@@ -1,11 +1,9 @@
 """CouncilKey-Os Ollama manager with model management."""
 from __future__ import annotations
 
-import os
-import subprocess
 import json
+import os
 from pathlib import Path
-from typing import Any
 
 try:
     import httpx

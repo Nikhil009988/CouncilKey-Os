@@ -6,8 +6,6 @@ import os
 import sys
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
@@ -40,7 +38,7 @@ def test_storage_setup():
 
 def test_journal_analyze_empty():
     os_env = {"COUNCIL_HOME": str(ROOT / "tests/fixtures/council_home")}
-    import council.journal.analyzer as analyzer
+    from council.journal import analyzer
     old = os.environ.get("COUNCIL_HOME")
     os.environ["COUNCIL_HOME"] = os_env["COUNCIL_HOME"]
     try:

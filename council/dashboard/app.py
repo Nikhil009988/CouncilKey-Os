@@ -1,19 +1,16 @@
-"""CouncilKey-Os Dashboard."""
+"""CouncilKey-Os Dashboard app - thin alias over the council orchestrator.
+
+Serving `council.dashboard.app:app` and `council.orchestrator.main:app` now
+behave identically (previously the /api sub-app mount produced broken
+/api/api/... routes).
+"""
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI
 
 try:
     from council.orchestrator.main import app as council_app
-    _html = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
-except Exception:
-    council_app = None
-    _html = "<html><body><h1>Council Dashboard</h1></body></html>"
 
-app = FastAPI()
-app.mount("/api", council_app or FastAPI())
+    app: FastAPI = council_app
+except Exception:  # pragma: no cover - fallback so uvicorn can still boot
+    app = FastAPI(title="CouncilKey-Os Dashboard (degraded)")

@@ -1,2 +1,17 @@
-[source]
-name = "councilkey-bootc"
+# bootc-image-builder configuration example for CouncilKey-Os.
+# Save as config.toml and pass with: --config /config.toml
+[blueprint]
+name = "councilkey-os"
+version = "1.1.0"
+description = "CouncilKey-Os - 3 AI agents live on a pendrive"
+
+[customizations]
+hostname = "councilkey"
+
+[customizations.user]
+name = "council"
+password = ""            # set a real password or use sshkey below
+# sshkey = "ssh-ed25519 AAAA... user@host"
+
+[customizations.filesystem]
+size = 8                  # root filesystem size in GiB (pendrive friendly)

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
 
 COUNCIL_HOME = Path(os.environ.get("COUNCIL_HOME", "/var/lib/council"))
 LLM_DIR = COUNCIL_HOME / "llm"

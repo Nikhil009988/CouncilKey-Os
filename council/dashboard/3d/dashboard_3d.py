@@ -189,9 +189,6 @@ renderer.domElement.addEventListener('click', (event) => {
 </html>
 """
 
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
-
 def create_app_3d():
     app = FastAPI(title="CouncilKey-Os 3D Dashboard - Three.js - Particle Effects - Production 10/10")
     

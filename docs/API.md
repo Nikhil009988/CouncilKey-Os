@@ -221,3 +221,89 @@ When running `python3 council/orchestrator/main.py dashboard`, visit:
 - Swagger UI: `http://localhost:8443/docs`
 - ReDoc: `http://localhost:8443/redoc`
 - OpenAPI JSON: `http://localhost:8443/openapi.json`
+
+---
+
+# v1.1.0 - New Endpoints & Features
+
+## System
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/version` | Package version |
+| GET | `/api/system` | Host info: platform, python, cpu count, uptime, disk, council home |
+| GET | `/api/agents/status` | Live probe of hermes/openclaw/agent-zero gateways (2s timeout, mock fallback) |
+| GET | `/api/scheduler/status` | Background scheduler state (nightly consolidation, journal prune) |
+| GET | `/api/metrics` | Now includes `uptime_seconds`, `disk`, `request_count`, `storage_split` |
+
+## Council & Knowledge
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/council/vote` | Same as `/api/council/ask` but includes full `vote_result` (strategy detail) |
+| GET | `/api/chat/history?limit=20` | Journal parsed into prompt/final chat-history entries |
+| GET | `/api/knowledge/search?q=` | Substring search over knowledge-graph nodes |
+| GET | `/api/skills/list` | List evolved skills |
+| GET | `/api/skills/read?name=` | Read a single skill |
+| GET | `/api/memory/summary` | Hermes long-term memory preview (chars/lines/preview) |
+
+## Backups & Ollama
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/backup/restore` | `{"name": "council-2026-08-05.tar.gz"}` - restores keep dirs from a backup (name-validated) |
+| POST | `/api/ollama/delete` | `{"model": "qwen2.5:3b"}` - delete a model |
+| POST | `/api/ollama/show` | `{"model": "..."}` - model metadata via `/api/show` |
+
+## Vision
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/vision/status` | Ollama running + installed vision models (llava/qwen2.5vl/...) |
+| POST | `/api/vision/screenshot` | Capture desktop to `hermes/cache/screenshots/` (PIL -> gnome-screenshot -> scrot -> imagemagick) |
+| POST | `/api/vision/upload` | Multipart `file` upload -> saved screenshot path |
+| POST | `/api/vision/analyze` | `{"path": "...", "prompt": "..."}` - analyze with local vision model |
+
+## Voice
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/voice/status` | Provider availability (edge_tts, elevenlabs, openai_tts, whisper_local) |
+| POST | `/api/voice/tts` | `{"text": "...", "voice": "en-US-JennyNeural", "provider": "edge"}` -> `{ok, url}` (mp3 served from `/api/voice/audio/{name}`) |
+| GET | `/api/voice/audio/{name}` | Play a generated mp3 |
+| POST | `/api/voice/transcribe` | Multipart audio file -> text via local Whisper |
+
+## Canvas (sandboxed file browser inside COUNCIL_HOME)
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/canvas/files?path=shared` | List directory entries (name/type/size/modified) |
+| GET | `/api/canvas/read?path=shared/note.md` | Read text file (200KB cap) |
+| POST | `/api/canvas/write` | `{"path": "shared/note.md", "content": "..."}` - write file |
+| POST | `/api/canvas/mkdir` | `{"path": "shared/docs"}` - create directory |
+
+Traversal (`../`, absolute paths outside home) is rejected.
+
+## Browser
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/browser/fetch?url=https://...` | Fetch page -> title + readable text + status (http/https only) |
+
+## Security (new)
+- Set `COUNCIL_API_KEY` to require auth: `Authorization: Bearer <key>` or `?token=<key>` on every route except `/` and `/api/health`; WebSockets use `?token=`
+- `COUNCIL_RATE_LIMIT=<n>` enables per-IP requests/minute limiting (0 = off)
+- `COUNCIL_CORS=*` (default) or comma-separated origins
+- Security headers on all responses (nosniff, referrer-policy, permissions-policy)
+
+## CLI (`councilkey`)
+```
+councilkey serve [--host 0.0.0.0] [--port 8443]
+councilkey doctor          # environment health report (exit code 0/1)
+councilkey storage [--dry-run]
+councilkey version
+```
+
+## systemd service
+```
+sudo ./deploy/install.sh   # installs /opt/councilkey + enables councilkey.service
+```
+
+## No-traces audit
+```
+COUNCIL_HOME=/var/lib/council ./scripts/verify-no-traces.sh         # 7 checks
+COUNCIL_HOME=/var/lib/council ./scripts/verify-no-traces.sh --clean # audit + delete
+```

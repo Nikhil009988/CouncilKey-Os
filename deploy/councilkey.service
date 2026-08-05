@@ -1,0 +1,30 @@
+[Unit]
+Description=CouncilKey-Os Council Orchestrator
+Documentation=https://github.com/Nikhil009988/CouncilKey-Os
+After=network-online.target ollama.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=council
+Group=council
+Environment=COUNCIL_HOME=/var/lib/council
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=/opt/councilkey
+ExecStart=/opt/councilkey/.venv/bin/python -m uvicorn council.orchestrator.main:app --host 0.0.0.0 --port 8443
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/council
+CapabilityBoundingSet=
+LockPersonality=true
+MemoryDenyWriteExecute=false
+
+[Install]
+WantedBy=multi-user.target

@@ -82,6 +82,7 @@
         <span id="uptime-badge" class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">Uptime: --</span>
         <span id="mode-badge" class="px-3 py-1 rounded-full bg-council-600/10 border border-council-600/30 text-council-300">Mode: debate</span>
         <span id="storage-badge" class="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300">Storage: --</span>
+        <button id="key-btn" title="Set API key" class="px-3 py-1 rounded-full bg-council-700/40 border border-council-600/40 text-council-300">🔑</button>
       </div>
     </div>
 
@@ -250,7 +251,18 @@
   </div>
 
   <script>
-    const WS_URL = ((location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws');
+    const TOKEN = localStorage.getItem('council_api_key') || '';
+    const WS_URL = ((location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws' + (TOKEN ? '?token=' + encodeURIComponent(TOKEN) : ''));
+    async function apiFetch(path, opts) {
+      if (TOKEN) path += (path.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN);
+      return fetch(path, opts);
+    }
+    document.getElementById('key-btn').addEventListener('click', () => {
+      const v = prompt('Council API key (leave empty to clear):', TOKEN);
+      if (v === null) return;
+      localStorage.setItem('council_api_key', v.trim());
+      location.reload();
+    });
     let ws = null;
     let reconnectMs = 1000;
     let term = null;
@@ -292,7 +304,7 @@
       document.getElementById('typing-indicator').classList.remove('hidden');
       const body = { prompt, strategy: document.getElementById('strategy-select').value, min_agreement: 2 };
       try {
-        const r = await fetch('/api/council/ask', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const r = await apiFetch('/api/council/ask', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
         const data = await r.json();
         if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(body));
         renderCouncilResult(data);
@@ -317,7 +329,7 @@
     async function storageAction(path, btnId, resultId) {
       document.getElementById(resultId).classList.remove('hidden');
       try {
-        const r = await fetch(path);
+        const r = await apiFetch(path);
         const data = await r.json();
         document.getElementById(resultId).textContent = JSON.stringify(data, null, 2);
         if (data.total_keep) document.getElementById('keep-total').textContent = data.total_keep_human;
@@ -340,7 +352,7 @@
     async function loadJournal() {
       const list = document.getElementById('journal-list');
       try {
-        const r = await fetch('/api/journal');
+        const r = await apiFetch('/api/journal');
         const data = await r.json();
         list.innerHTML = (data.files || []).slice().reverse().slice(0, 20).map(f => `<div class="glass rounded-lg p-2 flex items-center justify-between"><div class="text-xs">${f.file}</div><div class="text-xs text-slate-400">${(f.size/1024).toFixed(1)}KB</div></div>`).join('');
       } catch (e) { list.innerHTML = '<div class="text-xs text-red-300">Failed to load journal</div>'; }
@@ -349,32 +361,57 @@
     loadJournal();
 
     // Terminal
+    let termSocket = null;
     document.getElementById('terminal-connect').addEventListener('click', () => {
       const container = document.getElementById('terminal');
+      const agent = document.getElementById('terminal-agent').value;
       if (!term) {
         term = new Terminal({ cursorBlink: true, fontSize: 14, fontFamily: 'monospace', theme: { background: '#0a0a0f', foreground: '#e2e8f0' }});
         termFit = new FitAddon.FitAddon();
         term.loadAddon(termFit);
         term.open(container);
         termFit.fit();
-        term.writeln('CouncilKey-Os terminal ready. Connect /ws/terminal in next version.');
       }
+      if (termSocket) { termSocket.close(); termSocket = null; }
+      const url = ((location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws/terminal?agent=' + encodeURIComponent(agent) + (TOKEN ? '&token=' + encodeURIComponent(TOKEN) : ''));
+      termSocket = new WebSocket(url);
+      termSocket.onopen = () => term.writeln('\x1b[1;32mConnected to ' + agent + '\x1b[0m');
+      termSocket.onmessage = (ev) => {
+        if (typeof ev.data === 'string') { term.write(ev.data); return; }
+        const reader = new FileReader();
+        reader.onload = () => term.write(reader.result);
+        reader.readAsArrayBuffer(ev.data);
+      };
+      termSocket.onclose = () => { termSocket = null; term.writeln('\x1b[1;31mTerminal disconnected\x1b[0m'); };
+      term.onData((data) => { if (termSocket && termSocket.readyState === WebSocket.OPEN) termSocket.send(data); });
+      term.onResize(({ rows, cols }) => { if (termSocket && termSocket.readyState === WebSocket.OPEN) termSocket.send('__RESIZE__:' + rows + ':' + cols); });
     });
 
     // Vision
+    let visionUploadedPath = null;
     document.getElementById('vision-upload').addEventListener('click', () => document.getElementById('vision-file').click());
-    document.getElementById('vision-file').addEventListener('change', (e) => {
+    document.getElementById('vision-file').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
       const url = URL.createObjectURL(file);
       const img = document.getElementById('vision-preview');
       img.src = url; img.classList.remove('hidden');
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await apiFetch('/api/vision/upload', { method: 'POST', body: fd });
+      const up = await r.json();
+      visionUploadedPath = up.ok ? up.path : null;
       document.getElementById('vision-analyze').classList.remove('hidden');
     });
-    document.getElementById('vision-analyze').addEventListener('click', () => {
+    document.getElementById('vision-analyze').addEventListener('click', async () => {
       const result = document.getElementById('vision-result');
       result.classList.remove('hidden');
-      result.textContent = 'Vision analysis requires backend /api/vision endpoint in next version.';
+      result.textContent = 'Analyzing...';
+      try {
+        const r = await apiFetch('/api/vision/analyze', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ path: visionUploadedPath }) });
+        const data = await r.json();
+        result.textContent = data.ok ? data.analysis : ('Vision unavailable: ' + (data.error || 'unknown error'));
+      } catch (e) { result.textContent = 'Error: ' + e.message; }
     });
 
     // Voice
@@ -386,11 +423,15 @@
       rec.start();
     });
     document.getElementById('voice-stop').addEventListener('click', () => {});
-    document.getElementById('voice-speak').addEventListener('click', () => {
+    document.getElementById('voice-speak').addEventListener('click', async () => {
       const text = document.getElementById('voice-text').textContent;
       if (!text) return;
-      const u = new SpeechSynthesisUtterance(text);
-      speechSynthesis.speak(u);
+      try {
+        const r = await apiFetch('/api/voice/tts', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ text, provider: document.getElementById('voice-provider').value }) });
+        const data = await r.json();
+        if (data.ok) { new Audio(data.url).play(); }
+        else { document.getElementById('voice-text').textContent = 'TTS unavailable: ' + data.error; }
+      } catch (e) { console.error(e); }
     });
 
     // 3D
@@ -418,7 +459,7 @@
 
     async function refreshStatus() {
       try {
-        const r = await fetch('/api/status'); const data = await r.json();
+        const r = await apiFetch('/api/status'); const data = await r.json();
         const agents = data.agents || {};
         document.getElementById('uptime-badge').textContent = 'Uptime: live';
         document.getElementById('mode-badge').textContent = 'Mode: ' + (data.council && data.council.mode ? data.council.mode : 'debate');

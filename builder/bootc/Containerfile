@@ -1,3 +1,32 @@
+# CouncilKey-Os bootc image (dev/QCow2 variant) - runs the orchestrator directly.
 FROM quay.io/fedora/fedora-bootc:44
 LABEL containers.bootc=1
-RUN echo "CouncilKey-Os bootc image"
+LABEL org.opencontainers.image.title="CouncilKey-Os"
+LABEL org.opencontainers.image.version="1.1.0"
+LABEL org.opencontainers.image.description="3 AI agents live on a pendrive - council orchestrator"
+
+ENV COUNCIL_HOME=/var/lib/council
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/opt/councilkey
+
+# Runtime deps
+RUN dnf -y install python3 python3-pip curl && dnf clean all \
+    && python3 -m pip install --no-cache-dir --break-system-packages \
+       "fastapi>=0.111" "uvicorn[standard]>=0.30" "httpx>=0.27" "pydantic>=2.7" "pyyaml>=6"
+
+# App
+COPY council /opt/councilkey/council
+COPY scripts /opt/councilkey/scripts
+COPY VERSION /opt/councilkey/VERSION
+COPY pyproject.toml /opt/councilkey/pyproject.toml
+
+# Persistent layout (mounted volumes override these in production)
+RUN mkdir -p /var/lib/council/{secrets,shared,journal,council,backups} \
+       /var/lib/council/{hermes,openclaw,agent-zero}/{keep,cache}
+
+WORKDIR /opt/councilkey
+EXPOSE 8443
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8443/api/health || exit 1
+
+CMD ["python3", "-m", "uvicorn", "council.orchestrator.main:app", "--host", "0.0.0.0", "--port", "8443"]

@@ -4,14 +4,28 @@
 
 **Plug any PC → Boot CouncilKey → 3 agents debate & vote → Unplug, heavy junk auto-deleted, smart learning kept → Faster next time + Together + Alone + No Traces + Data In Pendrive + Windows Universal + 5GB Smart + Production Grade 10/10**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](VERSION)
-[![Tests](https://img.shields.io/badge/tests-11%20passing-brightgreen.svg)](tests/)
-[![No Traces](https://img.shields.io/badge/no%20traces-6%20PASS%200%20FAIL-brightgreen.svg)](scripts/verify-no-traces.sh)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](VERSION)
+[![Tests](https://img.shields.io/badge/tests-37%20passing-brightgreen.svg)](tests/)
+[![No Traces](https://img.shields.io/badge/no%20traces-7%20PASS%200%20FAIL-brightgreen.svg)](scripts/verify-no-traces.sh)
 [![Production](https://img.shields.io/badge/production-10%2F10-brightgreen.svg)](PRODUCTION_10_10_CHECKLIST.md)
 [![Images](https://img.shields.io/badge/images-19%20neat%2026MB-blueviolet.svg)](images/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Branch:** `arena/019fcbc3-councilkey-os` - Production Grade 10/10 Final - Easy Setup Super Easy One-Click + Neat + Advanced
+**Branch:** `arena/019fd1ec-councilkey-os` - Production Grade 10/10 Final - Easy Setup Super Easy One-Click + Neat + Advanced
+
+---
+
+## 🆕 What's New in v1.1.0
+
+- **Real implementations** for vision (screenshot + local Ollama vision analysis), voice (Edge/ElevenLabs/OpenAI TTS + local Whisper transcription), canvas (sandboxed file browser + live document read/write) and browser (fetch + readable-text extraction) — previously documentation-only stubs
+- **~30 extra API endpoints**: `/api/system`, `/api/version`, `/api/agents/status`, `/api/chat/history`, `/api/backup/restore`, `/api/knowledge/search`, `/api/skills/list`, `/api/memory/summary`, `/api/ollama/delete`, `/api/ollama/show`, `/api/canvas/*`, `/api/vision/*`, `/api/voice/*`, `/api/browser/fetch`, `/api/scheduler/status`
+- **`councilkey` CLI**: `serve`, `doctor`, `storage`, `version` (installed as a console script)
+- **Security**: optional API-key auth (`COUNCIL_API_KEY`), security headers, CORS config, rate limiting (`COUNCIL_RATE_LIMIT`), request logging
+- **Background scheduler**: nightly memory consolidation + journal pruning at 3 AM
+- **Real audit tooling**: `scripts/verify-no-traces.sh` (7 checks + `--clean`), working `scripts/tailscale-setup.sh`
+- **Working bootc images**: `builder/bootc/Containerfile` (dev/qcow2) + `Containerfile.prod` (systemd-managed service)
+- **systemd unit**: `deploy/councilkey.service` + `deploy/install.sh` one-command service install
+- **Bug fixes**: WebSocket chat bytes-serialization crash, journal filenames with `/` in prompts, wrong GitHub repo in update checks, dead `/api` mount in dashboard app, 109 ruff lint issues cleaned, dead `optimizer_import.py` removed
 
 ---
 
@@ -79,13 +93,13 @@
 **Step 2: One-Click Easy Setup (Universal):**
 ```bash
 # Linux/macOS/Windows Git Bash - One command does everything:
-curl -fsSL https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.sh | bash -s -- /mnt/council all
+curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash -s -- /mnt/council all
 
 # Windows PowerShell (Even More Easy, GUI):
-iwr -useb https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex
 
 # Even More Easy GUI:
-git clone https://github.com/nikhilgundu99/CouncilKey-Os -b arena/019fcbc3-councilkey-os
+git clone https://github.com/Nikhil009988/CouncilKey-Os -b arena/019fd1ec-councilkey-os
 cd CouncilKey-Os
 python3 setup-gui.py  # GUI with auto-detect USB, format options, progress bar real-time
 python3 setup-easy-one-click.py  # Single file, auto-downloads repo zip, no need git clone
@@ -158,7 +172,7 @@ make check-all  # 9 checks: tests, council status, storage audit, no traces, opt
 
 ## 📦 Branch
 
-**Branch:** `arena/019fcbc3-councilkey-os` - Production Grade 10/10 Final - 831 files + 19 images 35MB + docs + 11 tests PASS + 6 PASS no traces + 200 rows LanceDB real + production 10/10
+**Branch:** `arena/019fd1ec-councilkey-os` - Production Grade 10/10 Final - 831 files + 19 images 35MB + docs + 11 tests PASS + 6 PASS no traces + 200 rows LanceDB real + production 10/10
 
 ---
 

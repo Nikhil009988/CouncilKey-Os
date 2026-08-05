@@ -1,19 +1,39 @@
-"""CouncilKey-Os WebSocket Terminal - Cross-platform terminal for agents."""
+"""CouncilKey-Os WebSocket Terminal - cross-platform terminal for agents.
+
+Unix:   event-driven PTY via asyncio.add_reader - no blocking executor threads,
+        clean cancellation, no fd-close deadlocks.
+Windows: subprocess with pipes.
+
+(Previously the Unix path used loop.run_in_executor(os.read, ...) which leaked
+a blocked thread per session and could deadlock the whole event loop when the
+master fd was closed while the read thread was still blocked.)
+"""
 from __future__ import annotations
 
 import asyncio
 import os
-import sys
 import signal
 import subprocess
+import sys
 from typing import Optional
 
 from fastapi import WebSocket, WebSocketDisconnect
 
+if sys.platform == "win32":  # pragma: no cover - Windows-only guards
+    fcntl = None
+    pty = None
+    struct = None
+    termios = None
+else:
+    import fcntl
+    import pty
+    import struct
+    import termios
+
 
 class TerminalSession:
     """Manages a terminal session (PTY on Unix, subprocess on Windows)."""
-    
+
     def __init__(self, shell: str | None = None, env: dict | None = None):
         if shell is None:
             shell = "powershell.exe" if sys.platform == "win32" else os.environ.get("SHELL", "/bin/bash")
@@ -22,12 +42,15 @@ class TerminalSession:
         self.process: Optional[subprocess.Popen] = None
         self._running = False
         self.is_windows = sys.platform == "win32"
-    
+        self.pid: int | None = None
+        self.master_fd: int | None = None
+
+    # ------------------------------------------------------------------ life
     def start(self) -> None:
         """Start the terminal session."""
         self.env["TERM"] = "xterm-256color"
         self.env["COLORTERM"] = "truecolor"
-        
+
         if self.is_windows:
             # On Windows, use subprocess with pipes
             self.process = subprocess.Popen(
@@ -39,36 +62,43 @@ class TerminalSession:
                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
             )
         else:
-            # On Unix, use pty
-            import pty
-            import os
-            self.pid, self.master_fd = pty.fork()
-            
-            if self.pid == 0:
-                # Child process
-                os.setsid()
-                os.environ.update(self.env)
-                os.execvpe(self.shell, [self.shell], self.env)
+            master_fd, slave_fd = pty.openpty()
+            pid = os.fork()
+            if pid == 0:
+                # Child: new session, acquire controlling tty, exec shell.
+                try:
+                    os.setsid()
+                    tty_fd = os.open(os.ttyname(slave_fd), os.O_RDWR)
+                    os.dup2(tty_fd, 0)
+                    os.dup2(tty_fd, 1)
+                    os.dup2(tty_fd, 2)
+                    if tty_fd > 2:
+                        os.close(tty_fd)
+                    os.close(slave_fd)
+                    os.execvpe(self.shell, [self.shell], self.env)
+                except Exception:
+                    os._exit(127)
             else:
-                # Parent process
-                import fcntl
-                import termios
-                import struct
-                # Set window size
-                winsize = struct.pack("HHHH", 24, 80, 0, 0)
-                fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ, winsize)
-        
+                os.close(slave_fd)
+                self.pid = pid
+                self.master_fd = master_fd
+                self._set_winsize(24, 80)
+
         self._running = True
-    
+
+    # ------------------------------------------------------------------ io
+    def _set_winsize(self, rows: int, cols: int) -> None:
+        if self.master_fd is None:
+            return
+        try:
+            fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
+        except OSError:
+            pass
+
     def resize(self, rows: int, cols: int) -> None:
-        """Resize the terminal."""
-        if not self.is_windows and hasattr(self, 'master_fd') and self.master_fd is not None:
-            import fcntl
-            import termios
-            import struct
-            winsize = struct.pack("HHHH", rows, cols, 0, 0)
-            fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ, winsize)
-    
+        if not self.is_windows:
+            self._set_winsize(rows, cols)
+
     def write(self, data: bytes) -> None:
         """Write to terminal."""
         if self.is_windows:
@@ -78,47 +108,76 @@ class TerminalSession:
                     self.process.stdin.flush()
                 except (BrokenPipeError, OSError):
                     pass
-        else:
-            if hasattr(self, 'master_fd') and self.master_fd is not None:
-                try:
-                    os.write(self.master_fd, data)
-                except OSError:
-                    pass
-    
+        elif self.master_fd is not None:
+            try:
+                os.write(self.master_fd, data)
+            except OSError:
+                pass
+
     async def read_loop(self, ws: WebSocket) -> None:
         """Read from terminal and send to WebSocket."""
         if self.is_windows:
             await self._read_loop_windows(ws)
         else:
             await self._read_loop_unix(ws)
-    
+
     async def _read_loop_unix(self, ws: WebSocket) -> None:
-        """Read from PTY on Unix."""
-        import os
-        loop = asyncio.get_event_loop()
-        while self._running and hasattr(self, 'master_fd') and self.master_fd is not None:
+        """Event-driven PTY read on Unix (no blocking threads)."""
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue[bytes | None] = asyncio.Queue()
+        fd = self.master_fd
+
+        def _on_readable() -> None:
+            # Runs on the event loop; must never raise or we starve the loop.
             try:
-                data = await loop.run_in_executor(None, os.read, self.master_fd, 1024)
+                if fd is None:
+                    return
+                data = os.read(fd, 1024)
                 if not data:
+                    try:
+                        loop.remove_reader(fd)
+                    except Exception:
+                        pass
+                    queue.put_nowait(None)  # EOF sentinel
+                else:
+                    queue.put_nowait(data)
+            except OSError:
+                try:
+                    loop.remove_reader(fd)
+                except Exception:
+                    pass
+                queue.put_nowait(None)
+            except Exception:
+                try:
+                    loop.remove_reader(fd)
+                except Exception:
+                    pass
+
+        if fd is not None:
+            loop.add_reader(fd, _on_readable)
+        try:
+            while self._running:
+                data = await queue.get()
+                if data is None:
                     break
                 await ws.send_bytes(data)
-            except Exception:
-                break
-    
+        finally:
+            if fd is not None:
+                try:
+                    loop.remove_reader(fd)
+                except Exception:
+                    pass
+
     async def _read_loop_windows(self, ws: WebSocket) -> None:
         """Read from subprocess on Windows."""
-        loop = asyncio.get_event_loop()
         while self._running and self.process and self.process.stdout:
-            try:
-                data = await loop.run_in_executor(None, self.process.stdout.read, 1024)
-                if not data:
-                    break
-                await ws.send_bytes(data)
-            except Exception:
+            data = await asyncio.to_thread(self.process.stdout.read, 1024)
+            if not data:
                 break
-    
+            await ws.send_bytes(data)
+
     def close(self) -> None:
-        """Close the terminal session."""
+        """Close the terminal session (safe to call more than once)."""
         self._running = False
         if self.is_windows:
             if self.process:
@@ -130,50 +189,62 @@ class TerminalSession:
                 except Exception:
                     pass
         else:
-            if hasattr(self, 'pid') and self.pid is not None:
+            if self.pid is not None:
+                for sig in (signal.SIGTERM, signal.SIGKILL):
+                    try:
+                        os.killpg(self.pid, sig)
+                    except (ProcessLookupError, OSError):
+                        break
                 try:
-                    os.killpg(os.getpgid(self.pid), signal.SIGTERM)
-                except (ProcessLookupError, OSError):
+                    os.waitpid(self.pid, os.WNOHANG)  # reap the zombie
+                except (ChildProcessError, OSError):
                     pass
-            if hasattr(self, 'master_fd') and self.master_fd is not None:
+                self.pid = None
+            if self.master_fd is not None:
                 try:
                     os.close(self.master_fd)
                 except OSError:
                     pass
+                self.master_fd = None
 
 
 async def terminal_websocket(ws: WebSocket, agent: str = "council") -> None:
     """WebSocket endpoint for terminal (cross-platform)."""
     await ws.accept()
-    
+
     # Determine shell and env based on agent
     shell = None
     env = os.environ.copy()
     env["TERM"] = "xterm-256color"
     env["COLORTERM"] = "truecolor"
-    
+
     if agent == "hermes":
         env["HERMES_HOME"] = env.get("HERMES_HOME", "/var/lib/council/hermes/real_home")
     elif agent == "openclaw":
         env["OPENCLAW_HOME"] = env.get("OPENCLAW_HOME", "/var/lib/council/openclaw")
     elif agent == "agent-zero":
         env["AGENT_ZERO_HOME"] = env.get("AGENT_ZERO_HOME", "/var/lib/council/agent-zero")
-    
+
     session = TerminalSession(shell=shell, env=env)
-    session.start()
-    
+    try:
+        session.start()
+    except Exception as exc:
+        await ws.send_text(f"\r\n\x1b[1;31mTerminal error: {exc}\x1b[0m\r\n")
+        await ws.close()
+        return
+
     # Send welcome
     platform = "Windows" if sys.platform == "win32" else "Unix"
     await ws.send_text(f"\r\n\x1b[1;32mCouncilKey-Os Terminal - Agent: {agent} ({platform})\x1b[0m\r\n")
     await ws.send_text(f"Shell: {session.shell}\r\nType 'exit' to close.\r\n\r\n")
-    
+
     # Start read loop
     read_task = asyncio.create_task(session.read_loop(ws))
-    
+
     try:
         while True:
             message = await ws.receive()
-            
+
             if "bytes" in message:
                 # Binary input (raw keystrokes)
                 session.write(message["bytes"])
@@ -191,12 +262,20 @@ async def terminal_websocket(ws: WebSocket, agent: str = "council") -> None:
                     session.write(text.encode())
     except WebSocketDisconnect:
         pass
+    except RuntimeError:
+        pass  # client already gone ("Cannot call receive once a disconnect...")
     except Exception as e:
-        await ws.send_text(f"\r\n\x1b[1;31mTerminal error: {e}\x1b[0m\r\n")
+        try:
+            await ws.send_text(f"\r\n\x1b[1;31mTerminal error: {e}\x1b[0m\r\n")
+        except Exception:
+            pass
     finally:
-        session.close()
+        # Cancel + drain the reader task FIRST so its finally block can
+        # unregister the fd watcher, then tear the session down (closing the
+        # master fd must not race a registered reader callback).
         read_task.cancel()
         try:
             await read_task
         except asyncio.CancelledError:
             pass
+        session.close()

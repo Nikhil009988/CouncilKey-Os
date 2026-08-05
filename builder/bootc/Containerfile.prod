@@ -1,4 +1,27 @@
+# CouncilKey-Os bootc image (production variant) - systemd-managed service.
 FROM quay.io/fedora/fedora-bootc:44
 LABEL containers.bootc=1
+LABEL org.opencontainers.image.title="CouncilKey-Os (production)"
+LABEL org.opencontainers.image.version="1.1.0"
+
 ENV COUNCIL_HOME=/var/lib/council
-RUN mkdir -p /opt/council
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/opt/councilkey
+
+RUN dnf -y install python3 python3-pip curl && dnf clean all \
+    && python3 -m pip install --no-cache-dir --break-system-packages \
+       "fastapi>=0.111" "uvicorn[standard]>=0.30" "httpx>=0.27" "pydantic>=2.7" "pyyaml>=6"
+
+COPY council /opt/councilkey/council
+COPY scripts /opt/councilkey/scripts
+COPY VERSION /opt/councilkey/VERSION
+COPY pyproject.toml /opt/councilkey/pyproject.toml
+COPY deploy/councilkey.service /usr/lib/systemd/system/councilkey.service
+
+RUN mkdir -p /var/lib/council/{secrets,shared,journal,council,backups} \
+       /var/lib/council/{hermes,openclaw,agent-zero}/{keep,cache} \
+    && useradd -r -d /var/lib/council -s /usr/sbin/nologin council \
+    && chown -R council:council /var/lib/council \
+    && systemctl enable councilkey.service
+
+EXPOSE 8443

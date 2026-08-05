@@ -1,10 +1,16 @@
-"""CouncilKey-Os production agent adapters."""
+"""CouncilKey-Os production agent adapters.
+
+Each adapter talks to a local agent gateway (Hermes / OpenClaw / Agent-Zero).
+If a gateway is unreachable the adapter degrades to a deterministic mock
+response instead of crashing the council, and a circuit breaker avoids
+hammering a dead gateway.
+"""
 from __future__ import annotations
 
-import asyncio
 import os
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 import httpx
@@ -47,6 +53,11 @@ class _CircuitBreaker:
         return False
 
 
+def _mock(agent: str, role: str, prompt: str, exc: Exception | None = None) -> AgentResult:
+    detail = f": {exc}" if exc else ""
+    return AgentResult(agent, role, f"[mock fallback] {prompt}", 0.0, f"offline (mock){detail}")
+
+
 class HermesClient:
     def __init__(self, base_url: str = "http://127.0.0.1:18790", token: str | None = None):
         self.base_url = base_url.rstrip("/")
@@ -55,7 +66,7 @@ class HermesClient:
 
     async def ask(self, prompt: str, timeout: float = 60.0) -> AgentResult:
         if not self.cb.allow():
-            return AgentResult("hermes", "memory", "[circuit open]", 0.0, "offline (mock)")
+            return _mock("hermes", "memory", prompt)
         start = time.monotonic()
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
@@ -70,11 +81,11 @@ class HermesClient:
                 return AgentResult("hermes", "memory", text, time.monotonic() - start, "live")
         except Exception as exc:
             self.cb.record_failure()
-            return AgentResult("hermes", "memory", f"[mock fallback] {prompt}", time.monotonic() - start, f"offline (mock): {exc}")
+            return _mock("hermes", "memory", prompt, exc)
 
     def _headers(self) -> dict[str, str]:
         if not self.token:
-            return {}
+            return {"Content-Type": "application/json"}
         return {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
 
 
@@ -86,10 +97,10 @@ class OpenClawClient:
 
     async def ask(self, prompt: str, timeout: float = 60.0) -> AgentResult:
         if not self.cb.allow():
-            return AgentResult("openclaw", "action", "[circuit open]", 0.0, "offline (mock)")
+            return _mock("openclaw", "action", prompt)
         start = time.monotonic()
         endpoints = [f"{self.base_url}/api/message", f"{self.base_url}/api/v1/chat"]
-        last_exc = None
+        last_exc: Exception | None = None
         for ep in endpoints:
             try:
                 async with httpx.AsyncClient(timeout=timeout) as client:
@@ -101,7 +112,7 @@ class OpenClawClient:
             except Exception as exc:
                 last_exc = exc
         self.cb.record_failure()
-        return AgentResult("openclaw", "action", f"[mock fallback] {prompt}", time.monotonic() - start, f"offline (mock): {last_exc}")
+        return _mock("openclaw", "action", prompt, last_exc)
 
     def _headers(self) -> dict[str, str]:
         if not self.token:
@@ -116,7 +127,7 @@ class AgentZeroClient:
 
     async def ask(self, prompt: str, timeout: float = 120.0) -> AgentResult:
         if not self.cb.allow():
-            return AgentResult("agent-zero", "builder", "[circuit open]", 0.0, "offline (mock)")
+            return _mock("agent-zero", "builder", prompt)
         start = time.monotonic()
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
@@ -130,21 +141,24 @@ class AgentZeroClient:
                 return AgentResult("agent-zero", "builder", text, time.monotonic() - start, "live")
         except Exception as exc:
             self.cb.record_failure()
-            return AgentResult("agent-zero", "builder", f"[mock fallback] {prompt}", time.monotonic() - start, f"offline (mock): {exc}")
+            return _mock("agent-zero", "builder", prompt, exc)
 
 
 def _read_gateway_token(agent: str) -> str | None:
     candidates = [
-        os.path.expanduser(f"~/.{agent}/gateway.token"),
-        os.path.join(COUNCIL_HOME, agent, "gateway.token"),
-        "/run/secrets/" + f"{agent}_token",
+        Path.home() / f".{agent}" / "gateway.token",
+        Path(COUNCIL_HOME) / agent / "gateway.token",
+        Path("/run/secrets") / f"{agent}_token",
     ]
     for p in candidates:
-        if os.path.exists(p):
-            try:
-                return open(p).read().strip()
-            except Exception:
-                pass
+        try:
+            if p.exists():
+                with open(p, encoding="utf-8") as fh:
+                    token = fh.read().strip()
+                if token:
+                    return token
+        except Exception:
+            continue
     return None
 
 

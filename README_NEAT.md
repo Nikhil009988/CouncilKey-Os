@@ -111,13 +111,13 @@
 **Step 2: One-Click Easy Setup (Universal):**
 ```bash
 # Linux/macOS/Windows Git Bash - One command does everything:
-curl -fsSL https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.sh | bash -s -- /mnt/council all
+curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash -s -- /mnt/council all
 
 # Windows PowerShell (Even More Easy, GUI):
-iwr -useb https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex
 
 # Even More Easy GUI:
-git clone https://github.com/nikhilgundu99/CouncilKey-Os -b arena/019fcbc3-councilkey-os
+git clone https://github.com/Nikhil009988/CouncilKey-Os -b arena/019fd1ec-councilkey-os
 cd CouncilKey-Os
 python3 setup-gui.py  # GUI with auto-detect USB, format options exFAT/F2FS/ext4, progress bar real-time
 ```
@@ -145,5 +145,5 @@ python3 setup-gui.py  # GUI with auto-detect USB, format options exFAT/F2FS/ext4
 ![No Traces](images/no-traces.png)
 ![Storage](images/storage.png)
 
-**Repo:** arena/019fcbc3-councilkey-os - Final production 10/10 - Ready to clone and make easy-setup
+**Repo:** arena/019fd1ec-councilkey-os - Final production 10/10 - Ready to clone and make easy-setup
 

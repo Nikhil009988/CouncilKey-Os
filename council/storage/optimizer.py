@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-import shutil
+import time
 from pathlib import Path
 from typing import Any
 
@@ -67,7 +67,7 @@ def _walk_keep_cache() -> dict[str, Any]:
                     }
                 )
     return {
-        "timestamp": __import__("time").strftime("%Y-%m-%dT%H:%M:%S"),
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "council_home": str(COUNCIL_HOME),
         "agents": agents,
         "total_keep": sum(v["keep_size"] for v in agents.values()),
@@ -109,7 +109,7 @@ def what_if_delete() -> dict[str, Any]:
                     }
                 )
     return {
-        "timestamp": __import__("time").strftime("%Y-%m-%dT%H:%M:%S"),
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "files": files[:500],
         "total_files": len(files),
         "total_size": total,
@@ -129,7 +129,7 @@ def optimize(dry_run: bool = False) -> dict[str, Any]:
             actions.append(f"Removed compressed journal {p.name}")
             saved += _size(p)
     return {
-        "timestamp": __import__("time").strftime("%Y-%m-%dT%H:%M:%S"),
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "actions": actions[:50],
         "saved_bytes": saved,
         "saved_human": _human(saved),

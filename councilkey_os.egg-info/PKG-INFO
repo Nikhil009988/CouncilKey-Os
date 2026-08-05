@@ -1,14 +1,22 @@
 Metadata-Version: 2.4
 Name: councilkey-os
-Version: 1.0.0
+Version: 1.1.0
 Summary: CouncilKey-Os - 3 AI agents live on pendrive with voting dashboard
 Requires-Python: >=3.11
 Requires-Dist: fastapi>=0.111
 Requires-Dist: uvicorn[standard]>=0.30
 Requires-Dist: httpx>=0.27
 Requires-Dist: pydantic>=2.7
+Requires-Dist: python-multipart>=0.0.9
 Provides-Extra: dev
 Requires-Dist: pytest>=8.3; extra == "dev"
 Requires-Dist: pytest-asyncio>=0.23; extra == "dev"
 Requires-Dist: ruff>=0.5; extra == "dev"
 Requires-Dist: mypy>=1.11; extra == "dev"
+Provides-Extra: extras
+Requires-Dist: pyyaml>=6; extra == "extras"
+Requires-Dist: lancedb>=0.10; extra == "extras"
+Requires-Dist: pyarrow>=15; extra == "extras"
+Requires-Dist: psutil>=5.9; extra == "extras"
+Requires-Dist: edge-tts>=6.1; extra == "extras"
+Requires-Dist: Pillow>=10; extra == "extras"
