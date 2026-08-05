@@ -1,12 +1,10 @@
 # Easy Setup Guide
 
-**You Wanted:** Make setup more easy so improve that thing.
-
-**Highlights:** One-click GUI + One-liner installer + Auto-detect USB + Progress bar + Verification
+**Highlights:** one-click GUI + one-liner installer + auto-detect USB + progress bar + verification
 
 ---
 
-## Super Easy - One Click - Any OS (Windows, Linux, macOS)
+## One Click - Any OS (Windows, Linux, macOS)
 
 ### Option 1: One-Liner Installer
 
@@ -24,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/01
 # 2. GUI selector if zenity (Linux) or osascript (macOS) or WPF (Windows) available, shows drives with free space
 # 3. Checks FS type exFAT for universal Windows+Linux+macOS, recommends exFAT if ext4 (Linux only)
 # 4. Asks to format as exFAT if needed with confirmation (y/N): "Format /dev/sdX1 as exFAT? This will ERASE pendrive!"
-# 5. 7 steps: Smart Initial 691 files 2.8MB demo scaling to 5GB, Advanced Smart (knowledge graph 200 nodes, memory consolidation, skill evolution), Real LanceDB 200 rows + FTS5 300 docs, Local LLM check, Optional Agents, Portable USB with rsync --progress progress bar, Multiple Checks tests 11 passing + verify-no-traces.sh 6 PASS
+# 5. Runs 7 setup steps: storage layout, knowledge graph, memory consolidation, skill evolution, local LLM check, portable USB copy with progress bar, verification checks
 ```
 
 **Windows PowerShell (GUI):**
@@ -34,7 +32,7 @@ iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019
 # Or with USB drive letter E:\ and Mode all:
 # iex "$USB='E:\'; iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex"
 
-# What PowerShell one-liner does (even more Windows native):
+# What the PowerShell one-liner does:
 # 1. Auto-detects USB drives via Get-PSDrive, GUI selector WPF XAML glassmorphism modern (more modern than WinForms) on Windows 11 + WinForms fallback, shows drives with free space GB
 # 2. Checks free space, warning if <5GB, need at least 5GB for smart initial + 64GB recommended
 # 3. Desktop + Start Menu shortcuts via WScript.Shell (Windows native++)
@@ -54,13 +52,13 @@ git clone https://github.com/Nikhil009988/CouncilKey-Os -b arena/019fd1ec-counci
 cd CouncilKey-Os
 python3 setup-gui.py  # GUI with auto-detect USB, format options exFAT/F2FS/ext4, mode selection, progress bar, log real-time, verify, dashboard button
 
-# What GUI does (much more easy than text):
+# What the GUI does:
 # - Header with gradient, 7 steps with progress bar (real progress, not just text)
 # - USB Selection Frame with glassmorphism: Entry + Browse button + Auto-Detect USB button, Listbox with drives and free space, Format radio buttons exFAT (Universal) / F2FS (Better USB Wear) / ext4 (Linux Only)
 # - Mode selection: all (full easy setup all steps), portable (5 min), smart (smart initial 5GB demo), checks (multiple checks)
 # - Progress bar with real-time percentage, status label, log text area with real-time output green #00ff00 on black #0a0c12
 # - Buttons: Easy Setup One-Click, Verify No Traces, Dashboard
-# - Much more easy than text-based: GUI, progress bar, log real-time, verification after copy, desktop shortcuts
+# - GUI with progress bar, live log, verification after copy, desktop shortcuts
 ```
 
 **Windows PowerShell GUI:**
@@ -112,11 +110,11 @@ iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019
 # What it does (7 steps, 2-3 min, no 3GB download yet):
 # 1. Auto-detects USB drives via Get-PSDrive, GUI selector WPF XAML glassmorphism modern on Windows 11 + WinForms fallback
 # 2. Checks free space, warning if <5GB, need at least 5GB for smart initial + 64GB recommended
-# 3. Smart Initial 691 files 2.8MB demo scaling to 5GB (500 knowledge, 130 skills, 100 solutions, MEMORY.md 1000 facts)
+# 3. Smart initial layout: seeded knowledge/skills/memory that grows as the council learns
 # 4. Advanced Smart: Knowledge graph 200 nodes, Memory consolidation, Skill evolution, Journal analyzer, Collaboration decomposer, Browser, Vision, Voice, Local LLM manager
-# 5. Real LanceDB 200 rows + FTS5 300 docs + Local LLM check + Optional Agents list
+# 5. Real embeddings + local LLM check + optional agents list
 # 6. Portable USB Council Universal OS with 4 launchers start.py start.ps1 start.sh start.bat
-# 7. Multiple Checks: tests 11 PASS, council status Together+Alone+NoTraces+DataInPendrive, storage audit, verify-no-traces.sh 6 PASS, optional agents list, local LLM check, advanced smart
+# 7. Verification: tests, council status, storage audit, no-traces checks, optional agents, local LLM
 ```
 
 **Linux/macOS/Windows Git Bash One-Liner:**
@@ -146,12 +144,12 @@ python3 setup-gui.py  # GUI with auto-detect USB, format options exFAT/F2FS/ext4
 - GUI selector: zenity list (Linux) or osascript choose from list (macOS) or WPF XAML ComboBox Free GB (Windows) with OK button
 - Checks FS type exFAT for universal Windows+Linux+macOS, recommends exFAT if ext4 (Linux only)
 - Asks to format as exFAT if needed with confirmation y/N: "Format /dev/sdX1 as exFAT? This will ERASE pendrive!"
-- 7 steps with progress bar real: Smart Initial 691 files 2.8MB, Advanced Smart knowledge graph 200 nodes etc., Real LanceDB 200 rows + FTS5 300 docs, Local LLM check, Optional Agents, Portable USB with rsync --progress progress bar (easy setup more easy), Multiple Checks tests 11 PASS etc.
+- 7 steps with a real progress bar: storage layout, knowledge graph, embeddings, local LLM check, portable USB copy (rsync --progress), verification checks
 
 **To Reach Full 5GB (Needs Internet 3GB, 10-20 min good internet):**
 ```bash
 make download-models      # 3GB models Option A qwen2.5:3b 1.9GB + deepseek-coder 1.3b 0.8GB + nomic-embed 274MB
-make build-embeddings     # 500MB vector DB real LanceDB (already built 200 rows + FTS5 300 docs)
+make build-embeddings     # build the vector DB (LanceDB, offline embeddings)
 make build-smart-5gb      # Full 5GB: 2.8MB demo + 3GB models + 0.5GB embeddings = 3.6GB close to 5GB + more curated = 5GB
 make build-live           # ISO 4-8GB with 5GB smart RO xz compressed -Xbcj x86 -b 1M
 ```
@@ -200,8 +198,8 @@ council> exit  # Cleaning up - Removing agents from PC, keeping data in pendrive
 - **On host PC after unplug:**
   - Windows PowerShell: `Get-ChildItem $env:TEMP | Where-Object {$_.Name -like '*council*'}` → Empty → **No traces, agents removed from PC**
   - Linux: `ls /tmp/ | grep council` → Empty, `ps aux | grep council` → Empty
-  - Or run: `bash scripts/verify-no-traces.sh` → **6 PASS 0 FAIL - No traces on host, data in pendrive** (Linux/macOS)
-  - Windows PowerShell: `.\scripts\verify-no-traces.ps1` → 6 PASS 0 FAIL
+  - Or run: `bash scripts/verify-no-traces.sh` → **no-traces checks pass 0 FAIL - No traces on host, data in pendrive** (Linux/macOS)
+  - Windows PowerShell: `.\scripts\verify-no-traces.ps1` → no-traces checks pass 0 FAIL
 
 - **Data still in pendrive:**
   - Plug pendrive into another PC or same after reboot → `ls E:\config\council\keep\` or `ls /media/$USER/COUNCIL/config/council/keep/` → Still has SOUL.md, MEMORY.md, USER.md, skills/ 50 files, knowledge/custom/ 500 files, solutions/ 100, shared/memory.md, journal/*.md git versioned, secrets/ GPG encrypted, models/ollama/ 3GB → **Data stored in pendrive, not host, permanent things store keys and models necessary for all agents, LUKS encrypted, RO no wear + RW daily learning**
@@ -212,13 +210,13 @@ council> exit  # Cleaning up - Removing agents from PC, keeping data in pendrive
 
 **Already built:**
 
-- ✅ Real embeddings with LanceDB 200 rows + FTS5 300 docs + knowledge graph 200 nodes 150 edges - Built real LanceDB with simple hash demo + TF-IDF real 200 rows 384 dim via sklearn no internet more real than simple hash, fallback
+- ✅ Real embeddings: LanceDB vector store (offline deterministic embeddings) + knowledge graph + TF-IDF search
 - ✅ Dashboard: Tailwind CDN, 8 tabs, Together/Alone toggle, real xterm.js terminal, glassmorphism, animated typing dots + voting bars
 - ✅ Optional agents real - CrewAI 1.15.10 installed for real via pip, Agent Crew Task import ok, crew with 3 agents Researcher Writer Reviewer, plus langgraph available as fallback for Microsoft Agent Framework
 - ✅ Windows Universal - start.py universal Python + start.ps1 PowerShell v2 Windows Native++ with GUI drive selector WPF modern + WinForms fallback + Windows Terminal wt detection + WSL detection + Admin check + Desktop + Start Menu shortcuts + Free space check + taskkill cleanup + start.sh + start.bat
-- ✅ 5GB Smart Initial - 691 files 2.8MB demo + 500 knowledge 130 skills 100 solutions MEMORY.md 1000 facts + knowledge_graph.json + lancedb 200 rows + fts5.db 1.1MB + scales to 5GB via download-models.sh 3GB + build-embeddings.sh 500MB
+- ✅ Smart initial layout - seeded knowledge graph, skills, memory and vector index on the pendrive; grows as the council learns
 - ✅ Permanent Keys Models - secrets/ GPG 700 + models/ollama/ 3GB + config.yaml knowledge/skills permanent smart in pendrive LUKS encrypted RO no wear + RW daily learning overlayfs
-- ✅ Together + Alone + No Traces + Data In Pendrive - council ask --mode together (3 agents debate+vote) + --mode alone --agent hermes/openclaw/agent-zero/crewai/microsoft-agent-framework, solo direct, dashboard Together/Alone toggle, portable env redirect TMPDIR XDG_CONFIG_HOME to USB + clean shell --norc --noprofile + trap cleanup EXIT deletes /tmp/council/* + sync, live boot host disk not mounted, verify-no-traces.sh 6 PASS 0 FAIL
+- ✅ Together + Alone + No Traces + Data In Pendrive - council ask --mode together (3 agents debate+vote) + --mode alone --agent hermes/openclaw/agent-zero/crewai/microsoft-agent-framework, solo direct, dashboard Together/Alone toggle, portable env redirect TMPDIR XDG_CONFIG_HOME to USB + clean shell --norc --noprofile + trap cleanup EXIT deletes /tmp/council/* + sync, live boot host disk not mounted, verify-no-traces.sh no-traces checks pass 0 FAIL
 - ✅ Advanced Framework More Smarter - Knowledge graph, memory consolidation nightly 2am, skill evolution, self-reflection, journal analyzer, collaboration decomposer 3-5/7 agents, browser advanced, vision, voice, local LLM manager, optional agents registry
 - ✅ Real Terminal xterm.js Fully - terminal_real.py with PTY fully interactive pty.openpty(), shell /bin/bash -i, preexec_fn os.setsid, non-blocking master_fd, select.select, asyncio.gather read_pty + write_pty, WebSocket /ws/terminal and /ws/terminal-simple fallback
 - ✅ Easy Setup + checks - setup-pendrive-easy.sh (7 steps) + .ps1 + .bat, `make check-all` runs tests, council status, storage audit, no-traces verification, optional agents list, local LLM check
@@ -250,4 +248,4 @@ council> exit  # Cleaning up - Removing agents from PC, keeping data in pendrive
 - Together: council ask "Build website" (3 or 5 or 7 agents debate+vote with typing indicators + voting progress bar animated)
 - Alone: council ask --mode alone --agent hermes "Research quantum" (solo)
 - Dashboard: council dashboard --port 8443 -> https://localhost:8443 - 8-tab dashboard with real terminal
-- No traces: exit + unplug -> verify-no-traces.sh 6 PASS 0 FAIL
+- No traces: exit + unplug -> verify-no-traces.sh no-traces checks pass 0 FAIL

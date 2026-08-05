@@ -1,16 +1,16 @@
 # CouncilKey-Os Pendrive Guide - 3 Agents Live, One Dashboard, Smart Storage
 
-## What You Asked
+## Goal
 
-> i want the 3 agents live in my pendrive and i can access them with my pendrive when i need them and make a one dashboard so i can control all 3 agents from that dashboard and normally you know they can be worked though terminal too .redesign and optimize the agents like they store the important data like user and data skills and api keys and much more data what the agents want and neccessary to run and learn .and delete the heavy things like session and much moree not much useful things when i unplug the pendrive .so first see what things really agent needed to improve day by day and much more ,first do deep research on 3 agents and see what things make sense
+Run the three agents (Hermes, OpenClaw, Agent Zero) from a USB pendrive, control them from one dashboard (or the terminal), and keep only what makes them smarter — while deleting heavy session data automatically when the pendrive is unplugged.
 
-This guide is the answer.
+This guide explains how the storage design achieves that.
 
 ---
 
-## Deep Research Result (STORAGE_AUDIT.md)
+## Storage research summary
 
-We scanned full source of Hermes, OpenClaw, Agent Zero.
+We looked at how Hermes, OpenClaw and Agent Zero each store data. Every agent has two kinds of data:
 
 **Key finding:** Each agent has TWO types of data:
 
@@ -312,7 +312,7 @@ council cleanup             # manual trigger delete heavy on unplug logic + sync
 
 ## Roadmap Done
 
-- [x] Deep audit of 3 agents storage (STORAGE_AUDIT.md 4.6KB)
+- [x] Deep audit of the 3 agents' storage (keep vs cache split)
 - [x] Optimized partition design
 - [x] Storage optimizer (council/storage/optimizer.py) audit/what-if/optimize/setup
 - [x] Cleanup on unplug (council/storage/cleanup.sh + council-cleanup.service)

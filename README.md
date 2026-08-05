@@ -1,101 +1,166 @@
 # CouncilKey-Os 🗝️
 
-**A self-contained AI council that runs from a USB stick.** Three local agent gateways (Hermes, OpenClaw, Agent Zero) debate and vote on every request, with smart storage that keeps distilled knowledge and discards raw caches on unplug.
+**Your private AI council on a USB stick.** Three AI agents — Hermes, OpenClaw and Agent Zero — debate every question, vote on the answer, and remember what they learn. Unplug the stick and your data goes with you. Nothing stays on the host machine.
 
 ```
 pip install -e .
 councilkey serve          # dashboard + API on http://0.0.0.0:8443
 ```
 
-| | |
-|---|---|
-| Python | 3.11+ |
-| Stack | FastAPI, Uvicorn, httpx, Pydantic |
-| Agents | Hermes (memory), OpenClaw (action), Agent Zero (builder) |
-| Voting | majority · weighted · LLM judge · hermes decides |
-| License | MIT |
+---
 
-## Features
+## What is it for?
 
-- **Council workflow** — every prompt is answered by all three agents, voted on, and journaled. Works *together* (debate + vote) or *alone* (single agent, faster).
-- **No traces** — all data lives under `COUNCIL_HOME` (default `/var/lib/council`) with a keep/cache split; heavy caches are flushed on unplug. Verified by `scripts/verify-no-traces.sh` (7 checks).
-- **Local-first LLMs** — optional Ollama integration: model management (`pull` / `ensure` / `delete` / `show`), chat, embeddings, and a built-in LLM judge strategy.
-- **Knowledge & memory** — LanceDB vector store (offline deterministic embeddings), JSON knowledge graph with search, nightly memory consolidation, self-reflection, evolving skills.
-- **Workspaces** — sandboxed canvas file browser (path-confined to `COUNCIL_HOME`), WebSocket terminal (PTY, event-driven), browser fetch with HTML→text extraction.
-- **Vision & voice** — desktop screenshots + local vision-model analysis (llava / qwen2.5vl), TTS (Edge free default, ElevenLabs, OpenAI) and local Whisper transcription.
-- **Advanced orchestration** — task decomposition (role-based subtasks + vote), iterative multi-round debate with convergence detection, streaming council responses over SSE, prioritized background task queue (`/api/tasks`).
-- **Intelligence** — RAG-lite memory injection into prompts, TF-IDF full-text search over journal + docs, semantic result cache, JSONL audit trail with consensus/latency analytics, encrypted secrets vault (Fernet / stdlib fallback).
-- **Safety** — terminal command guard blocks dangerous commands (`rm -rf /`, `mkfs`, `dd`, fork bombs...) before they reach the PTY; `!force`/allowlist overrides.
-- **Operations** — `councilkey` CLI (`serve`, `doctor`, `storage`, `version`), systemd unit, bootc/live-ISO/portable build scripts, backup create/restore, storage audit & optimize, optional API-key auth, rate limiting, request logging.
-- **Dashboard** — 10-tab web UI: council chat (with streaming, debate & decompose), agent status (live probe), storage tools, journal, terminal (guarded), secrets, 3D knowledge-graph view, vision/voice, background tasks, intelligence (search/cache/audit).
+CouncilKey-Os turns one AI into three that argue, check each other, and agree before answering — so you get a second opinion on everything, automatically.
 
-## Gallery
+**Use it for:**
 
-| | |
-|---|---|
-| ![Banner](images/banner.png) | ![Architecture](images/architecture.png) |
-| ![Dashboard](images/dashboard.png) | ![Agents](images/agents.png) |
-| ![Storage](images/storage.png) | ![Together vs Alone](images/together-alone.png) |
-| ![No Traces](images/no-traces.png) | ![Easy Setup](images/easy-setup.png) |
-| ![5GB Smart](images/5gb-smart.png) | ![Optional LLM](images/optional-llm.png) |
-| ![Terminal](images/terminal-real.png) | ![LanceDB](images/lancedb-real.png) |
-| ![3D Dashboard](images/3d-dashboard.png) | ![Voice Chat](images/voice-chat.png) |
-| ![Vision](images/vision-screenshot.png) | ![Browser](images/browser-camofox.png) |
-| ![Canvas](images/canvas-desktop.png) | ![Dashboard v4](images/dashboard-neat-v4.png) |
+- **Private AI work** — run agents fully local (Ollama) with your data on your own USB drive, not on a cloud server
+- **No-trace sessions** — boot anywhere (Windows/Linux), work, unplug: heavy caches are auto-deleted, only distilled knowledge is kept
+- **Important decisions** — get 3 independent answers + a vote instead of one model's opinion: research plans, code reviews, risky commands
+- **A learning companion** — the council journals every session, builds a knowledge graph, and injects relevant past decisions into future answers
+- **Offline/air-gapped machines** — everything runs on your hardware; no internet required beyond optional model downloads
+
+---
+
+## How it works
+
+```
+You ask ──► 3 agents answer ──► council votes ──► journal + memory
+              │  Hermes: memory/analysis     │  majority / weighted /
+              │  OpenClaw: action/execution  │  LLM judge / hermes decides
+              │  Agent Zero: builder/review  │
+                                         └──► final answer + reasoning
+```
+
+- **Together** mode: debate + vote (2/3 agreement needed by default)
+- **Alone** mode: one agent, direct and fast
+- **Debate** mode: multiple rounds where agents revise after seeing each other
+- **Decompose** mode: complex tasks split into analysis → plan → review subtasks
+
+---
+
+## What's inside
+
+Listed in the order the project was built:
+
+### v1.0 — Core council (first version)
+- FastAPI orchestrator with ~30 REST endpoints + WebSocket chat
+- 3 agent gateways (Hermes / OpenClaw / Agent Zero) with circuit breakers and offline mock fallback
+- 4 voting strategies: majority, weighted, LLM judge, hermes-decides
+- Web dashboard: council chat, live voting bars, storage tools, journal, terminal, secrets, 3D knowledge graph
+- Keep/cache storage split — distilled knowledge kept, raw cache auto-deleted on unplug
+- Ollama integration: model management, chat, embeddings
+- LanceDB vector store (offline embeddings), journal, backups, metrics, update checker
+- Build tooling: portable USB, live ISO, bootc images
+
+### v1.1 — Real features + hardening
+- Working **vision** (screenshots + local vision-model analysis), **voice** (Edge TTS free default + local Whisper), **canvas** (sandboxed file browser), **browser** (fetch + text extraction)
+- `councilkey` CLI: `serve`, `doctor`, `storage`, `version`
+- Security: optional API-key auth, rate limiting, CORS, security headers, request logging
+- Background scheduler (nightly consolidation + journal pruning), systemd service
+- Real no-traces audit script (7 checks) and Tailscale setup script
+
+### v1.2 — Advanced orchestration & intelligence (latest)
+- **Task decomposition** — complex prompts split into role-based subtasks, then voted on
+- **Iterative debate** — multi-round revision with automatic convergence detection
+- **Streaming responses** — Server-Sent Events as each agent answers
+- **Async task queue** — prioritized background jobs with status + cancellation
+- **Audit trail** — every request logged with per-agent latency and consensus analytics
+- **TF-IDF full-text search** — search the council's journal and documents (pure Python, offline)
+- **Semantic result cache** — repeated questions answered from cache (TTL + size capped)
+- **Encrypted secrets vault** — API keys stored encrypted (Fernet or stdlib fallback), never plaintext
+- **Memory injection (RAG-lite)** — relevant past decisions auto-injected into new prompts
+- **Terminal command guard** — `rm -rf /`, `mkfs`, `dd`, fork bombs blocked before reaching the shell
+
+---
 
 ## Quick start
 
 ```bash
-# clone & install
+# 1. clone
 git clone https://github.com/Nikhil009988/CouncilKey-Os.git
 cd CouncilKey-Os
-python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 
-# run the server (dashboard + API)
-.venv/bin/councilkey serve
+# 2. install
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev]"
 
-# open http://localhost:8443
+# 3. run
+.venv/bin/councilkey serve        # open http://localhost:8443
+
+# 4. ask
+curl -X POST http://localhost:8443/api/council/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt": "plan a 3-day trip to Goa"}'
 ```
 
-The council works out of the box: when an agent gateway is offline it degrades to a mock response so the pipeline is always testable. Point `HERMES_TOKEN` / `OPENCLAW_TOKEN` or the gateway URLs to real agents for live operation (see [docs/API.md](docs/API.md)).
+Works out of the box: if an agent gateway is offline it answers in mock mode so the pipeline is always testable. Point the gateways at real agents for live operation.
 
 ### CLI
 
 ```
 councilkey serve [--host 0.0.0.0] [--port 8443]
-councilkey doctor                     # environment health report
-councilkey storage [--dry-run]        # audit / optimize storage
+councilkey doctor               # environment health report
+councilkey storage [--dry-run]  # audit / optimize storage
 councilkey version
 ```
 
-### systemd
+### systemd (server install)
 
 ```bash
-sudo ./deploy/install.sh              # installs to /opt/councilkey + enables service
+sudo ./deploy/install.sh        # installs to /opt/councilkey + enables the service
 ```
 
-## API
+---
 
-~45 endpoints under `/api` — health, status, council ask/vote, journal & chat history, storage, backups, config, embeddings, Ollama, knowledge graph, skills, memory, vision, voice, canvas, browser, metrics, update check. Full reference: [docs/API.md](docs/API.md). Interactive docs at `/docs` when running.
+## Docs
 
-Optional auth: set `COUNCIL_API_KEY` (all routes except `/` and `/api/health` require `Authorization: Bearer <key>`); `COUNCIL_RATE_LIMIT` per-IP request limiting; `COUNCIL_CORS` for allowed origins.
+| Topic | Where |
+|---|---|
+| API reference (all ~70 endpoints) | [docs/API.md](docs/API.md) |
+| Architecture | [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) |
+| Security model | [docs/SECURITY.md](docs/SECURITY.md) |
+| Build guide (USB / ISO / bootc) | [docs/guides/BUILD.md](docs/guides/BUILD.md) |
+| Pendrive guide | [docs/guides/PENDRIVE_GUIDE.md](docs/guides/PENDRIVE_GUIDE.md) |
+| Easy setup | [docs/guides/EASY_SETUP_GUIDE.md](docs/guides/EASY_SETUP_GUIDE.md) |
+| Collaboration modes | [docs/guides/COLLABORATION_MODES.md](docs/guides/COLLABORATION_MODES.md) |
+| Change history | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
+| Roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
 
-## Documentation
+---
 
-- [Architecture](docs/architecture/ARCHITECTURE.md)
-- [API reference](docs/API.md)
-- [Security](docs/SECURITY.md)
-- [Build guide](docs/guides/BUILD.md) · [Easy setup](docs/guides/EASY_SETUP_GUIDE.md) · [Pendrive guide](docs/guides/PENDRIVE_GUIDE.md) · [Single binary](docs/guides/SINGLE_BINARY_GUIDE.md) · [Collaboration modes](docs/guides/COLLABORATION_MODES.md)
-- [Changelog](docs/CHANGELOG.md)
+## How it compares
+
+CouncilKey-Os is not another agent framework — it's a **council wrapper** around three proven agents, focused on portability and privacy.
+
+| | CouncilKey-Os | OpenClaw | Hermes Agent | Agent Zero | CrewAI |
+|---|---|---|---|---|---|
+| Core idea | 3 agents debate + vote | Multi-channel assistant | Self-improving learning loop | General autonomous agent | Role-based agent teams |
+| Multi-agent voting | **Native (built-in)** | Subagents only | Single agent | Single agent | Via workflows |
+| Runs from USB, no traces | **Yes (core feature)** | No | No | No | No |
+| Offline / local LLM | **Yes (Ollama)** | Yes | Yes | Yes | Yes |
+| Setup time | Minutes | Minutes | Minutes | Minutes | Hours |
+
+Everyone is free to use these great open-source projects — CouncilKey-Os sits on top of them and adds the council layer, the voting, and the pendrive-first storage.
+
+---
+
+## Project timeline
+
+| Version | Date | What was added |
+|---|---|---|
+| v1.0 | 2026-07 | Core council: 3 agents, voting, dashboard, storage split |
+| v1.1 | 2026-08-05 | Vision, voice, canvas, browser, CLI, security, scheduler |
+| v1.2 | 2026-08-05 | Decomposition, debate, streaming, task queue, audit, search, vault, memory injection, terminal guard |
+
+---
 
 ## Development
 
 ```bash
-make test        # pytest
+make test        # pytest (50 tests)
 make lint        # ruff
-.venv/bin/python -m ruff check council tests scripts
 ```
 
-## License
-
-[MIT](LICENSE)
+Python 3.11+ · MIT License

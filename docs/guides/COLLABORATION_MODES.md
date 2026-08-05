@@ -27,7 +27,7 @@ User: "Build me a website"
   ↓ Final answer: synthesis of 3 perspectives + best agent + council decision
 ```
 
-**Why together better than single (from STORAGE_AUDIT.md + ARCHITECTURE.md):**
+**Why together is better than single:**
 - Safety: No single agent can act alone, 2/3 vote required prevents email deletion incident (real incident from Tank-OS docs)
 - Memory: Hermes FTS5 historical context
 - Action: OpenClaw phone bridge
@@ -73,7 +73,7 @@ hermes                  # Hermes TUI direct - Full TUI multiline editing, slash-
 openclaw                # OpenClaw CLI - openclaw onboard, openclaw gateway start 18789, openclaw dashboard 18788
 agent-zero              # Agent Zero WebUI 50001 + A0 CLI host-machine bridge
 
-# Even more direct:
+# Direct (single agent):
 council hermes "prompt"      # Solo Hermes
 council openclaw "prompt"    # Solo OpenClaw
 council agent-zero "prompt"  # Solo Agent Zero
