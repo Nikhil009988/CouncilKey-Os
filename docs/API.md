@@ -392,3 +392,42 @@ Installed agents show up in `GET /api/status` and `/api/agents/status` as
 > + git on first run. Each agent's own README documents the canonical start
 > command; `councilkey agents start` tries common launchers and falls back to
 > printing the right hint.
+
+---
+
+# v1.4.0 - Local LLM agents (agents that actually work)
+
+## The 3 agents now have a real, working brain by default
+
+Each council role is answered by a local Ollama model with a distinct system
+prompt (no API keys, offline):
+
+| Role | Agent | Default model |
+|---|---|---|
+| memory & analysis | hermes | qwen2.5:3b |
+| action & execution | openclaw | qwen2.5:3b |
+| builder & review | agent-zero | deepseek-coder:1.3b (falls back to qwen2.5:3b) |
+
+Fallback chain per agent (in `/api/status` as `mode`):
+1. **gateway** - an external agent server answers on its URL
+   (`COUNCIL_HERMES_URL` / `COUNCIL_OPENCLAW_URL` / `COUNCIL_AGENTZERO_URL`)
+2. **local-llm** - Ollama is running (any model; preferred model picked first)
+3. **mock** - nothing available; explicitly labeled, never silent
+
+## CLI
+```
+councilkey llm status         # ollama running? models? recommended pull
+councilkey llm install        # install Ollama (winget on Windows)
+councilkey llm pull [model]   # download a model (default qwen2.5:3b, ~1.9GB)
+councilkey agents verify      # real smoke test: asks each agent, shows backend
+```
+
+## Windows
+- `scripts/setup.ps1` - full setup (venv, agents, Ollama via winget, model pull, tests)
+- `scripts/start.ps1` / `scripts/start.bat` - start the dashboard (auto-starts Ollama)
+
+## Demo mode
+`scripts/llm-demo-server.py` implements the Ollama HTTP protocol with
+deterministic role-aware replies for sandboxes where model weights cannot be
+downloaded. It is a test fixture, clearly labeled in the dashboard; replace it
+with real Ollama (`councilkey llm install && councilkey llm pull`).

@@ -61,3 +61,36 @@
 
 ### Behavior change
 - Setup now downloads the agents for you — before, only the build scripts for USB images fetched them and users had to install them later (or run in mock mode)
+
+## v1.4.0 (2026-08-05) - Agents that actually work
+
+### The problem fixed
+The dashboard showed 3 agents but none of them answered: the external agent
+repos (Hermes/OpenClaw/Agent Zero) were cloned but their gateways never ran
+(they are CLIs, not HTTP servers on fixed ports - and OpenClaw's cloned source
+tree was unbuilt, which is exactly why `openclaw` failed in PowerShell).
+
+### What changed
+- **Local-LLM role agents (new default brain)**: the 3 council roles run on a
+  local Ollama model with distinct system prompts (Hermes=analysis,
+  OpenClaw=execution, Agent Zero=review). Real local inference, offline, no
+  API keys. Fallback chain per agent: external gateway -> local LLM -> explicit
+  mock (never silently wrong).
+- `councilkey llm status|install|pull` - install Ollama (incl. `winget` on
+  Windows) and pull qwen2.5:3b
+- `councilkey agents verify` - real smoke test per agent showing the active backend
+- **OpenClaw**: `agents install openclaw` now also installs the prebuilt
+  `openclaw@latest` CLI globally (fixes "missing dist/entry.mjs")
+- **Windows**: `scripts/setup.ps1` + `scripts/start.ps1` (native PowerShell,
+  winget for Ollama), fixed `start.bat` with clear errors
+- `scripts/llm-demo-server.py` - Ollama-compatible demo server for sandbox
+  environments (clearly labeled; not real inference)
+- Dashboard Agents tab shows the real per-agent backend + LLM badge in header
+- `COUNCIL_HERMES_URL` / `COUNCIL_OPENCLAW_URL` / `COUNCIL_AGENTZERO_URL` env
+  overrides for external gateways
+- 9 new tests (66 total passing)
+
+### Verified end-to-end in a live server
+`councilkey agents verify` -> all 3 agents answer as local-llm with distinct
+role voices; `/api/status` reports mode per agent; council ask returns 3 real
+answers + vote + journal.

@@ -82,6 +82,7 @@
         <span id="uptime-badge" class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">Uptime: --</span>
         <span id="mode-badge" class="px-3 py-1 rounded-full bg-council-600/10 border border-council-600/30 text-council-300">Mode: debate</span>
         <span id="storage-badge" class="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300">Storage: --</span>
+        <span id="llm-badge" class="px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300">LLM: --</span>
         <button id="key-btn" title="Set API key" class="px-3 py-1 rounded-full bg-council-700/40 border border-council-600/40 text-council-300">🔑</button>
       </div>
     </div>
@@ -151,27 +152,23 @@
       </div>
     </div>
 
-    <!-- Agents Tab -->
+    <!-- Agents Tab (live status) -->
     <div id="tab-agents" class="tab-panel hidden glass rounded-2xl p-6 space-y-4">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="glass rounded-xl p-4 space-y-2">
-          <div class="flex items-center justify-between"><div class="font-semibold">🧙 Hermes</div><span class="text-xs px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">online</span></div>
-          <div class="text-xs text-slate-400">Role: memory • Port: 18790</div>
-          <div class="text-xs text-slate-400">Keep: 45MB • Skills: 23 • Last skill: council-abc</div>
-          <div class="flex gap-2"><button class="px-3 py-1 rounded-lg bg-council-700 hover:bg-council-600 text-xs">Shell</button><button class="px-3 py-1 rounded-lg bg-council-700 hover:bg-council-600 text-xs">Logs</button><button class="px-3 py-1 rounded-lg bg-council-700 hover:bg-council-600 text-xs">Restart</button></div>
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="text-sm text-slate-400">Live agent status - <span id="agents-refreshed">-</span></div>
+        <div class="flex gap-2">
+          <button id="agents-refresh" class="px-3 py-1 rounded-lg bg-council-700 hover:bg-council-600 text-xs">Refresh</button>
         </div>
-        <div class="glass rounded-xl p-4 space-y-2">
-          <div class="flex items-center justify-between"><div class="font-semibold">🦞 OpenClaw</div><span class="text-xs px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">online</span></div>
-          <div class="text-xs text-slate-400">Role: action • Port: 18789</div>
-          <div class="text-xs text-slate-400">Keep: 30MB • Skills: 15 • Gateway: 18789</div>
-          <div class="flex gap-2"><button class="px-3 py-1 rounded-lg bg-council-700 hover:bg-council-600 text-xs">Shell</button><button class="px-3 py-1 rounded-lg bg-council-700 hover:bg-council-600 text-xs">Control UI</button></div>
-        </div>
-        <div class="glass rounded-xl p-4 space-y-2">
-          <div class="flex items-center justify-between"><div class="font-semibold">🔧 Agent Zero</div><span class="text-xs px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">online</span></div>
-          <div class="text-xs text-slate-400">Role: builder • Port: 50001</div>
-          <div class="text-xs text-slate-400">Knowledge: 5MB • Solutions: 12 • Workdir: 200MB tmpfs</div>
-          <div class="flex gap-2"><button class="px-3 py-1 rounded-lg bg-council-700 hover:bg-council-600 text-xs">Open UI</button></div>
-        </div>
+      </div>
+      <div id="agents-cards" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="text-xs text-slate-500">Loading agent status...</div>
+      </div>
+      <div class="text-xs text-slate-500 space-y-1" id="agents-help">
+        <div>How to make agents really answer:</div>
+        <div>1. <span class="text-slate-300">councilkey llm status</span> - local LLM (Ollama) running + model installed</div>
+        <div>2. <span class="text-slate-300">councilkey llm pull</span> - download qwen2.5:3b (~1.9GB, one-time)</div>
+        <div>3. or run the external agents: <span class="text-slate-300">councilkey agents start</span></div>
+        <div>Mode legend: 🟢 gateway = external agent server · 🟡 local-llm = Ollama model answering · ⚪ mock = nothing available yet</div>
       </div>
     </div>
 
@@ -575,14 +572,54 @@
       container.addEventListener('resize', () => { camera.aspect = container.clientWidth / container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight); });
     }
 
+    const MODE_META = {
+      gateway:   { label: 'gateway',   cls: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300', dot: '🟢' },
+      'local-llm': { label: 'local-llm', cls: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300', dot: '🟡' },
+      mock:      { label: 'mock',      cls: 'bg-slate-500/10 border-slate-500/30 text-slate-400', dot: '⚪' },
+    };
+
+    function agentCard(name, info) {
+      const meta = MODE_META[info.mode] || MODE_META.mock;
+      const status = (info.status || '').slice(0, 60);
+      const latency = info.latency != null ? info.latency.toFixed(2) + 's' : '-';
+      return `<div class="glass rounded-xl p-4 space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="font-semibold">${name === 'hermes' ? '🧙 Hermes' : name === 'openclaw' ? '🦞 OpenClaw' : '🔧 Agent Zero'}</div>
+          <span class="text-xs px-2 py-1 rounded border ${meta.cls}">${meta.dot} ${meta.label}</span>
+        </div>
+        <div class="text-xs text-slate-400">Role: ${info.role || '-'} · latency ${latency}</div>
+        <div class="text-xs text-slate-400 break-words">${status}</div>
+        <div class="text-[10px] text-slate-500 break-words">${info.detail || ''}</div>
+      </div>`;
+    }
+
     async function refreshStatus() {
       try {
         const r = await apiFetch('/api/status'); const data = await r.json();
         const agents = data.agents || {};
         document.getElementById('uptime-badge').textContent = 'Uptime: live';
         document.getElementById('mode-badge').textContent = 'Mode: ' + (data.council && data.council.mode ? data.council.mode : 'debate');
-      } catch (e) { document.getElementById('uptime-badge').textContent = 'Uptime: offline'; }
+        const ollama = data.ollama || {};
+        const llmBadge = document.getElementById('llm-badge');
+        if (ollama.running && (ollama.models || []).length) {
+          llmBadge.textContent = 'LLM: ✓ ' + ollama.models[0];
+          llmBadge.className = 'px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300';
+        } else if (ollama.running) {
+          llmBadge.textContent = 'LLM: running, no model';
+          llmBadge.className = 'px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-300';
+        } else {
+          llmBadge.textContent = 'LLM: none';
+          llmBadge.className = 'px-3 py-1 rounded-full bg-slate-500/10 border border-slate-500/30 text-slate-400';
+        }
+        document.getElementById('agents-cards').innerHTML =
+          Object.entries(agents).map(([n, i]) => agentCard(n, i)).join('');
+        document.getElementById('agents-refreshed').textContent = new Date().toLocaleTimeString();
+      } catch (e) {
+        document.getElementById('uptime-badge').textContent = 'Uptime: offline';
+        document.getElementById('agents-cards').innerHTML = '<div class="text-xs text-red-300">Failed to load agent status</div>';
+      }
     }
+    document.getElementById('agents-refresh').addEventListener('click', refreshStatus);
     refreshStatus(); setInterval(refreshStatus, 5000);
 
     // ---- Tasks ----

@@ -79,6 +79,14 @@ Listed in the order the project was built:
 - `councilkey agents` CLI — `status` (installed? running? which port), `install` (download + deps), `start` (best-effort launcher with hints)
 - Agents can also be installed from the API as background tasks: `POST /api/tasks {"kind": "install_agent", "name": "hermes"}`
 
+### v1.4 — Agents that actually work (latest)
+- **Local-LLM agents**: the 3 council roles (Hermes analysis / OpenClaw execution / Agent Zero review) run on a local Ollama model with distinct system prompts — real inference, offline, no API keys. Fallback chain per agent: external gateway → local LLM → explicit mock (never silent).
+- **`councilkey llm` CLI**: `status` / `install` (Ollama, incl. `winget` on Windows) / `pull` (default qwen2.5:3b)
+- **`councilkey agents verify`** — smoke-tests each agent with a real ask and shows the active backend
+- **OpenClaw fix**: installs the prebuilt `openclaw@latest` CLI globally (the cloned source tree was unbuilt — this is what broke `openclaw` in PowerShell)
+- **Windows native**: `scripts\setup.ps1`, `scripts\start.ps1`, fixed `start.bat`
+- **Dashboard**: Agents tab shows the real per-agent backend (🟢 gateway / 🟡 local-llm / ⚪ mock) + LLM badge in the header
+
 ---
 
 ## Quick start
@@ -107,7 +115,14 @@ Or as a one-liner (clones to `~/councilkey-os`, runs the full setup):
 curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
 ```
 
-**The 3 agents are downloaded during setup — no manual downloads needed.** Add `--skip-agents` to `setup.sh` if you only want the orchestrator (it runs in mock mode until agents are installed). Manage them anytime with `councilkey agents status | install | start`.
+**The setup downloads the 3 agents AND installs a local LLM (Ollama + qwen2.5:3b) — so the agents genuinely answer, no API keys, no cloud.** If you only want the orchestrator: `./scripts/setup.sh --skip-agents --no-llm`. Manage things anytime:
+
+```
+councilkey agents status | install | start | verify
+councilkey llm status | install | pull
+```
+
+Windows: run `scripts\setup.ps1` in PowerShell (installs Ollama via winget automatically), then `scripts\start.bat` or `scripts\start.ps1` to open the dashboard.
 
 Works out of the box: if an agent gateway is offline it answers in mock mode so the pipeline is always testable. Point the gateways at real agents for live operation.
 
@@ -168,6 +183,7 @@ Everyone is free to use these great open-source projects — CouncilKey-Os sits 
 | v1.1 | 2026-08-05 | Vision, voice, canvas, browser, CLI, security, scheduler |
 | v1.2 | 2026-08-05 | Decomposition, debate, streaming, task queue, audit, search, vault, memory injection, terminal guard |
 | v1.3 | 2026-08-05 | One-command setup that downloads the 3 agents automatically + `councilkey agents` CLI |
+| v1.4 | 2026-08-05 | Agents really work: local-LLM role agents (Ollama), `llm` + `agents verify` CLI, OpenClaw prebuilt fix, Windows scripts, honest dashboard statuses |
 
 ---
 

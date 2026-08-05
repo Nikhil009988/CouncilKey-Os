@@ -29,21 +29,21 @@ AGENTS: dict[str, dict[str, Any]] = {
         "port": 18790,
         "role": "memory",
         "runtime": "python",
-        "start_hint": "cd tools/linux/hermes && uv run hermes   (or: .venv/bin/hermes)",
+        "start_hint": "cd tools/linux/hermes && uv run hermes   (native Windows supported; official docs: hermes-agent.nousresearch.com)",
     },
     "openclaw": {
         "repo": "https://github.com/openclaw/openclaw.git",
         "port": 18789,
         "role": "action",
         "runtime": "node",
-        "start_hint": "cd tools/linux/openclaw && node openclaw.mjs   (or: npm install -g openclaw && openclaw)",
+        "start_hint": "openclaw   (prebuilt CLI installed globally - works in PowerShell/cmd)",
     },
     "agent-zero": {
         "repo": "https://github.com/agent0ai/agent-zero.git",
         "port": 50001,
         "role": "builder",
         "runtime": "python",
-        "start_hint": "cd tools/linux/agent-zero && .venv/bin/python agent.py",
+        "start_hint": "cd tools/linux/agent-zero && python agent.py   (or use their API server)",
     },
 }
 
@@ -165,6 +165,11 @@ def install(name: str, update: bool = False) -> dict[str, Any]:
         steps.append(_install_python_deps(agent_dir))
     else:
         steps.append(_install_node_deps(agent_dir))
+        # OpenClaw source trees are NOT built - the prebuilt npm package is
+        # the reliable way to get a working `openclaw` command (this is what
+        # fixes 'missing dist/entry.mjs' errors in PowerShell).
+        if name == "openclaw" and shutil.which("npm"):
+            steps.append(_install_openclaw_cli())
 
     ok_all = all(s.get("ok") for s in steps[1:]) if len(steps) > 1 else True
     if ok_all:
@@ -210,6 +215,16 @@ def _install_node_deps(agent_dir: Path) -> dict[str, Any]:
         return {"step": "deps", "ok": False, "detail": "npm not installed - install Node.js first"}
     ok, tail = _run(["npm", "install", "--no-audit", "--no-fund"], agent_dir, timeout=1800)
     return {"step": "deps", "ok": ok, "detail": (tail or "npm install done")[:300]}
+
+
+def _install_openclaw_cli() -> dict[str, Any]:
+    """Install the prebuilt OpenClaw CLI globally (npm) - the supported way."""
+    ok, tail = _run(["npm", "install", "-g", "openclaw@latest"], Path.home(), timeout=1800)
+    detail = tail or "openclaw CLI installed"
+    if ok:
+        version = _run(["openclaw", "--version"], Path.home(), timeout=30)
+        detail = f"openclaw CLI ready: {version[1][:60]}"
+    return {"step": "cli", "ok": ok, "detail": detail[:300]}
 
 
 def start(name: str, wait: int = 30) -> dict[str, Any]:

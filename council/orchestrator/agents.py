@@ -162,9 +162,66 @@ def _read_gateway_token(agent: str) -> str | None:
     return None
 
 
+# External gateway URLs can be overridden per agent via env vars
+# (COUNCIL_HERMES_URL etc.) - defaults are the legacy gateway ports.
+GATEWAY_URLS = {
+    "hermes": os.environ.get("COUNCIL_HERMES_URL", "http://127.0.0.1:18790"),
+    "openclaw": os.environ.get("COUNCIL_OPENCLAW_URL", "http://127.0.0.1:18789"),
+    "agent-zero": os.environ.get("COUNCIL_AGENTZERO_URL", "http://127.0.0.1:50001"),
+}
+
+
+def gateway_reachable(name: str, timeout: float = 0.8) -> bool:
+    """Fast probe: is an external gateway actually listening for this agent?"""
+    try:
+        r = httpx.get(GATEWAY_URLS[name], timeout=timeout)
+        return r.status_code < 500
+    except Exception:
+        return False
+
+
+def client_modes(timeout: float = 0.8) -> dict[str, dict[str, str]]:
+    """Per-agent backend resolution: gateway | local-llm | mock.
+
+    Gateway wins when an external agent server actually answers on its URL.
+    Otherwise a local Ollama model takes the role. If neither exists, the
+    agent is explicitly marked mock (degraded mode).
+    """
+    from council.llm.agents import ollama_available
+
+    llm_up = ollama_available()
+    modes: dict[str, dict[str, str]] = {}
+    for name in ("hermes", "openclaw", "agent-zero"):
+        if gateway_reachable(name, timeout):
+            modes[name] = {"mode": "gateway", "detail": GATEWAY_URLS[name]}
+        elif llm_up:
+            modes[name] = {"mode": "local-llm", "detail": "ollama role agent"}
+        else:
+            modes[name] = {"mode": "mock", "detail": "no gateway, no local LLM"}
+    return modes
+
+
 def build_default_clients() -> dict[str, AgentClient]:
-    return {
-        "hermes": HermesClient(),
-        "openclaw": OpenClawClient(),
-        "agent-zero": AgentZeroClient(),
-    }
+    """Build the three agent clients.
+
+    Resolution order per agent: external gateway (if it answers) -> local
+    Ollama role agent (if Ollama is up) -> explicit mock client.
+    """
+    from council.llm.agents import MockAgentClient, OllamaAgentClient
+
+    modes = client_modes()
+    clients: dict[str, AgentClient] = {}
+    for name in ("hermes", "openclaw", "agent-zero"):
+        mode = modes[name]["mode"]
+        if mode == "gateway":
+            if name == "hermes":
+                clients[name] = HermesClient(base_url=GATEWAY_URLS[name])
+            elif name == "openclaw":
+                clients[name] = OpenClawClient(base_url=GATEWAY_URLS[name])
+            else:
+                clients[name] = AgentZeroClient(base_url=GATEWAY_URLS[name])
+        elif mode == "local-llm":
+            clients[name] = OllamaAgentClient(name)
+        else:
+            clients[name] = MockAgentClient(name)
+    return clients

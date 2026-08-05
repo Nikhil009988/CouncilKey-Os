@@ -120,6 +120,67 @@ def cmd_serve(host: str, port: int) -> int:
     return 0
 
 
+def cmd_llm(action: str, model: str | None) -> int:
+    """Manage the local LLM backend (Ollama): status / install / pull."""
+    from council.llm.agents import DEFAULT_MODEL, installed_models, ollama_available
+    from council.llm.ollama import pull as ollama_pull
+
+    if action == "status":
+        up = ollama_available()
+        print(f"ollama:      {'🟢 running' if up else '🔴 not running'}")
+        print(f"base url:    {os.environ.get('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')}")
+        models = installed_models()
+        if models:
+            print(f"models:      {', '.join(models)}")
+        else:
+            print("models:      none installed")
+        print(f"recommended: {DEFAULT_MODEL} (pull with: councilkey llm pull)")
+        if not up:
+            print("\nhint: install ollama first -> councilkey llm install")
+        return 0 if up else 1
+
+    if action == "install":
+        print("Installing Ollama (local LLM server)...")
+        if sys.platform == "win32":
+            print("  Windows: run this in PowerShell (admin):")
+            print("    winget install --id Ollama.Ollama -e")
+            print("  then start it: ollama serve  (or the Ollama app)")
+        else:
+            print("  downloading the official installer...")
+            import subprocess as sp
+
+            r = sp.run(
+                ["curl", "-fsSL", "https://ollama.com/install.sh"],
+                capture_output=True,
+                text=True,
+            )
+            if r.returncode != 0:
+                print("  ❌ could not reach ollama.com from this machine.")
+                print("     install manually from https://ollama.com/download")
+                return 1
+            r2 = sp.run(["sh"], input=r.stdout, capture_output=True, text=True)
+            print(r2.stdout[-400:] or r2.stderr[-400:])
+            if r2.returncode != 0:
+                print("  ❌ ollama install failed - install manually from https://ollama.com/download")
+                return 1
+        print("\nnext:  councilkey llm pull   (downloads a model, ~2GB)")
+        return 0
+
+    if action == "pull":
+        target = model or DEFAULT_MODEL
+        print(f"Pulling model {target!r} (can take a few minutes)...")
+        if not ollama_available():
+            print("  ❌ ollama is not running - install & start it first (councilkey llm install)")
+            return 1
+        result = ollama_pull(target)
+        if result.get("ok"):
+            print(f"  ✅ {target} ready")
+            return 0
+        print(f"  ❌ pull failed: {result.get('error', 'unknown error')}")
+        return 1
+    return 2
+
+
 def cmd_agents(action: str, names: list[str]) -> int:
     """Manage the 3 agents: status / install / start."""
     from council.agents.installer import AGENTS, install, start, status
@@ -181,6 +242,31 @@ def cmd_agents(action: str, names: list[str]) -> int:
                 print(f"     hint: {result.get('hint', '')}")
         return 1 if failed else 0
 
+    if action == "verify":
+        """Real smoke test: ask every agent and show what backend answered."""
+        import asyncio
+
+        from council.orchestrator.agents import build_default_clients, client_modes
+
+        print("== verifying the 3 agents (real ask) ==")
+        modes = client_modes()
+        clients = build_default_clients()
+
+        async def _check(name: str):
+            try:
+                r = await clients[name].ask("Reply with: OK", timeout=30.0)
+                head = " ".join(r.response.split())[:60]
+                print(f"  {name:<11} mode={modes[name]['mode']:<10} status={r.status:<40} reply={head!r}")
+            except Exception as exc:
+                print(f"  {name:<11} ERROR: {exc}")
+
+        async def _run_all() -> None:
+            await asyncio.gather(*[_check(n) for n in selected])
+
+        asyncio.run(_run_all())
+        print("\nlegend: gateway = external agent server | local-llm = ollama model | mock = nothing available")
+        return 0
+
     return 2
 
 
@@ -200,9 +286,13 @@ def main(argv: list[str] | None = None) -> None:
 
     sub.add_parser("version", help="print version")
 
-    p_agents = sub.add_parser("agents", help="manage the 3 agents (status/install/start)")
-    p_agents.add_argument("action", nargs="?", default="status", choices=["status", "install", "start"])
+    p_agents = sub.add_parser("agents", help="manage the 3 agents (status/install/start/verify)")
+    p_agents.add_argument("action", nargs="?", default="status", choices=["status", "install", "start", "verify"])
     p_agents.add_argument("names", nargs="*", help="agent names (default: all)")
+
+    p_llm = sub.add_parser("llm", help="manage the local LLM backend (status/install/pull)")
+    p_llm.add_argument("action", nargs="?", default="status", choices=["status", "install", "pull"])
+    p_llm.add_argument("model", nargs="?", help="model to pull (default: qwen2.5:3b)")
 
     args = parser.parse_args(argv)
 
@@ -218,6 +308,8 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(cmd_storage(args.dry_run))
     elif args.command == "agents":
         sys.exit(cmd_agents(args.action, args.names))
+    elif args.command == "llm":
+        sys.exit(cmd_llm(args.action, args.model))
     elif args.command == "version":
         print(cmd_version())
     else:

@@ -364,7 +364,10 @@ def _cache_enabled() -> dict:
 
 
 async def _probe_agents(timeout: float = 2.0) -> dict[str, Any]:
+    from council.orchestrator.agents import client_modes
+
     agents = build_default_clients()
+    modes = client_modes(timeout=1.0)
     results: dict[str, Any] = {}
 
     async def _one(name: str, client: Any) -> None:
@@ -374,10 +377,16 @@ async def _probe_agents(timeout: float = 2.0) -> dict[str, Any]:
                 "status": r.status,
                 "latency": round(r.latency, 2),
                 "role": r.role,
-                "port": AGENT_PORTS.get(name),
+                "mode": modes.get(name, {}).get("mode", "unknown"),
+                "detail": modes.get(name, {}).get("detail", ""),
             }
         except Exception as exc:  # pragma: no cover
-            results[name] = {"status": f"error: {exc}", "role": "", "port": AGENT_PORTS.get(name)}
+            results[name] = {
+                "status": f"error: {exc}",
+                "role": "",
+                "mode": modes.get(name, {}).get("mode", "unknown"),
+                "detail": modes.get(name, {}).get("detail", ""),
+            }
 
     await asyncio.gather(*[_one(n, c) for n, c in agents.items()])
     return results
@@ -511,7 +520,10 @@ async def status() -> JSONResponse:
             "version": __version__,
             "agents": agents,
             "council": {"mode": "debate", "consensus": {"strategy": "majority"}},
-            "ollama": {"running": bool(ollama.get("running"))},
+            "ollama": {
+                "running": bool(ollama.get("running")),
+                "models": ollama.get("models", []) if ollama.get("running") else [],
+            },
             "queue": _queue.stats(),
             "cache": dict(_cache_stats),
             "journal": journal,
