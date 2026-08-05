@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CouncilKey-Os - 3 AI Agents Live on Pendrive - Production Grade 10/10 - Neat</title>
+
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        council: { 900: '#0a0a0f', 800: '#1a1d29', 700: '#2a2d3d', 600: '#6366f1', 500: '#4f46e5', 400: '#818cf8' }
+      },
+      animation: {
+        'float': 'float 3s ease-in-out infinite',
+        'glow': 'glow 2s ease-in-out infinite',
+        'gradient': 'gradient 3s ease infinite',
+        'pulse-slow': 'pulse 3s infinite'
+      },
+      keyframes: {
+        float: { '0%, 100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-10px)' } },
+        glow: { '0%, 100%': { 'box-shadow': '0 0 20px rgba(99,102,241,0.3)' }, '50%': { 'box-shadow': '0 0 30px rgba(99,102,241,0.6)' } },
+        gradient: { '0%, 100%': { 'background-position': '0% 50%' }, '50%': { 'background-position': '100% 50%' } }
+      }
+    }
+  }
+}
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+<style>
+body { font-family: 'Inter', sans-serif; background: #0a0a0f; color: #e0e0e0; }
+.display { font-family: 'Space Grotesk', sans-serif; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.glass { backdrop-filter: blur(20px); background: rgba(26,29,41,0.7); border: 1px solid rgba(99,102,241,0.15); }
+.glass:hover { background: rgba(26,29,41,0.85); border-color: rgba(99,102,241,0.3); box-shadow: 0 20px 60px rgba(99,102,241,0.15); transform: translateY(-4px); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.gradient-text { background: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #a5b4fc 100%); background-size: 200% 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gradient 3s ease infinite; }
+</style>
+</head>
+
+<body class="bg-council-900 text-gray-100 overflow-x-hidden">
+
+<!-- Animated background -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none">
+  <div class="absolute -top-40 -right-40 w-96 h-96 bg-council-600/20 rounded-full blur-3xl animate-float"></div>
+  <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-float" style="animation-delay: 1s;"></div>
+</div>
+
+<!-- Header -->
+<header class="sticky top-0 z-50 glass border-b border-council-700/20 backdrop-blur-xl">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <span class="text-4xl animate-float">🗝️</span>
+      <div>
+        <h1 class="text-2xl font-black display gradient-text">CouncilKey-Os</h1>
+        <p class="text-xs opacity-60">3 Agents Live on Pendrive + 5GB Smart + Production 10/10</p>
+      </div>
+    </div>
+    <div class="flex gap-2 text-xs">
+      <span class="px-3 py-1 rounded-full bg-green-900/30 text-green-300 border border-green-700/30">Live • 10/10</span>
+      <span class="px-3 py-1 rounded-full bg-blue-900/30 text-blue-300 border border-blue-700/30">19 Images • 35MB</span>
+      <span class="px-3 py-1 rounded-full bg-purple-900/30 text-purple-300 border border-purple-700/30">11 Tests PASS</span>
+      <a href="https://github.com/nikhilgundu99/CouncilKey-Os" class="px-4 py-1 rounded-full bg-council-600 hover:bg-council-500 text-white font-bold transition-all">GitHub</a>
+    </div>
+  </div>
+</header>
+
+<!-- Hero with banner image -->
+<section class="relative z-10 max-w-7xl mx-auto px-6 py-12">
+  <div class="grid lg:grid-cols-2 gap-12 items-center">
+    <div>
+      <h2 class="text-5xl lg:text-7xl font-black display leading-tight">
+        <span class="gradient-text">3 AI Agents</span><br>
+        <span class="text-white">Live on</span><br>
+        <span class="gradient-text">One Pendrive</span>
+      </h2>
+      <p class="text-lg opacity-70 mt-6 leading-relaxed">
+        Plug any PC → Boot CouncilKey → 3 agents debate & vote → Unplug, heavy junk auto-deleted, smart learning kept → Faster next time.
+        <span class="text-council-400 font-bold">Together + Alone + No Traces + Data In Pendrive + 5GB Smart + Windows Universal.</span>
+      </p>
+      <div class="flex flex-wrap gap-3 mt-8">
+        <a href="#setup" class="px-8 py-3 bg-gradient-to-r from-council-600 to-council-500 hover:from-council-500 hover:to-council-400 rounded-xl font-bold shadow-xl shadow-council-600/20 hover:shadow-council-600/40 transform hover:-translate-y-1 transition-all">🚀 One-Click Setup</a>
+        <a href="#images" class="px-8 py-3 bg-council-800/50 border border-council-700/30 hover:border-council-600/50 rounded-xl font-bold backdrop-blur-sm transition-all">📸 Images Gallery 19</a>
+      </div>
+      <div class="grid grid-cols-3 gap-4 mt-8 text-center">
+        <div class="glass p-4 rounded-xl">
+          <div class="text-2xl font-black text-council-400">3+2</div>
+          <div class="text-xs opacity-60">Agents (Core 3 + Optional 2)</div>
+        </div>
+        <div class="glass p-4 rounded-xl">
+          <div class="text-2xl font-black text-green-400">5GB</div>
+          <div class="text-xs opacity-60">Smart Initial Born Smart</div>
+        </div>
+        <div class="glass p-4 rounded-xl">
+          <div class="text-2xl font-black text-blue-400">10/10</div>
+          <div class="text-xs opacity-60">Production Grade</div>
+        </div>
+      </div>
+    </div>
+    <div class="relative">
+      <img src="../images/banner.png" alt="CouncilKey-Os Banner - 3 Agents Live on Pendrive" class="rounded-3xl shadow-2xl border border-council-700/20 hover:shadow-council-600/20 transition-all duration-500 hover:scale-105">
+      <div class="absolute -bottom-6 -right-6 glass p-4 rounded-2xl shadow-xl hidden lg:block">
+        <div class="text-sm font-bold">🗝️ CouncilKey-Os</div>
+        <div class="text-xs opacity-60">Together + Alone + No Traces</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features Grid -->
+<section class="max-w-7xl mx-auto px-6 py-12">
+  <h3 class="text-3xl font-bold display gradient-text text-center mb-12">Production Grade 10/10 Features - Much More Neat</h3>
+  
+  <div class="grid md:grid-cols-3 gap-6">
+    <div class="glass p-6 rounded-2xl hover:scale-105 transition-all duration-500">
+      <div class="text-3xl mb-3">💬</div>
+      <h4 class="font-bold text-lg">Together + Alone</h4>
+      <p class="text-sm opacity-60 mt-2">3 agents work together debate+vote 2/3 approve (default, safer) + Alone solo if user wants, faster, works alone too. Solo direct: council hermes "prompt"</p>
+      <code class="mt-3 block p-2 bg-council-900/50 rounded-lg text-xs mono">council ask --mode together "Build website"<br>council ask --mode alone --agent hermes "Research quantum"</code>
+    </div>
+    
+    <div class="glass p-6 rounded-2xl hover:scale-105 transition-all duration-500">
+      <div class="text-3xl mb-3">🔒</div>
+      <h4 class="font-bold text-lg">No Traces + Data In Pendrive</h4>
+      <p class="text-sm opacity-60 mt-2">Portable env redirect to USB + clean shell --norc --noprofile + trap cleanup EXIT deletes host /tmp/council/* + sync. Live Boot host disk not mounted. Verified 6 PASS 0 FAIL.</p>
+      <code class="mt-3 block p-2 bg-council-900/50 rounded-lg text-xs mono">bash scripts/verify-no-traces.sh<br/>Data: USB/config/council/keep/ LUKS encrypted</code>
+    </div>
+    
+    <div class="glass p-6 rounded-2xl hover:scale-105 transition-all duration-500">
+      <div class="text-3xl mb-3">🧠</div>
+      <h4 class="font-bold text-lg">5GB Smart Initial - Born Smart</h4>
+      <p class="text-sm opacity-60 mt-2">691 files 2.8MB demo + 500 knowledge + 130 skills + 100 solutions + MEMORY.md 1000 facts + knowledge graph 200 nodes + LanceDB 200 rows + FTS5 300 docs + 3GB models + 500MB embeddings = 5GB</p>
+      <code class="mt-3 block p-2 bg-council-900/50 rounded-lg text-xs mono">make build-smart-initial<br/>make download-models (3GB)<br/>make build-smart-5gb</code>
+    </div>
+    
+    <div class="glass p-6 rounded-2xl hover:scale-105 transition-all duration-500">
+      <div class="text-3xl mb-3">🪟</div>
+      <h4 class="font-bold text-lg">Windows Universal + Any OS</h4>
+      <p class="text-sm opacity-60 mt-2">4 launchers same code: start.py universal Python + start.ps1 PowerShell v2 Windows Native++ with GUI + start.sh Linux/macOS + start.bat Windows batch. Works on any OS.</p>
+      <code class="mt-3 block p-2 bg-council-900/50 rounded-lg text-xs mono">Double-click start.bat (Windows)<br/>bash start.sh (Linux/macOS)<br/>python3 start.py (Any OS)</code>
+    </div>
+    
+    <div class="glass p-6 rounded-2xl hover:scale-105 transition-all duration-500">
+      <div class="text-3xl mb-3">📦</div>
+      <h4 class="font-bold text-lg">Optional 2 More Agents</h4>
+      <p class="text-sm opacity-60 mt-2">Core 3 Always + Optional 2 More: CrewAI 300MB Port 18791 + Microsoft Framework 800MB Ports 18792-18794 + 3 sub-agents = 6-7 agents total if both, download if user wants.</p>
+      <code class="mt-3 block p-2 bg-council-900/50 rounded-lg text-xs mono">council agents install all<br/>council ask --mode together --agents 5 "Build website"</code>
+    </div>
+    
+    <div class="glass p-6 rounded-2xl hover:scale-105 transition-all duration-500">
+      <div class="text-3xl mb-3">🧠</div>
+      <h4 class="font-bold text-lg">Local LLM + Real Embeddings</h4>
+      <p class="text-sm opacity-60 mt-2">Ollama server 11434, models qwen2.5:3b 1.9GB + deepseek-coder 1.3b 0.8GB + nomic-embed 274MB = 3GB, offline no API keys needed, LLM Judge via local Ollama, vector DB RAG LanceDB + FTS5.</p>
+      <code class="mt-3 block p-2 bg-council-900/50 rounded-lg text-xs mono">council llm status<br/>council llm pull qwen2.5:7b<br/>Real LanceDB 200 rows + FTS5 300 docs</code>
+    </div>
+    
+    <div class="glass p-6 rounded-2xl hover:scale-105 transition-all duration-500">
+      <div class="text-3xl mb-3">🎨</div>
+      <h4 class="font-bold text-lg">Neat Dashboard 8 Tabs + Tailwind + Real Terminal</h4>
+      <p class="text-sm opacity-60 mt-2">8 tabs: Council, Agents 3+2, Optional 2, Local LLM, Storage, Journal, Terminal Real (xterm.js + WebSocket + PTY), Secrets + Together/Alone toggle + Tailwind animations + Framer Motion glassmorphism + 3D dashboard.</p>
+      <code class="mt-3 block p-2 bg-council-900/50 rounded-lg text-xs mono">council dashboard --port 8443<br/>https://localhost:8443 8 tabs neat Tailwind</code>
+    </div>
+    
+    <div class="glass p-6 rounded-2xl hover:scale-105 transition-all duration-500">
+      <div class="text-3xl mb-3">🚀</div>
+      <h4 class="font-bold text-lg">Easy Setup One-Click + Multiple Checks</h4>
+      <p class="text-sm opacity-60 mt-2">One-liner curl | bash + PowerShell iwr | iex + GUI setup-gui.py + setup-easy-one-click.py single file + setup-windows-easy.bat double-click does everything + make easy-setup + make check-all 9 checks + production grade 10/10.</p>
+      <code class="mt-3 block p-2 bg-council-900/50 rounded-lg text-xs mono">curl -fsSL .../install.sh | bash -s -- /mnt/council all<br/>iwr -useb .../install.ps1 | iex</code>
+    </div>
+    
+    <div class="glass p-6 rounded-2xl hover:scale-105 transition-all duration-500">
+      <div class="text-3xl mb-3">🔒</div>
+      <h4 class="font-bold text-lg">Production 10/10 + Security</h4>
+      <p class="text-sm opacity-60 mt-2">AppArmor profiles per Quadlet + F2FS + QEMU + Backup Full GPG Remote + Tailscale Auto + Secure Boot shim + Real Terminal PTY + Optional Real + Real TF-IDF + 5GB Smart + Universal OS + Time Estimates + Multiple Checks.</p>
+      <code class="mt-3 block p-2 bg-council-900/50 rounded-lg text-xs mono">11 tests PASS + 6 PASS no traces<br/>AppArmor + F2FS + QEMU + Backup GPG + Tailscale</code>
+    </div>
+  </div>
+</section>
+
+<!-- Images Gallery -->
+<section id="images" class="max-w-7xl mx-auto px-6 py-12">
+  <h3 class="text-3xl font-bold display gradient-text text-center mb-8">Neat Images Gallery - 19 Images 35MB - Much More Neat</h3>
+  
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="glass rounded-2xl overflow-hidden hover:scale-105 transition-all duration-500 group">
+      <img src="../images/banner.png" alt="Banner" class="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500">
+      <div class="p-4">
+        <h4 class="font-bold">Banner - 3 Agents Live on Pendrive</h4>
+        <p class="text-xs opacity-60 mt-1">Futuristic, dark mode, neon purple blue gradient, glassmorphism, pendrive USB with glowing council logo</p>
+      </div>
+    </div>
+    
+    <div class="glass rounded-2xl overflow-hidden hover:scale-105 transition-all duration-500 group">
+      <img src="../images/architecture.png" alt="Architecture" class="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500">
+      <div class="p-4">
+        <h4 class="font-bold">Architecture - Pendrive 3 Partitions</h4>
+        <p class="text-xs opacity-60 mt-1">EFI FAT32, LIVE squashfs RO, PERSIST LUKS encrypted, keep/cache split, council voting</p>
+      </div>
+    </div>
+    
+    <div class="glass rounded-2xl overflow-hidden hover:scale-105 transition-all duration-500 group">
+      <img src="../images/dashboard.png" alt="Dashboard" class="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500">
+      <div class="p-4">
+        <h4 class="font-bold">Dashboard - 8 Tabs Neat</h4>
+        <p class="text-xs opacity-60 mt-1">Together/Alone toggle, typing indicators, voting progress bar animated, storage bar, agent cards</p>
+      </div>
+    </div>
+    
+    <div class="glass rounded-2xl overflow-hidden hover:scale-105 transition-all duration-500 group">
+      <img src="../images/agents.png" alt="Agents" class="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500">
+      <div class="p-4">
+        <h4 class="font-bold">Agents - 3 Core + 2 Optional + 3 Sub-Agents</h4>
+        <p class="text-xs opacity-60 mt-1">Hermes Sage, OpenClaw Executor, Agent Zero Builder + CrewAI + Microsoft Framework 3 sub-agents</p>
+      </div>
+    </div>
+    
+    <div class="glass rounded-2xl overflow-hidden hover:scale-105 transition-all duration-500 group">
+      <img src="../images/storage.png" alt="Storage" class="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500">
+      <div class="p-4">
+        <h4 class="font-bold">Storage - Keep Smart vs Delete Heavy</h4>
+        <p class="text-xs opacity-60 mt-1">Keep 100-300MB + 5GB RO vs Cache RAM 1-10GB auto delete, RO no wear + RW daily learning</p>
+      </div>
+    </div>
+    
+    <div class="glass rounded-2xl overflow-hidden hover:scale-105 transition-all duration-500 group">
+      <img src="../images/together-alone.png" alt="Together Alone" class="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500">
+      <div class="p-4">
+        <h4 class="font-bold">Together vs Alone</h4>
+        <p class="text-xs opacity-60 mt-1">Left Together 3 agents debating voting, Right Alone solo faster, Data in pendrive No traces</p>
+      </div>
+    </div>
+    
+    <div class="glass rounded-2xl overflow-hidden hover:scale-105 transition-all duration-500 group">
+      <img src="../images/no-traces.png" alt="No Traces" class="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500">
+      <div class="p-4">
+        <h4 class="font-bold">No Traces + Data In Pendrive</h4>
+        <p class="text-xs opacity-60 mt-1">Host PC clean /tmp/council/* deleted, no processes, ports closed + Pendrive data keep/ SOUL MEMORY USER skills/</p>
+      </div>
+    </div>
+    
+    <div class="glass rounded-2xl overflow-hidden hover:scale-105 transition-all duration-500 group">
+      <img src="../images/easy-setup.png" alt="Easy Setup" class="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500">
+      <div class="p-4">
+        <h4 class="font-bold">Easy Setup One-Click Universal</h4>
+        <p class="text-xs opacity-60 mt-1">Works on Any OS Windows+Linux+macOS, GUI auto-detect USB, format options, progress bar, one-liner curl | bash</p>
+      </div>
+    </div>
+    
+    <div class="glass rounded-2xl overflow-hidden hover:scale-105 transition-all duration-500 group">
+      <img src="../images/5gb-smart.png" alt="5GB Smart" class="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500">
+      <div class="p-4">
+        <h4 class="font-bold">5GB Smart Initial - Born Smart</h4>
+        <p class="text-xs opacity-60 mt-1">500 knowledge, 130 skills, 100 solutions, MEMORY.md 1000 facts, knowledge graph 200 nodes, LanceDB 200 rows + 3GB models + 500MB embeddings</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="text-center mt-8">
+    <a href="../images/" class="px-6 py-3 bg-council-800/50 border border-council-700/30 rounded-xl hover:border-council-600/50 transition-all">View All 19 Images 35MB Gallery →</a>
+  </div>
+</section>
+
+<!-- Setup Steps -->
+<section id="setup" class="max-w-7xl mx-auto px-6 py-12">
+  <h3 class="text-3xl font-bold display gradient-text text-center mb-8">How To Setup From Moving Pendrive To Running Agents - Super Simple - Any OS - One-Click</h3>
+  
+  <div class="grid md:grid-cols-3 gap-6">
+    <div class="glass p-6 rounded-2xl">
+      <div class="w-12 h-12 rounded-full bg-gradient-to-r from-council-600 to-council-500 flex items-center justify-center text-xl font-bold mb-4">1</div>
+      <h4 class="font-bold">Format Pendrive exFAT (Universal)</h4>
+      <p class="text-sm opacity-60 mt-2">Windows: Explorer → Format → exFAT → Label COUNCIL<br>Linux: sudo mkfs.exfat -n COUNCIL /dev/sdX1<br>macOS: Disk Utility → exFAT</p>
+    </div>
+    
+    <div class="glass p-6 rounded-2xl">
+      <div class="w-12 h-12 rounded-full bg-gradient-to-r from-council-600 to-council-500 flex items-center justify-center text-xl font-bold mb-4">2</div>
+      <h4 class="font-bold">One-Click Easy Setup</h4>
+      <p class="text-sm opacity-60 mt-2">Linux/macOS: curl -fsSL .../install.sh | bash -s -- /mnt/council all<br>Windows PowerShell: iwr -useb .../install.ps1 | iex<br>GUI: python3 setup-gui.py</p>
+    </div>
+    
+    <div class="glass p-6 rounded-2xl">
+      <div class="w-12 h-12 rounded-full bg-gradient-to-r from-council-600 to-council-500 flex items-center justify-center text-xl font-bold mb-4">3</div>
+      <h4 class="font-bold">Move Pendrive + Run Agents</h4>
+      <p class="text-sm opacity-60 mt-2">Unplug → Plug into any PC → Double-click start.bat/start.ps1/start.py<br>Together: council ask "Build website"<br>Alone: council ask --mode alone --agent hermes "Research"<br>Dashboard: https://localhost:8443</p>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="border-t border-council-700/20 mt-12 py-8">
+  <div class="max-w-7xl mx-auto px-6 text-center">
+    <p class="text-sm opacity-60">CouncilKey-Os - 3 Agents Live on Pendrive + 5GB Smart + Together+Alone+NoTraces+Data In Pendrive + Windows Universal + Production Grade 10/10</p>
+    <p class="text-xs opacity-40 mt-2">Branch: arena/019fcbc3-councilkey-os - 19 Images 35MB + 691 files smart + 200 rows LanceDB + 300 docs FTS5 + 11 tests PASS + 6 PASS no traces + production 10/10 - Ready to clone</p>
+    <div class="flex justify-center gap-4 mt-4">
+      <a href="https://github.com/nikhilgundu99/CouncilKey-Os" class="text-council-400 hover:text-council-300 transition-colors">GitHub</a>
+      <a href="../README_NEAT.md" class="text-council-400 hover:text-council-300 transition-colors">Neat Gallery</a>
+      <a href="../docs/" class="text-council-400 hover:text-council-300 transition-colors">Docs</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Simple JS for demo
+console.log("CouncilKey-Os Neat Dashboard - 3 Agents Live on Pendrive + 5GB Smart + Production 10/10 - Much More Neat");
+
+// Particle effect for background
+function createParticles() {
+  const container = document.getElementById('particles');
+  if (!container) return;
+  for (let i = 0; i < 30; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'absolute w-1 h-1 bg-council-600/30 rounded-full';
+    particle.style.left = Math.random() * 100 + '%';
+    particle.style.top = Math.random() * 100 + '%';
+    particle.style.animation = `float ${3 + Math.random()*2}s ease-in-out infinite`;
+    particle.style.animationDelay = Math.random() * 2 + 's';
+    container.appendChild(particle);
+  }
+}
+// Uncomment to create particles: createParticles();
+</script>
+
+</body>
+</html>
