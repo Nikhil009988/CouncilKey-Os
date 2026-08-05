@@ -180,8 +180,8 @@ window.addEventListener('resize', () => {
 
 // Add interactivity: click on node to show info
 renderer.domElement.addEventListener('click', (event) => {
-  // For demo, just log
-  console.log('Clicked 3D dashboard - Knowledge Graph 200 nodes + 3 Agents as 3D avatars + particle effects');
+  // Interactive node selection can be added here
+  console.log('3D dashboard clicked');
 });
 </script>
 

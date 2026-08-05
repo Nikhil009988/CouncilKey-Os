@@ -83,8 +83,7 @@ tree was unbuilt, which is exactly why `openclaw` failed in PowerShell).
   `openclaw@latest` CLI globally (fixes "missing dist/entry.mjs")
 - **Windows**: `scripts/setup.ps1` + `scripts/start.ps1` (native PowerShell,
   winget for Ollama), fixed `start.bat` with clear errors
-- `scripts/llm-demo-server.py` - Ollama-compatible demo server for sandbox
-  environments (clearly labeled; not real inference)
+- `scripts/dev/llm-demo-server.py` - dev-only Ollama-compatible fixture for CI/sandbox testing (clearly labeled; not part of the product)
 - Dashboard Agents tab shows the real per-agent backend + LLM badge in header
 - `COUNCIL_HERMES_URL` / `COUNCIL_OPENCLAW_URL` / `COUNCIL_AGENTZERO_URL` env
   overrides for external gateways

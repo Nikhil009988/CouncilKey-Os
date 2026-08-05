@@ -109,6 +109,9 @@ curl -X POST http://localhost:8443/api/council/ask \
   -d '{"prompt": "plan a 3-day trip to Goa"}'
 ```
 
+**Full step-by-step setup & usage instructions (Windows / Linux / macOS, troubleshooting):**
+[Complete Setup & Usage Guide](docs/guides/EASY_SETUP_GUIDE.md)
+
 Or as a one-liner (clones to `~/councilkey-os`, runs the full setup):
 
 ```bash
@@ -152,7 +155,7 @@ sudo ./deploy/install.sh        # installs to /opt/councilkey + enables the serv
 | Security model | [docs/SECURITY.md](docs/SECURITY.md) |
 | Build guide (USB / ISO / bootc) | [docs/guides/BUILD.md](docs/guides/BUILD.md) |
 | Pendrive guide | [docs/guides/PENDRIVE_GUIDE.md](docs/guides/PENDRIVE_GUIDE.md) |
-| Easy setup | [docs/guides/EASY_SETUP_GUIDE.md](docs/guides/EASY_SETUP_GUIDE.md) |
+| Complete setup & usage guide | [docs/guides/EASY_SETUP_GUIDE.md](docs/guides/EASY_SETUP_GUIDE.md) |
 | Collaboration modes | [docs/guides/COLLABORATION_MODES.md](docs/guides/COLLABORATION_MODES.md) |
 | Change history | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
 | Roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |

@@ -79,13 +79,25 @@ def ollama_available() -> bool:
         return False
 
 
-def installed_models() -> list[str]:
+_models_cache: tuple[float, list[str]] | None = None
+_MODELS_TTL = 10.0  # seconds - don't hammer /api/tags on every agent ask
+
+
+def installed_models(force: bool = False) -> list[str]:
+    """List models installed in Ollama, cached for a few seconds."""
+    global _models_cache
+    now = time.monotonic()
+    if not force and _models_cache and now - _models_cache[0] < _MODELS_TTL:
+        return _models_cache[1]
     try:
         r = httpx.get(OLLAMA_BASE.rstrip("/") + "/api/tags", timeout=2.0)
         if r.status_code == 200:
-            return [m.get("name", "") for m in r.json().get("models", [])]
+            models = [m.get("name", "") for m in r.json().get("models", [])]
+            _models_cache = (now, models)
+            return models
     except Exception:
         pass
+    _models_cache = (now, [])
     return []
 
 

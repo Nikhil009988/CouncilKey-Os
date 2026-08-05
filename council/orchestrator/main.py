@@ -82,7 +82,6 @@ from council.update.manager import check_update as update_check
 COUNCIL_HOME = Path(os.environ.get("COUNCIL_HOME", "/var/lib/council"))
 JOURNAL_DIR = COUNCIL_HOME / "journal"
 
-AGENT_PORTS = {"hermes": 18790, "openclaw": 18789, "agent-zero": 50001}
 
 app = FastAPI(title="CouncilKey-Os", version=__version__)
 
@@ -493,14 +492,10 @@ def index() -> HTMLResponse:
 
 @app.get("/3d")
 def index_3d() -> HTMLResponse:
-    """Standalone 3D knowledge-graph dashboard."""
-    from council.dashboard.three_d import create_app_3d
+    """Standalone 3D knowledge-graph dashboard (see council/dashboard/three_d.py)."""
+    from council.dashboard.three_d import HTML_3D
 
-    routes = {r.path: r for r in create_app_3d().routes}
-    endpoint = routes.get("/")
-    if endpoint is None:
-        return HTMLResponse("<html><body><h1>3D dashboard unavailable</h1></body></html>")
-    return endpoint.endpoint()
+    return HTMLResponse(HTML_3D)
 
 
 @app.get("/api/health")

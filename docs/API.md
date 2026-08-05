@@ -426,8 +426,11 @@ councilkey agents verify      # real smoke test: asks each agent, shows backend
 - `scripts/setup.ps1` - full setup (venv, agents, Ollama via winget, model pull, tests)
 - `scripts/start.ps1` / `scripts/start.bat` - start the dashboard (auto-starts Ollama)
 
-## Demo mode
-`scripts/llm-demo-server.py` implements the Ollama HTTP protocol with
-deterministic role-aware replies for sandboxes where model weights cannot be
-downloaded. It is a test fixture, clearly labeled in the dashboard; replace it
-with real Ollama (`councilkey llm install && councilkey llm pull`).
+## Real vs dev-only
+For real use, the 3 agents run on genuine Ollama:
+`councilkey llm install && councilkey llm pull` (or run `scripts/setup.sh`,
+which does it automatically).
+
+A dev-only, clearly-labeled Ollama-compatible fixture lives at
+`scripts/dev/llm-demo-server.py` for CI/sandbox testing. It is NOT part of
+the product and is never used by setup, start, or the dashboard.

@@ -2,8 +2,8 @@
 
 ## What we have now (tried and working)
 
-✅ Portable council in /tmp/council-usb-demo - mocked 3 agents, voting, journal git log
-✅ Orchestrator main.py works: status, ask, dashboard, journal
+✅ Portable council working end-to-end - 3 agents (local-LLM or gateways), voting, journal
+✅ Orchestrator: status, ask, debate, decompose, dashboard, journal
 ✅ Build scripts: build-portable.sh, build-live-iso.sh (Ubuntu from scratch), build-bootc.sh (Fedora bootc like Tank-OS)
 ✅ Surveyed related projects: exFAT symlinks, bootc Quadlet, Buildroot, casper persistence
 ✅ Architecture: 3 partitions, LUKS encrypted persistence, council voting

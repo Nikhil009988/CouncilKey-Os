@@ -11,8 +11,10 @@ from importlib import import_module
 
 _mod = import_module("council.dashboard.3d.dashboard_3d")
 create_app_3d = _mod.create_app_3d
+HTML_3D = _mod.HTML_3D
 
 # module-level app so `uvicorn council.dashboard.three_d:app` works directly
 app = create_app_3d()
 
-__all__ = ["app", "create_app_3d"]
+__all__ = ["app", "create_app_3d", "HTML_3D"]
+

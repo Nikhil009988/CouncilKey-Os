@@ -14,7 +14,7 @@ Landing page: [index.html](index.html) (GitHub Pages ready — enable Pages from
 
 - [BUILD.md](guides/BUILD.md) — build profiles (portable USB, live ISO, bootc)
 - [PENDRIVE_GUIDE.md](guides/PENDRIVE_GUIDE.md) — from a USB stick to running agents
-- [EASY_SETUP_GUIDE.md](guides/EASY_SETUP_GUIDE.md) — one-click setup
+- [EASY_SETUP_GUIDE.md](guides/EASY_SETUP_GUIDE.md) — **complete setup & usage guide** (Windows/Linux/macOS, using the agents, troubleshooting)
 - [SINGLE_BINARY_GUIDE.md](guides/SINGLE_BINARY_GUIDE.md) — single-binary packaging
 - [COLLABORATION_MODES.md](guides/COLLABORATION_MODES.md) — together vs alone modes
 
