@@ -15,6 +15,9 @@ from pydantic import BaseModel
 
 from council.orchestrator.agents import AgentResult, build_default_clients
 
+from council.config.loader import load as config_load, save as config_save
+from council.embeddings.lancedb import add_documents as lancedb_add, search as lancedb_search
+from council.llm.ollama import chat as ollama_chat, embeddings as ollama_embeddings, is_running as ollama_running
 from council.journal.analyzer import analyze as journal_analyze, list_journal
 from council.backup.manager import create_backup as backup_create, list_backups as backup_list
 from council.llm.manager import available as llm_available
@@ -214,6 +217,67 @@ def reflection_last_route() -> JSONResponse:
 @app.post("/api/skills/evolve")
 def skills_evolve_route() -> JSONResponse:
     return JSONResponse(evolve())
+
+
+@app.get("/api/config")
+def config_route() -> JSONResponse:
+    return JSONResponse(config_load())
+
+
+@app.post("/api/config")
+def config_save_route(body: dict[str, object]) -> JSONResponse:
+    config_save(body)
+    return JSONResponse({"ok": True})
+
+
+@app.get("/api/embeddings/search")
+def embeddings_search(q: str = "", limit: int = 5) -> JSONResponse:
+    if not q:
+        return JSONResponse({"ok": True, "results": []})
+    return JSONResponse(lancedb_search(q, limit=min(limit, 50)))
+
+
+@app.post("/api/embeddings/add")
+def embeddings_add(body: dict[str, object]) -> JSONResponse:
+    docs = body.get("docs", [])
+    if not isinstance(docs, list):
+        docs = [str(docs)]
+    return JSONResponse(lancedb_add([str(x) for x in docs]))
+
+
+@app.get("/api/ollama/status")
+def ollama_status_route() -> JSONResponse:
+    return JSONResponse(ollama_running())
+
+
+@app.post("/api/ollama/chat")
+def ollama_chat_route(body: dict[str, object]) -> JSONResponse:
+    model = str(body.get("model", "qwen2.5:3b"))
+    prompt = str(body.get("prompt", ""))
+    system = str(body.get("system", ""))
+    return JSONResponse(ollama_chat(model, prompt, system))
+
+
+@app.get("/api/terminal/status")
+def terminal_status_route() -> JSONResponse:
+    return JSONResponse({"pty": True, "agent": "council"})
+
+
+@app.get("/api/optional/agents")
+def optional_agents_route() -> JSONResponse:
+    return JSONResponse({"crewai": False, "microsoft": False, "llm_judge": True})
+
+
+@app.get("/api/update/check")
+def update_check_route() -> JSONResponse:
+    from council.update.manager import check_update as update_fn
+    return JSONResponse(update_fn())
+
+
+@app.get("/api/metrics")
+def metrics_route() -> JSONResponse:
+    from council.metrics.snapshot import snapshot as metrics_fn
+    return JSONResponse(metrics_fn())
 
 
 def cli_dashboard(port: int = 8000, host: str = "0.0.0.0") -> None:
