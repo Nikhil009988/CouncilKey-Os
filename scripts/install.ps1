@@ -18,12 +18,10 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [ValidateNotNullOrEmpty()]
-    [string]$DriveLetter,
+    [string]$DriveLetter = "",
 
     [Parameter(Mandatory=$false)]
-    [ValidateNotNullOrEmpty()]
-    [string]$TargetPath,
+    [string]$TargetPath = "",
 
     [Parameter(Mandatory=$false)]
     [switch]$AutoDetect = $true,
@@ -35,6 +33,10 @@ param(
     [Parameter(Mandatory=$false)]
     [switch]$SkipBuild = $false
 )
+
+# Normalize empty strings to $null for proper handling
+if ([string]::IsNullOrWhiteSpace($DriveLetter)) { $DriveLetter = $null }
+if ([string]::IsNullOrWhiteSpace($TargetPath)) { $TargetPath = $null }
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
