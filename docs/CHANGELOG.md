@@ -48,3 +48,16 @@
 ### Fixed
 - `get_secret` decryption bug (wrapper vs payload dict)
 - Terminal guard now also covers text-frame input, not only binary keystrokes
+
+## v1.3.0 (2026-08-05) - One-command setup with automatic agent download
+
+### Added
+- `./scripts/setup.sh` — one-command setup: Python env + package, **downloads the 3 agents automatically** (Hermes, OpenClaw, Agent Zero from their official repos), installs their dependencies, runs the tests, prints final agent status; `--skip-agents` / `--skip-tests` flags
+- `install.sh` — one-liner installer (`curl | bash`), clones to `~/councilkey-os` and runs the full setup
+- `councilkey agents` CLI: `status` (installed/running/ports), `install` (clone + deps with step-by-step report), `start` (best-effort launcher + per-agent start hints)
+- `GET /api/agents/prereqs` endpoint; `install_agent` task kind for the background queue
+- Fresh agent venvs now upgrade pip/setuptools/wheel before installing requirements (fixes upstream `metadata-generation-failed`), with a `.council-installed` marker to skip completed installs
+- 7 new tests (total 57 passing)
+
+### Behavior change
+- Setup now downloads the agents for you — before, only the build scripts for USB images fetched them and users had to install them later (or run in mock mode)

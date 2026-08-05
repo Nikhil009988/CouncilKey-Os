@@ -360,3 +360,35 @@ COUNCIL_HOME=/var/lib/council ./scripts/verify-no-traces.sh --clean # audit + de
 - **Scheduler**: adds automatic daily backup at 04:00 alongside nightly consolidation; `/api/scheduler/status` shows queue stats
 - **`/api/status` and `/api/metrics`** now include queue depth, cache hits/misses and audit totals
 - **Dashboard**: new Tasks tab (enqueue/monitor background tasks), Intelligence tab (TF-IDF search, cache stats, audit analytics), and a Stream toggle for the council chat
+
+---
+
+# v1.3.0 - Agent Installer
+
+The three agents (Hermes, OpenClaw, Agent Zero) are downloaded automatically by
+`./scripts/setup.sh` (or the `install.sh` one-liner) from their official GitHub
+repos into `tools/linux/` (override with `COUNCIL_AGENTS_DIR`).
+
+## CLI
+```
+councilkey agents              # status table (installed? running? port?)
+councilkey agents install      # download + configure all 3 agents
+councilkey agents install hermes openclaw
+councilkey agents start        # best-effort launch of installed agents
+councilkey agents start agent-zero
+```
+
+## API
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/agents/prereqs` | Tool availability: git, python3, node, npm, uv |
+| POST | `/api/tasks` | `{"kind": "install_agent", "name": "hermes", "priority": 5}` — download an agent as a background task; monitor via `/api/tasks/{id}` |
+
+Installed agents show up in `GET /api/status` and `/api/agents/status` as
+`running` (their gateway port answers), `installed`, or `not installed`.
+
+> Note: installing an agent clones its official repository (Hermes ~200MB,
+> Agent Zero's Python deps can be several GB including torch). Needs internet
+> + git on first run. Each agent's own README documents the canonical start
+> command; `councilkey agents start` tries common launchers and falls back to
+> printing the right hint.

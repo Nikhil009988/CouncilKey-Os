@@ -73,6 +73,12 @@ Listed in the order the project was built:
 - **Memory injection (RAG-lite)** — relevant past decisions auto-injected into new prompts
 - **Terminal command guard** — `rm -rf /`, `mkfs`, `dd`, fork bombs blocked before reaching the shell
 
+### v1.3 — One-command setup with automatic agent download (latest)
+- `./scripts/setup.sh` — installs CouncilKey-Os **and downloads the 3 agents** (Hermes, OpenClaw, Agent Zero) from their official repos into `tools/linux/`, installs their dependencies, runs the tests, and shows the final status
+- `install.sh` — one-liner installer (`curl | bash`)
+- `councilkey agents` CLI — `status` (installed? running? which port), `install` (download + deps), `start` (best-effort launcher with hints)
+- Agents can also be installed from the API as background tasks: `POST /api/tasks {"kind": "install_agent", "name": "hermes"}`
+
 ---
 
 ## Quick start
@@ -82,18 +88,26 @@ Listed in the order the project was built:
 git clone https://github.com/Nikhil009988/CouncilKey-Os.git
 cd CouncilKey-Os
 
-# 2. install
-python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
+# 2. one-command setup - installs CouncilKey-Os AND downloads the 3 agents
+#    (Hermes, OpenClaw, Agent Zero) from their official repos automatically
+./scripts/setup.sh
 
 # 3. run
-.venv/bin/councilkey serve        # open http://localhost:8443
+./scripts/start.sh                # open http://localhost:8443
 
 # 4. ask
 curl -X POST http://localhost:8443/api/council/ask \
   -H 'Content-Type: application/json' \
   -d '{"prompt": "plan a 3-day trip to Goa"}'
 ```
+
+Or as a one-liner (clones to `~/councilkey-os`, runs the full setup):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
+```
+
+**The 3 agents are downloaded during setup — no manual downloads needed.** Add `--skip-agents` to `setup.sh` if you only want the orchestrator (it runs in mock mode until agents are installed). Manage them anytime with `councilkey agents status | install | start`.
 
 Works out of the box: if an agent gateway is offline it answers in mock mode so the pipeline is always testable. Point the gateways at real agents for live operation.
 
@@ -153,6 +167,7 @@ Everyone is free to use these great open-source projects — CouncilKey-Os sits 
 | v1.0 | 2026-07 | Core council: 3 agents, voting, dashboard, storage split |
 | v1.1 | 2026-08-05 | Vision, voice, canvas, browser, CLI, security, scheduler |
 | v1.2 | 2026-08-05 | Decomposition, debate, streaming, task queue, audit, search, vault, memory injection, terminal guard |
+| v1.3 | 2026-08-05 | One-command setup that downloads the 3 agents automatically + `councilkey agents` CLI |
 
 ---
 

@@ -219,9 +219,15 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             min_agreement=int(payload.get("min_agreement", 2)),
         )
 
+    async def _task_install_agent(payload: dict[str, Any]) -> dict[str, Any]:
+        from council.agents.installer import install as agent_install
+
+        return await asyncio.to_thread(agent_install, payload.get("name", ""))
+
     _queue.register_handler("ask", _task_ask)
     _queue.register_handler("decompose", _task_decompose)
     _queue.register_handler("debate", _task_debate)
+    _queue.register_handler("install_agent", _task_install_agent)
     _queue.start()
 
     SCHEDULER["started"] = time.strftime("%Y-%m-%dT%H:%M:%S")
@@ -285,14 +291,15 @@ class RestoreRequest(BaseModel):
 
 
 class TaskRequest(BaseModel):
-    kind: str = "ask"  # ask | decompose | debate
-    prompt: str
+    kind: str = "ask"  # ask | decompose | debate | install_agent
+    prompt: str = ""
     strategy: str = "majority"
     min_agreement: int = 2
     mode: str = "together"
     agent: str | None = None
     rounds: int = 3
     priority: int = 5
+    name: str | None = None  # agent name for kind=install_agent
 
 
 class SecretRequest(BaseModel):
@@ -517,6 +524,13 @@ async def agents_status() -> JSONResponse:
     return JSONResponse(await _probe_agents())
 
 
+@app.get("/api/agents/prereqs")
+def agents_prereqs_route() -> JSONResponse:
+    from council.agents.installer import check_prereqs
+
+    return JSONResponse(check_prereqs())
+
+
 @app.post("/api/council/ask")
 async def ask(req: AskRequest) -> JSONResponse:
     cache_cfg = _cache_enabled()
@@ -698,6 +712,7 @@ async def tasks_enqueue(req: TaskRequest) -> JSONResponse:
         "mode": req.mode,
         "agent": req.agent,
         "rounds": req.rounds,
+        "name": req.name,
     }
     task_id = await _queue.enqueue(req.kind, payload, priority=req.priority)
     return JSONResponse({"ok": True, "id": task_id, "kind": req.kind, "status": "queued"})

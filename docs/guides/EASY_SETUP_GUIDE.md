@@ -11,7 +11,7 @@
 **Linux / macOS / Windows Git Bash (Universal):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash -s -- /mnt/council all
+curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
 # Replace /mnt/council with your pendrive mount:
 #   Linux: /mnt/council or /media/$USER/COUNCIL (after sudo mount /dev/sdX1 /mnt/council)
 #   macOS: /Volumes/COUNCIL
@@ -28,9 +28,9 @@ curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/01
 **Windows PowerShell (GUI):**
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex
-# Or with USB drive letter E:\ and Mode all:
-# iex "$USB='E:\'; iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex"
+# (PowerShell one-liner coming soon - for now run the bash installer in WSL)
+# Or with USB drive letter E:\:
+# iex "$USB='E:\'; <powershell installer here>"
 
 # What the PowerShell one-liner does:
 # 1. Auto-detects USB drives via Get-PSDrive, GUI selector WPF XAML glassmorphism modern (more modern than WinForms) on Windows 11 + WinForms fallback, shows drives with free space GB
@@ -103,9 +103,9 @@ make easy-setup-gui  # Launches setup-gui.py GUI with auto-detect USB, progress 
 # Plug pendrive, note drive letter E:\
 # Open PowerShell as normal user
 # One-liner (auto-detects USB, GUI selector, 7 steps):
-iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex
+# (PowerShell one-liner coming soon - for now run the bash installer in WSL)
 # Or with USB E:\ and Mode all:
-# iex "$USB='E:\'; iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex"
+# iex "$USB='E:\'; # (PowerShell one-liner coming soon - for now run the bash installer in WSL)"
 
 # What it does (7 steps, 2-3 min, no 3GB download yet):
 # 1. Auto-detects USB drives via Get-PSDrive, GUI selector WPF XAML glassmorphism modern on Windows 11 + WinForms fallback
@@ -119,7 +119,7 @@ iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019
 
 **Linux/macOS/Windows Git Bash One-Liner:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash -s -- /mnt/council all
+curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
 # Replace /mnt/council with your pendrive mount:
 #   Linux: /mnt/council or /media/$USER/COUNCIL (after sudo mount /dev/sdX1 /mnt/council)
 #   macOS: /Volumes/COUNCIL
@@ -221,7 +221,7 @@ council> exit  # Cleaning up - Removing agents from PC, keeping data in pendrive
 - ✅ Real Terminal xterm.js Fully - terminal_real.py with PTY fully interactive pty.openpty(), shell /bin/bash -i, preexec_fn os.setsid, non-blocking master_fd, select.select, asyncio.gather read_pty + write_pty, WebSocket /ws/terminal and /ws/terminal-simple fallback
 - ✅ Easy Setup + checks - setup-pendrive-easy.sh (7 steps) + .ps1 + .bat, `make check-all` runs tests, council status, storage audit, no-traces verification, optional agents list, local LLM check
 - ✅ AppArmor Profiles Per Quadlet - builder/bootc/rootfs-overlay/etc/apparmor.d/council-hermes, council-openclaw, council-agent-zero with base + python/nodejs abstractions + allow reading keep/ real_home/ shared/ smart-initial/ + writing keep/ journal/ + cache RAM /tmp/council/ + deny /home/** w /etc/shadow r /proc/sys/** w /sys/** w + network inet tcp/udp + deny capability sys_admin sys_ptrace security
-- ✅ One-Liner Installers + GUI - install.sh (bash one-liner curl | bash) + install.ps1 (PowerShell one-liner iwr | iex) + setup-easy-gui.sh (tkinter GUI + zenity + osascript + WPF) + setup-pendrive-easy.sh + .ps1 + .bat one-click universal with auto-detect USB, GUI selector, format as exFAT/F2FS, progress bar rsync --progress, verification, desktop shortcuts
+- ✅ One-liner installer (bash, `curl | bash`) + `./scripts/setup.sh` — both download the 3 agents automatically
 - ✅ F2FS + QEMU Smoke Test + Backup Full + Tailscale + Secure Boot Docs - format-usb-f2fs.sh, qemu-smoke-test.sh placeholder, backup/manager_full.py GPG, tailscale.py check, SECURITY.md Secure Boot docs
 
 **Roadmap (needs real hardware / internet / root):**
@@ -240,8 +240,8 @@ council> exit  # Cleaning up - Removing agents from PC, keeping data in pendrive
 
 
 **Try now:**
-- One-liner: curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash -s -- /mnt/council all
-- PowerShell one-liner: iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex
+- One-liner: curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
+- PowerShell one-liner: # (PowerShell one-liner coming soon - for now run the bash installer in WSL)
 - GUI: python3 setup-gui.py (tkinter GUI + zenity + osascript + WPF)
 - Easy: ./setup-pendrive-easy.sh /mnt/council all or .\setup-pendrive-easy.ps1 -USB E:\ -Mode all
 - Then: bash /mnt/council/start.sh or double-click start.bat/start.ps1/python start.py

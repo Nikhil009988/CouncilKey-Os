@@ -18,5 +18,10 @@ if [ ! -d "$ROOT/.venv" ]; then
   "$ROOT/.venv/bin/pip" install -e "$ROOT[dev]" -q
 fi
 
+# Optional: auto-start the 3 agents before serving (COUNCIL_START_AGENTS=1)
+if [ "${COUNCIL_START_AGENTS:-0}" = "1" ] && [ -x "$ROOT/.venv/bin/councilkey" ]; then
+  "$ROOT/.venv/bin/councilkey" agents start || true
+fi
+
 exec "$ROOT/.venv/bin/python" -m uvicorn council.orchestrator.main:app \
   --host "${COUNCIL_HOST:-0.0.0.0}" --port "${COUNCIL_PORT:-8443}"

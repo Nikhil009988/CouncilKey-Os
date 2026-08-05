@@ -1,9 +1,10 @@
-"""CouncilKey-Os CLI - serve, doctor, storage, version.
+"""CouncilKey-Os CLI - serve, doctor, storage, agents, version.
 
 Commands:
   councilkey serve [--host H] [--port P]     Run the dashboard + API
   councilkey doctor                           Check environment health
   councilkey storage [--dry-run]              Audit / optimize storage
+  councilkey agents [status|install|start]    Manage the 3 agents
   councilkey version                          Print version
 """
 from __future__ import annotations
@@ -119,6 +120,70 @@ def cmd_serve(host: str, port: int) -> int:
     return 0
 
 
+def cmd_agents(action: str, names: list[str]) -> int:
+    """Manage the 3 agents: status / install / start."""
+    from council.agents.installer import AGENTS, install, start, status
+
+    selected = names or list(AGENTS)
+    bad = [n for n in selected if n not in AGENTS]
+    if bad:
+        print(f"unknown agent(s): {', '.join(bad)} - choose from {sorted(AGENTS)}")
+        return 2
+
+    if action == "status":
+        data = status(names)
+        print(f"{'agent':<11}{'role':<8}{'port':<7}{'state'}")
+        print("-" * 40)
+        for name, info in data.items():
+            mark = {"running": "🟢", "installed": "🟡", "not installed": "⚪"}.get(info["state"], "?")
+            print(f"{mark} {name:<10}{info['role']:<8}{info['port']:<7}{info['state']}")
+        print("-" * 40)
+        missing = [n for n, i in data.items() if i["state"] == "not installed"]
+        if missing:
+            print("not installed:", ", ".join(missing))
+            print("download them with: councilkey agents install")
+        return 0
+
+    if action == "install":
+        prereqs = __import__("council.agents.installer", fromlist=["check_prereqs"]).check_prereqs()
+        if not prereqs["git"]:
+            print("❌ git not found - install git first")
+            return 1
+        if any(n in selected for n in ("openclaw",)) and not prereqs["npm"]:
+            print("⚠ npm not found - OpenClaw needs Node.js/npm (its deps step will fail)")
+        failed = False
+        for name in selected:
+            print(f"\n== Installing {name} ({AGENTS[name]['role']}) ==")
+            result = install(name)
+            for step in result.get("steps", []):
+                mark = "✅" if step.get("ok") else "❌"
+                print(f"  {mark} {step.get('step')}: {(step.get('detail') or '')[:120]}")
+            if result.get("ok"):
+                print(f"  -> {name} ready at {result['dir']}")
+            else:
+                failed = True
+                print(f"  ❌ {result.get('error', 'install failed')}")
+                print(f"     hint: {result.get('hint', '')}")
+        print("\nAgents status:")
+        cmd_agents("status", [])
+        return 1 if failed else 0
+
+    if action == "start":
+        failed = False
+        for name in selected:
+            print(f"== starting {name} ==")
+            result = start(name)
+            if result.get("ok"):
+                print(f"  ✅ {name} up on port {result.get('port')} (log: {result.get('log', '-')})")
+            else:
+                failed = True
+                print(f"  ❌ {result.get('error')}")
+                print(f"     hint: {result.get('hint', '')}")
+        return 1 if failed else 0
+
+    return 2
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="councilkey", description="CouncilKey-Os control tool")
     parser.add_argument("--version", action="store_true", help="print version and exit")
@@ -135,6 +200,10 @@ def main(argv: list[str] | None = None) -> None:
 
     sub.add_parser("version", help="print version")
 
+    p_agents = sub.add_parser("agents", help="manage the 3 agents (status/install/start)")
+    p_agents.add_argument("action", nargs="?", default="status", choices=["status", "install", "start"])
+    p_agents.add_argument("names", nargs="*", help="agent names (default: all)")
+
     args = parser.parse_args(argv)
 
     if args.version:
@@ -147,6 +216,8 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(cmd_doctor())
     elif args.command == "storage":
         sys.exit(cmd_storage(args.dry_run))
+    elif args.command == "agents":
+        sys.exit(cmd_agents(args.action, args.names))
     elif args.command == "version":
         print(cmd_version())
     else:
