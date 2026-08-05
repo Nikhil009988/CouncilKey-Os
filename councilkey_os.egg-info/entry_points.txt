@@ -1,2 +1,0 @@
-[console_scripts]
-councilkey = council.cli:main

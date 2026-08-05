@@ -1,11 +1,11 @@
-# Future - From Portable to Bootable Pendrive
+# Roadmap
 
 ## What we have now (tried and working)
 
 ✅ Portable council in /tmp/council-usb-demo - mocked 3 agents, voting, journal git log
 ✅ Orchestrator main.py works: status, ask, dashboard, journal
 ✅ Build scripts: build-portable.sh, build-live-iso.sh (Ubuntu from scratch), build-bootc.sh (Fedora bootc like Tank-OS)
-✅ Research scan of 10 repos: how they handle exFAT symlinks, bootc Quadlet, Buildroot, casper persistence
+✅ Surveyed related projects: exFAT symlinks, bootc Quadlet, Buildroot, casper persistence
 ✅ Architecture: 3 partitions, LUKS encrypted persistence, council voting
 
 ## What to try next on real USB

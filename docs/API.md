@@ -1,4 +1,4 @@
-# CouncilKey-Os API - Production Grade
+# CouncilKey-Os API Reference
 
 Base URL: `https://council.local:8443` or `http://localhost:8443` or `http://localhost:8000`
 
@@ -36,7 +36,7 @@ Broadcast prompt to 3 agents in parallel, vote, return final synthesis.
 }
 ```
 
-**Production real adapters:**
+**Real adapters:**
 - OpenClaw: Tries POST http://127.0.0.1:18789/api/message with Bearer token from podman secret / file / env / ~/.openclaw/gateway.token, multiple endpoints fallback, circuit breaker 3 fails open 60s
 - Hermes: POST http://127.0.0.1:18790/api/message
 - Agent Zero: POST http://127.0.0.1:50001/api/message {text, context}
@@ -67,7 +67,7 @@ Agent status + council config + journal.
 
 Health check: `curl -f http://localhost:8443/api/status`
 
-## Storage Optimizer APIs (Production)
+## Storage Optimizer APIs
 
 ### GET /api/storage/audit
 
@@ -190,16 +190,16 @@ council journal
 council dashboard --port 8443 --host 0.0.0.0
 ```
 
-## Auth (Production)
+## Auth
 
 - v1: No auth, LAN only (like Reefy)
 - Production: Add BasicAuth via `auth_login`/`auth_password` from Agent Zero settings pattern, or Tailscale auth key from env `TAILSCALE_AUTHKEY`
 - Secrets edit via GPG requires master password (LUKS passphrase)
 - OpenAPI docs at `/docs` protected by auth in production (use `auth_login` from settings)
 
-## Metrics (Production)
+## Metrics
 
-### GET /api/metrics (to be implemented)
+### GET /api/metrics
 
 Returns CPU/RAM/storage per agent via `podman stats` + `df`.
 

@@ -103,7 +103,7 @@ We have 2 profiles for this:
 
 ### Profile A: Portable USB (exFAT, No Reboot, Works on Any Windows/Linux Host) - Zero Traces via Env Redirect + Cleanup
 
-**How portable-agent-usb trick works (from RESEARCH.md deep scan):**
+**How the portable USB trick works:**
 
 1. **All Binaries on Pendrive, Not Host:**
    - `bin/linux/node-v22.14-linux-x64/` - Portable Node.js runs directly from USB, no install

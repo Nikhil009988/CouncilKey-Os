@@ -1,4 +1,4 @@
-# CouncilKey-Os Security - Production Grade
+# CouncilKey-Os Security
 
 Based on deep scan of Hermes SECURITY.md + Tank-OS CVE-2026-27002 + Reefy security by design.
 
@@ -85,7 +85,7 @@ GitHub Actions (see `.github/workflows/`) runs Trivy weekly, uploads SARIF to Gi
 - Council decisions log to journal with timestamp, votes, prompt hash
 - Storage optimizer logs saved human-readable
 
-## Production Checklist
+## Deployment Checklist
 
 - [x] LUKS2 encrypted persistence
 - [x] Secrets never baked into image, podman secret + GPG

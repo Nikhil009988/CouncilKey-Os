@@ -1,6 +1,6 @@
 """
 CouncilKey-Os 3D Dashboard with Three.js - 3D Visualization of Knowledge Graph + Agents + Particle Effects
-Production Grade 10/10 - Much More Neat
+
 """
 
 from fastapi import FastAPI
@@ -11,7 +11,7 @@ HTML_3D = """
 <html>
 <head>
 <meta charset="utf-8">
-<title>CouncilKey-Os 3D Dashboard - Three.js - Particle Effects - Production 10/10</title>
+<title>CouncilKey-Os 3D Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
@@ -28,7 +28,7 @@ body { margin: 0; overflow: hidden; background: #0a0a0f; }
 <div class="ui-overlay">
   <div class="ui-card max-w-md">
     <h1 class="text-2xl font-bold text-white">🗝️ CouncilKey-Os 3D Dashboard</h1>
-    <p class="text-sm opacity-60 mt-2">Three.js - 3D Visualization of Knowledge Graph 200 nodes 150 edges + 3 Agents as 3D Avatars + Particle Effects + Glassmorphism - Production 10/10</p>
+    <p class="text-sm opacity-60 mt-2">Three.js - 3D knowledge graph, agent avatars and particle effects</p>
     <div class="mt-4 flex gap-2">
       <span class="px-3 py-1 rounded-full bg-green-900/30 text-green-300 border border-green-700/30 text-xs">3 Agents Live</span>
       <span class="px-3 py-1 rounded-full bg-blue-900/30 text-blue-300 border border-blue-700/30 text-xs">200 Nodes Knowledge Graph</span>
@@ -190,7 +190,7 @@ renderer.domElement.addEventListener('click', (event) => {
 """
 
 def create_app_3d():
-    app = FastAPI(title="CouncilKey-Os 3D Dashboard - Three.js - Particle Effects - Production 10/10")
+    app = FastAPI(title="CouncilKey-Os 3D Dashboard")
     
     @app.get("/", response_class=HTMLResponse)
     def root():

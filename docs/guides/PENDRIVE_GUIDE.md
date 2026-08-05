@@ -37,7 +37,7 @@ We scanned full source of Hermes, OpenClaw, Agent Zero.
 
 ---
 
-## Optimized Pendrive Design (OPTIMIZED_DESIGN.md)
+## Pendrive Partition Design
 
 ### Partition Layout (like Reefy + Tank-OS):
 
@@ -138,7 +138,7 @@ agent-zero             # WebUI 50001
 Best for quick test, no reboot.
 
 ```bash
-git clone https://github.com/nikhilgundu99/CouncilKey-Os
+git clone https://github.com/Nikhil009988/CouncilKey-Os
 cd CouncilKey-Os
 # Format USB exFAT
 sudo mkfs.exfat -n COUNCIL /dev/sdX1  # replace sdX1 with your USB partition
@@ -185,7 +185,7 @@ Based on `mvallim/live-custom-ubuntu-from-scratch` + our optimized storage setup
 ```bash
 sudo apt install debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools dosfstools
 
-git clone https://github.com/nikhilgundu99/CouncilKey-Os
+git clone https://github.com/Nikhil009988/CouncilKey-Os
 cd CouncilKey-Os
 
 sudo ./scripts/build-live-iso.sh noble amd64
@@ -228,7 +228,7 @@ council dashboard  # https://council.local:8443 from any device on LAN (Reefy st
 ```bash
 sudo dnf install podman make git qemu-kvm
 
-git clone https://github.com/nikhilgundu99/CouncilKey-Os
+git clone https://github.com/Nikhil009988/CouncilKey-Os
 cd CouncilKey-Os
 
 cp builder/bootc/config.toml.example builder/bootc/config.toml
@@ -313,7 +313,7 @@ council cleanup             # manual trigger delete heavy on unplug logic + sync
 ## Roadmap Done
 
 - [x] Deep audit of 3 agents storage (STORAGE_AUDIT.md 4.6KB)
-- [x] Optimized design (OPTIMIZED_DESIGN.md)
+- [x] Optimized partition design
 - [x] Storage optimizer (council/storage/optimizer.py) audit/what-if/optimize/setup
 - [x] Cleanup on unplug (council/storage/cleanup.sh + council-cleanup.service)
 - [x] Optimized storage setup (builder/live/council-storage-setup.sh)
@@ -348,4 +348,4 @@ python3 council/orchestrator/main.py dashboard --port 8443 --host 0.0.0.0
 5. Test storage optimizer daily, watch keep growth slow linear, cache auto delete
 6. Build in public early, ISO final stage (ClawOS approach)
 
-All code in branch arena/019fcbc3-councilkey-os, ready to push.
+All code in branch arena/019fd1ec-councilkey-os, ready to push.

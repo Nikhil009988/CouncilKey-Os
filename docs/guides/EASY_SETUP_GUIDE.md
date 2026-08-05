@@ -1,19 +1,19 @@
-# Easy Setup Guide - Super Simple - One Click Universal - Production Grade 10/10
+# Easy Setup Guide
 
 **You Wanted:** Make setup more easy so improve that thing.
 
-**Made Even More Easy:** One-click GUI + One-liner installer + Auto-detect USB + Progress bar + Verification
+**Highlights:** One-click GUI + One-liner installer + Auto-detect USB + Progress bar + Verification
 
 ---
 
 ## Super Easy - One Click - Any OS (Windows, Linux, macOS)
 
-### Option 1: One-Liner Easy Installer (Easiest, One Command Does Everything) - Production Grade 10/10
+### Option 1: One-Liner Installer
 
 **Linux / macOS / Windows Git Bash (Universal):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.sh | bash -s -- /mnt/council all
+curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash -s -- /mnt/council all
 # Replace /mnt/council with your pendrive mount:
 #   Linux: /mnt/council or /media/$USER/COUNCIL (after sudo mount /dev/sdX1 /mnt/council)
 #   macOS: /Volumes/COUNCIL
@@ -27,12 +27,12 @@ curl -fsSL https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/0
 # 5. 7 steps: Smart Initial 691 files 2.8MB demo scaling to 5GB, Advanced Smart (knowledge graph 200 nodes, memory consolidation, skill evolution), Real LanceDB 200 rows + FTS5 300 docs, Local LLM check, Optional Agents, Portable USB with rsync --progress progress bar, Multiple Checks tests 11 passing + verify-no-traces.sh 6 PASS
 ```
 
-**Windows PowerShell (Even More Easy, GUI):**
+**Windows PowerShell (GUI):**
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex
 # Or with USB drive letter E:\ and Mode all:
-# iex "$USB='E:\'; iwr -useb https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.ps1 | iex"
+# iex "$USB='E:\'; iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex"
 
 # What PowerShell one-liner does (even more Windows native):
 # 1. Auto-detects USB drives via Get-PSDrive, GUI selector WPF XAML glassmorphism modern (more modern than WinForms) on Windows 11 + WinForms fallback, shows drives with free space GB
@@ -41,7 +41,7 @@ iwr -useb https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/01
 # 4. 7 steps same as bash
 ```
 
-### Option 2: GUI Easy Setup (Even More Easy, One Click With GUI Progress Bar)
+### Option 2: GUI Easy Setup
 
 **Linux GUI (zenity) / macOS GUI (osascript) / Windows GUI (WPF):**
 
@@ -50,7 +50,7 @@ iwr -useb https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/01
 # macOS: Needs osascript (built-in) + tkinter
 # Windows: Needs PowerShell + WPF (built-in on Windows 11) + tkinter (python)
 
-git clone https://github.com/nikhilgundu99/CouncilKey-Os -b arena/019fcbc3-councilkey-os
+git clone https://github.com/Nikhil009988/CouncilKey-Os -b arena/019fd1ec-councilkey-os
 cd CouncilKey-Os
 python3 setup-gui.py  # GUI with auto-detect USB, format options exFAT/F2FS/ext4, mode selection, progress bar, log real-time, verify, dashboard button
 
@@ -63,7 +63,7 @@ python3 setup-gui.py  # GUI with auto-detect USB, format options exFAT/F2FS/ext4
 # - Much more easy than text-based: GUI, progress bar, log real-time, verification after copy, desktop shortcuts
 ```
 
-**Windows PowerShell GUI Even More Easy:**
+**Windows PowerShell GUI:**
 
 ```powershell
 # Double-click setup-pendrive-easy.ps1 or run:
@@ -77,7 +77,7 @@ python3 setup-gui.py  # GUI with auto-detect USB, format options exFAT/F2FS/ext4
 ### Option 3: Make Easy Setup (For Developers, One Command)
 
 ```bash
-git clone https://github.com/nikhilgundu99/CouncilKey-Os -b arena/019fcbc3-councilkey-os
+git clone https://github.com/Nikhil009988/CouncilKey-Os -b arena/019fd1ec-councilkey-os
 cd CouncilKey-Os
 make easy-setup USB=/mnt/council MODE=all  # One command does everything, 7 steps, multiple checks
 # Or GUI version:
@@ -105,9 +105,9 @@ make easy-setup-gui  # Launches setup-gui.py GUI with auto-detect USB, progress 
 # Plug pendrive, note drive letter E:\
 # Open PowerShell as normal user
 # One-liner (auto-detects USB, GUI selector, 7 steps):
-iwr -useb https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex
 # Or with USB E:\ and Mode all:
-# iex "$USB='E:\'; iwr -useb https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.ps1 | iex"
+# iex "$USB='E:\'; iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex"
 
 # What it does (7 steps, 2-3 min, no 3GB download yet):
 # 1. Auto-detects USB drives via Get-PSDrive, GUI selector WPF XAML glassmorphism modern on Windows 11 + WinForms fallback
@@ -121,7 +121,7 @@ iwr -useb https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/01
 
 **Linux/macOS/Windows Git Bash One-Liner:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.sh | bash -s -- /mnt/council all
+curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash -s -- /mnt/council all
 # Replace /mnt/council with your pendrive mount:
 #   Linux: /mnt/council or /media/$USER/COUNCIL (after sudo mount /dev/sdX1 /mnt/council)
 #   macOS: /Volumes/COUNCIL
@@ -129,13 +129,13 @@ curl -fsSL https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/0
 # Auto-detects USB via lsblk, GUI selector if zenity (Linux) or osascript (macOS), checks FS type exFAT, asks to format, 7 steps with rsync --progress progress bar
 ```
 
-**Even More Easy GUI (One Click With GUI Progress Bar):**
+**GUI (one click, with progress bar):**
 ```bash
 # Linux GUI (needs zenity + python3-tk): sudo apt install zenity python3-tk
 # macOS GUI (built-in osascript + tkinter): python3 -m tkinter (test tkinter)
 # Windows GUI: PowerShell WPF already built into Windows 11
 
-git clone https://github.com/nikhilgundu99/CouncilKey-Os -b arena/019fcbc3-councilkey-os
+git clone https://github.com/Nikhil009988/CouncilKey-Os -b arena/019fd1ec-councilkey-os
 cd CouncilKey-Os
 python3 setup-gui.py  # GUI with auto-detect USB, format options exFAT/F2FS/ext4, mode selection, progress bar real-time, log real-time green on black, verify, dashboard button
 # Or: make easy-setup-gui  # Launches setup-gui.py
@@ -185,7 +185,7 @@ council> council agents install all  # Both optional = 3->5 or 3->7 with sub-age
 council> council llm status   # Local LLM Ollama 11434, models, RAM GPU, internet offline mode
 council> council llm list     # Installed models: qwen2.5:3b 1.9GB + deepseek-coder 1.3b 0.8GB + nomic-embed 274MB = 3GB
 
-council> council dashboard --port 8443  # Opens https://localhost:8443 8 tabs neat Tailwind + animations + real xterm.js terminal
+council> council dashboard --port 8443  # Opens https://localhost:8443 - 8-tab dashboard with real terminal
 # 8 tabs: Council (Together/Alone toggle + typing indicators 3 agents typing... with animate-pulse dots + voting progress bar animated gradient), Agents 3+2, Optional 2, Local LLM, Storage (Keep smart vs Cache RAM bar visual), Journal (git versioned), Terminal Real (xterm.js real PTY + Connect button), Secrets (Vault GPG)
 
 council> exit  # Cleaning up - Removing agents from PC, keeping data in pendrive
@@ -208,12 +208,12 @@ council> exit  # Cleaning up - Removing agents from PC, keeping data in pendrive
 
 ---
 
-**Production Grade 10/10 Checklist - What Makes 10/10 (Not 9.5/10):**
+**Setup checklist:**
 
-**Already Built 9.7/10:**
+**Already built:**
 
-- ✅ Real embeddings with LanceDB 200 rows + FTS5 300 docs + knowledge graph 200 nodes 150 edges - Built real LanceDB with simple hash demo + TF-IDF real 200 rows 384 dim via sklearn no internet more real than simple hash, production fallback
-- ✅ Neat dashboard with Tailwind even more neat with animations - Built Tailwind CDN + header gradient sticky shadow + 8 tabs + Together/Alone toggle + Real xterm.js terminal + glassmorphism backdrop-blur + gradients + animate-pulse + typing-dot + progress-bar gradient animation, even more neat with Framer Motion style animations float, glow, slideIn, scaleIn, glass-morphism, neon-text
+- ✅ Real embeddings with LanceDB 200 rows + FTS5 300 docs + knowledge graph 200 nodes 150 edges - Built real LanceDB with simple hash demo + TF-IDF real 200 rows 384 dim via sklearn no internet more real than simple hash, fallback
+- ✅ Dashboard: Tailwind CDN, 8 tabs, Together/Alone toggle, real xterm.js terminal, glassmorphism, animated typing dots + voting bars
 - ✅ Optional agents real - CrewAI 1.15.10 installed for real via pip, Agent Crew Task import ok, crew with 3 agents Researcher Writer Reviewer, plus langgraph available as fallback for Microsoft Agent Framework
 - ✅ Windows Universal - start.py universal Python + start.ps1 PowerShell v2 Windows Native++ with GUI drive selector WPF modern + WinForms fallback + Windows Terminal wt detection + WSL detection + Admin check + Desktop + Start Menu shortcuts + Free space check + taskkill cleanup + start.sh + start.bat
 - ✅ 5GB Smart Initial - 691 files 2.8MB demo + 500 knowledge 130 skills 100 solutions MEMORY.md 1000 facts + knowledge_graph.json + lancedb 200 rows + fts5.db 1.1MB + scales to 5GB via download-models.sh 3GB + build-embeddings.sh 500MB
@@ -221,12 +221,12 @@ council> exit  # Cleaning up - Removing agents from PC, keeping data in pendrive
 - ✅ Together + Alone + No Traces + Data In Pendrive - council ask --mode together (3 agents debate+vote) + --mode alone --agent hermes/openclaw/agent-zero/crewai/microsoft-agent-framework, solo direct, dashboard Together/Alone toggle, portable env redirect TMPDIR XDG_CONFIG_HOME to USB + clean shell --norc --noprofile + trap cleanup EXIT deletes /tmp/council/* + sync, live boot host disk not mounted, verify-no-traces.sh 6 PASS 0 FAIL
 - ✅ Advanced Framework More Smarter - Knowledge graph, memory consolidation nightly 2am, skill evolution, self-reflection, journal analyzer, collaboration decomposer 3-5/7 agents, browser advanced, vision, voice, local LLM manager, optional agents registry
 - ✅ Real Terminal xterm.js Fully - terminal_real.py with PTY fully interactive pty.openpty(), shell /bin/bash -i, preexec_fn os.setsid, non-blocking master_fd, select.select, asyncio.gather read_pty + write_pty, WebSocket /ws/terminal and /ws/terminal-simple fallback
-- ✅ Easy Setup + Multiple Checks - setup-pendrive-easy.sh one-click universal 7 steps + .ps1 + .bat, make easy-setup + make check-all 9 checks tests 11 passing council status together+alone storage audit what-if no traces verification optional agents list local LLM check advanced smart
-- ✅ AppArmor Profiles Per Quadlet - builder/bootc/rootfs-overlay/etc/apparmor.d/council-hermes, council-openclaw, council-agent-zero with base + python/nodejs abstractions + allow reading keep/ real_home/ shared/ smart-initial/ + writing keep/ journal/ + cache RAM /tmp/council/ + deny /home/** w /etc/shadow r /proc/sys/** w /sys/** w + network inet tcp/udp + deny capability sys_admin sys_ptrace - Production Grade 10/10 security
+- ✅ Easy Setup + checks - setup-pendrive-easy.sh (7 steps) + .ps1 + .bat, `make check-all` runs tests, council status, storage audit, no-traces verification, optional agents list, local LLM check
+- ✅ AppArmor Profiles Per Quadlet - builder/bootc/rootfs-overlay/etc/apparmor.d/council-hermes, council-openclaw, council-agent-zero with base + python/nodejs abstractions + allow reading keep/ real_home/ shared/ smart-initial/ + writing keep/ journal/ + cache RAM /tmp/council/ + deny /home/** w /etc/shadow r /proc/sys/** w /sys/** w + network inet tcp/udp + deny capability sys_admin sys_ptrace security
 - ✅ One-Liner Installers + GUI - install.sh (bash one-liner curl | bash) + install.ps1 (PowerShell one-liner iwr | iex) + setup-easy-gui.sh (tkinter GUI + zenity + osascript + WPF) + setup-pendrive-easy.sh + .ps1 + .bat one-click universal with auto-detect USB, GUI selector, format as exFAT/F2FS, progress bar rsync --progress, verification, desktop shortcuts
 - ✅ F2FS + QEMU Smoke Test + Backup Full + Tailscale + Secure Boot Docs - format-usb-f2fs.sh, qemu-smoke-test.sh placeholder, backup/manager_full.py GPG, tailscale.py check, SECURITY.md Secure Boot docs
 
-**To Reach True 10/10 (From 9.7/10, 7-8 Hours Total):**
+**Roadmap (needs real hardware / internet / root):**
 
 - xterm.js real terminal fully with podman exec (30 min) - Built PTY, need podman exec for bootc profile
 - Optional agents real download Node.js 22+ (1 hour) - CrewAI real built, need Claude Code + Gemini CLI full
@@ -238,17 +238,16 @@ council> exit  # Cleaning up - Removing agents from PC, keeping data in pendrive
 - AppArmor enforce and test (1 hour, needs root + AppArmor enabled kernel)
 - Real nomic-embed-text 274MB via Ollama (20-30 min good internet, fails in sandbox no internet SSL_ERROR)
 
-**Current: 9.7/10 production grade, to reach true 10/10 need real hardware + internet + time 7-8 hours, demo production in sandbox 1.5 hours built 9.7/10 with AppArmor profiles + F2FS + QEMU + Backup Full + Real Terminal PTY + Optional Real + Real TF-IDF + Neat Dashboard Tailwind + Easy Setup One-Liner + GUI, which is production grade 10/10 for demo, full 10/10 would need real hardware + internet + time 7-8 hours**
+**Status:** The full demo runs in a sandbox today. The items above (Secure Boot signing, AppArmor enforcement, F2FS integration, QEMU boot test, real embedding models) require a real machine with root/internet.
 
-**Repo:** arena/019fcbc3-councilkey-os - Final advanced + easy setup GUI + one-liner installers + AppArmor + F2FS + QEMU + Backup GPG + Real Terminal PTY + Optional Real + Real TF-IDF + Neat Dashboard Tailwind + Easy Setup + Multiple Checks - Production grade 9.7/10 -> 10/10 checklist
 
 **Try now:**
-- One-liner: curl -fsSL https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.sh | bash -s -- /mnt/council all
-- PowerShell one-liner: iwr -useb https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.ps1 | iex
+- One-liner: curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash -s -- /mnt/council all
+- PowerShell one-liner: iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.ps1 | iex
 - GUI: python3 setup-gui.py (tkinter GUI + zenity + osascript + WPF)
 - Easy: ./setup-pendrive-easy.sh /mnt/council all or .\setup-pendrive-easy.ps1 -USB E:\ -Mode all
 - Then: bash /mnt/council/start.sh or double-click start.bat/start.ps1/python start.py
 - Together: council ask "Build website" (3 or 5 or 7 agents debate+vote with typing indicators + voting progress bar animated)
 - Alone: council ask --mode alone --agent hermes "Research quantum" (solo)
-- Dashboard: council dashboard --port 8443 -> https://localhost:8443 8 tabs neat Tailwind + animations + real xterm.js terminal
+- Dashboard: council dashboard --port 8443 -> https://localhost:8443 - 8-tab dashboard with real terminal
 - No traces: exit + unplug -> verify-no-traces.sh 6 PASS 0 FAIL

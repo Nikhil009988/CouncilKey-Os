@@ -51,7 +51,7 @@ def test_ollama_status_offline():
 
 def test_update_check_shape():
     mod = _load("update", "council/update/manager.py")
-    data = mod.check_update("nikhilgundu99/CouncilKey-Os")
+    data = mod.check_update("Nikhil009988/CouncilKey-Os")
     assert "update_available" in data
     if data.get("update_available"):
         assert "latest" in data

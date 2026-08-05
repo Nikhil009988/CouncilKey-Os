@@ -1,6 +1,6 @@
-# Single Executable Binary Even More Easy - No Need Git Clone or Python Installed
+# Single Executable Binary Packaging
 
-**Goal:** Single executable binary that does everything with GUI, no need git clone or Python installed, just double-click setup.exe (Windows) or setup.app (macOS) - even more easy than one-liner
+**Goal:** Ship a single executable (`setup.exe` / `setup.app`) so users don't need git or Python installed — just double-click.
 
 **Attempted:**
 
@@ -11,7 +11,7 @@ pip install pyinstaller
 pyinstaller --onefile --windowed --name CouncilKey-Os-Setup setup-gui.py
 # Creates dist/CouncilKey-Os-Setup (Linux) or dist/CouncilKey-Os-Setup.exe (Windows) single executable binary 100MB+
 # --onefile = single executable binary
-# --windowed = no console, GUI only (Windows) - even more easy, double-click
+# --windowed = no console, GUI only (Windows)
 # --name CouncilKey-Os-Setup = binary name
 # --add-data for smart-initial etc.
 ```
@@ -26,16 +26,16 @@ pyinstaller --onefile --windowed --name CouncilKey-Os-Setup setup-gui.py
 - `python3-config --ldflags` not found, `libpython3.11.a` not found in `/usr/lib/python3.11/config-3.11-x86_64-linux-gnu/` (no such file or directory)
 - Sandbox is minimal Debian without python dev packages and no internet to deb.debian.org for apt
 
-**Fallback Even More Easy Without Single Binary (Better Than Single Binary in Some Ways):**
+**Fallback without a single binary:**
 
-Single binary is 100MB+ download, while batch file is small (2KB) and downloads Python only if needed, even more easy than single binary in some ways:
+A single binary is 100MB+; the batch fallback is 2KB and downloads Python only if needed:
 
 - `setup-windows-easy.bat` and `setup-windows-easy-final.bat` - Windows batch double-click does everything, downloads Python if needed, no need Python installed, batch file does everything
   - Checks if Python installed via `where python`
   - If not, tries `winget install Python.Python.3.11 --silent` (Windows 10/11 built-in package manager)
   - If winget not found, tries PowerShell `Invoke-WebRequest -Uri https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe -OutFile %TEMP%\python-installer.exe` + `%TEMP%\python-installer.exe /quiet InstallAllUsers=0 PrependPath=1`
   - Then runs `setup-easy-one-click.py` or `setup-gui.py`
-  - Even more easy than single binary: Single binary is 100MB+ download, while batch file is 2KB and downloads Python only if needed (Python installer 24MB), total 24MB + small batch vs 100MB+ single binary
+  - Batch: 2KB + Python installer 24MB (only if needed) vs 100MB+ single binary
 
 - `setup-linux-easy.sh` - Linux shell double-click or bash, checks Python, installs via apt/dnf/pacman if needed, runs GUI
 
@@ -71,14 +71,12 @@ pyinstaller --onefile --windowed --name CouncilKey-Os-Setup --icon=icon.icns set
 - In sandbox, failed due to missing libpython3.11.so and no internet to apt, but spec file created: `CouncilKey-Os-Setup.spec` and `setup-binary.spec`
 - To build manually on real PC: `pip install pyinstaller && pyinstaller --onefile --windowed --name CouncilKey-Os-Setup setup-gui.py` - 5-10 min
 
-**Current Easy Setup Already Production Grade 10/10 Even More Easy (Without Single Binary):**
+**Without a single binary (recommended):**
 
-- One-liner: `curl -fsSL https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.sh | bash -s -- /mnt/council all` (Bash) and `iwr -useb .../install.ps1 | iex` (PowerShell) - Auto-detects USB, GUI selector, progress bar
+- One-liner: `curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash -s -- /mnt/council all` (Bash) and `iwr -useb .../install.ps1 | iex` (PowerShell) - Auto-detects USB, GUI selector, progress bar
 - GUI: `python3 setup-gui.py` or `python3 setup-easy-one-click.py` - GUI with auto-detect USB, format options exFAT/F2FS/ext4, progress bar real-time, log real-time
-- Even more easy batch: Double-click `setup-windows-easy.bat` or `setup-windows-easy-final.bat` - Checks Python, if not tries winget or PowerShell download Python installer, then runs GUI setup - No need Python installed, batch file does everything, downloads Python only if needed, even more easy than single binary 100MB+ download (batch file 2KB + Python installer 24MB if needed vs single binary 100MB+)
+- Batch fallback: double-click `setup-windows-easy.bat` — checks for Python, downloads it via winget/PowerShell if missing, then runs the GUI setup
 
 **Conclusion:**
 
-Single executable binary even more easy with PyInstaller that does everything with GUI, no need git clone or Python installed, just double-click setup.exe (Windows) or setup.app (macOS) - even more easy than one-liner - Attempted in sandbox, failed due to missing libpython3.11.so and apt failing no internet to deb.debian.org, but spec file created and fallback even more easy without single binary: `setup-windows-easy.bat` double-click does everything, downloads Python if needed, no need Python installed, batch file does everything - Even more easy than single binary in some ways, no need Python installed, batch file 2KB does everything.
-
-For production grade 10/10, current easy setup one-liner + GUI + even more easy batch that downloads Python if needed is already 10/10 easy, single binary would be even more easy but needs 50-100MB download vs batch 2KB + Python 24MB if needed.
+A single binary (PyInstaller `--onefile`) is possible but was not buildable in this sandbox (no internet to fetch `libpython3.11.so`); the spec files are included for building on a real machine. For most users the one-liner + GUI + batch fallback is simpler than shipping a 50-100MB binary: the batch file is 2KB and downloads Python only if needed.

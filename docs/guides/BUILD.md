@@ -15,14 +15,14 @@ This is fastest to test the 3-agent council on any PC, Windows/Linux.
 
 **Build:**
 ```bash
-git clone https://github.com/nikhilgundu99/CouncilKey-Os
+git clone https://github.com/Nikhil009988/CouncilKey-Os
 cd CouncilKey-Os
 chmod +x scripts/build-portable.sh
 ./scripts/build-portable.sh /mnt/your-usb-drive
 # Example: /media/$USER/COUNCIL or /mnt/e if WSL
 ```
 
-What script does (see RESEARCH.md for deep dive from portable-agent-usb):
+What the script does:
 - Downloads Node.js 22.14 for Linux+Windows (handles exFAT no-symlink via cp -rL)
 - Downloads Python 3.11 portable + uv
 - Installs:
@@ -64,7 +64,7 @@ sudo apt install -y debootstrap squashfs-tools xorriso isolinux syslinux-efi gru
 
 **Build:**
 ```bash
-git clone https://github.com/nikhilgundu99/CouncilKey-Os
+git clone https://github.com/Nikhil009988/CouncilKey-Os
 cd CouncilKey-Os
 sudo chmod +x scripts/build-live-iso.sh
 sudo ./scripts/build-live-iso.sh noble
@@ -150,7 +150,7 @@ Based on Tank-OS - best for enterprise, A/B rollback, cannot brick.
 sudo dnf install podman make git qemu-kvm qemu-img -y  # Fedora
 # or Ubuntu: sudo apt install podman make git qemu-kvm qemu-utils -y
 
-git clone https://github.com/nikhilgundu99/CouncilKey-Os
+git clone https://github.com/Nikhil009988/CouncilKey-Os
 cd CouncilKey-Os
 # Config for bootc-image-builder
 cp builder/bootc/config.toml.example builder/bootc/config.toml
