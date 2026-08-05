@@ -1,3 +1,7 @@
 @echo off
-set COUNCIL_HOME=%COUNCIL_HOME:C:\Users\nikhil\.council%
-python -m council.orchestrator.main
+setlocal
+set COUNCIL_HOME=%COUNCIL_HOME%
+set COUNCIL_HOST=%COUNCIL_HOST:0.0.0.0%
+set COUNCIL_PORT=%COUNCIL_PORT:8443%
+python -m uvicorn council.orchestrator.main:app --host "%COUNCIL_HOST%" --port "%COUNCIL_PORT%"
+endlocal

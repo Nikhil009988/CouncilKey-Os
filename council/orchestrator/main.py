@@ -10,9 +10,18 @@ from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from council.orchestrator.agents import AgentResult, build_default_clients
+
+from council.journal.analyzer import analyze as journal_analyze, list_journal
+from council.backup.manager import create_backup as backup_create, list_backups as backup_list
+from council.llm.manager import available as llm_available
+from council.memory.consolidation import nightly_consolidate
+from council.network.tailscale import tailscale_status, setup_tailscale
+from council.reflection.self import reflect_on_last
+from council.skills.evolution import evolve
 
 COUNCIL_HOME = Path(os.environ.get("COUNCIL_HOME", "/var/lib/council"))
 JOURNAL_DIR = COUNCIL_HOME / "journal"
@@ -21,11 +30,15 @@ JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI(title="CouncilKey-Os", version="1.0.0")
 clients: dict[str, Any] = {}
 
+_dashboard_html = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
+
 
 class AskRequest(BaseModel):
     prompt: str
     strategy: str = "majority"
     min_agreement: int = 2
+    mode: str = "together"
+    agent: str | None = None
 
 
 class OptimizeRequest(BaseModel):
@@ -68,8 +81,10 @@ def status() -> JSONResponse:
 @app.post("/api/council/ask")
 async def ask(req: AskRequest) -> JSONResponse:
     agents = build_default_clients()
-    tasks = [agents[k].ask(req.prompt) for k in agents]
-    responses: list[AgentResult] = await asyncio.gather(*tasks)
+    if req.mode == "alone" and req.agent and req.agent in agents:
+        responses: list[AgentResult] = [await agents[req.agent].ask(req.prompt)]
+    else:
+        responses = await asyncio.gather(*[agents[k].ask(req.prompt) for k in agents])
     votes = {r.agent: ("approve" if "danger" not in r.response.lower() else "reject") for r in responses}
     approve = sum(1 for v in votes.values() if v == "approve")
     consensus = approve >= req.min_agreement
@@ -124,9 +139,81 @@ async def ws(ws: WebSocket) -> None:
 
 @app.get("/")
 def index() -> HTMLResponse:
-    return HTMLResponse(
-        "<html><body><h1>CouncilKey-Os</h1><p>Use <a href='/docs'>/docs</a> or connect WS at /ws</p></body></html>"
-    )
+    return HTMLResponse(_dashboard_html)
+
+
+@app.get("/api/health")
+def health() -> JSONResponse:
+    return JSONResponse({"ok": True})
+
+
+@app.get("/api/journal")
+def journal() -> JSONResponse:
+    return JSONResponse(list_journal())
+
+
+@app.get("/api/journal/analyze")
+def journal_analyze_route() -> JSONResponse:
+    return JSONResponse(journal_analyze())
+
+
+@app.get("/api/storage/audit")
+def storage_audit() -> JSONResponse:
+    from council.storage.optimizer import audit as audit_fn
+    return JSONResponse(audit_fn())
+
+
+@app.get("/api/storage/what-if")
+def storage_whatif() -> JSONResponse:
+    from council.storage.optimizer import what_if_delete as whatif_fn
+    return JSONResponse(whatif_fn())
+
+
+@app.post("/api/storage/optimize")
+def storage_optimize(req: OptimizeRequest) -> JSONResponse:
+    from council.storage.optimizer import optimize as optimize_fn
+    return JSONResponse(optimize_fn(dry_run=req.dry_run))
+
+
+@app.post("/api/storage/setup")
+def storage_setup() -> JSONResponse:
+    from council.storage.optimizer import setup_persist_structure as setup_fn
+    return JSONResponse(setup_fn())
+
+
+@app.get("/api/backup/list")
+def backup_list_route() -> JSONResponse:
+    return JSONResponse(backup_list())
+
+
+@app.post("/api/backup/create")
+def backup_create_route() -> JSONResponse:
+    return JSONResponse(backup_create())
+
+
+@app.get("/api/llm/available")
+def llm_available_route() -> JSONResponse:
+    return JSONResponse(llm_available())
+
+
+@app.get("/api/network/tailscale")
+def tailscale_status_route() -> JSONResponse:
+    return JSONResponse(tailscale_status())
+
+
+@app.post("/api/network/tailscale/setup")
+def tailscale_setup_route() -> JSONResponse:
+    return JSONResponse(setup_tailscale())
+
+
+@app.get("/api/reflection/last")
+def reflection_last_route() -> JSONResponse:
+    return JSONResponse(reflect_on_last())
+
+
+@app.post("/api/skills/evolve")
+def skills_evolve_route() -> JSONResponse:
+    return JSONResponse(evolve())
 
 
 def cli_dashboard(port: int = 8000, host: str = "0.0.0.0") -> None:

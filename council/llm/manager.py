@@ -1,4 +1,4 @@
-"""CouncilKey-Os Local LLM Manager."""
+"""CouncilKey-Os local LLM manager."""
 from __future__ import annotations
 
 import os
@@ -13,7 +13,7 @@ def ensure_dirs() -> None:
     LLM_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def available() -> dict[str, Any]:
+def available() -> dict[str, object]:
     ensure_dirs()
     providers = {
         "openai": os.environ.get("OPENAI_API_KEY"),
@@ -22,4 +22,5 @@ def available() -> dict[str, Any]:
         "openrouter": os.environ.get("OPENROUTER_API_KEY"),
         "nous": os.environ.get("NOUS_API_KEY"),
     }
-    return {"providers": {k: bool(v) for k, v in providers.items()}, "default": "nous" if providers["nous"] else next((k for k, v in providers.items() if v), None)}
+    default = "nous" if providers["nous"] else next((k for k, v in providers.items() if v), None)
+    return {"providers": {k: bool(v) for k, v in providers.items()}, "default": default}

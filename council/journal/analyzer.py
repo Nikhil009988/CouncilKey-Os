@@ -1,31 +1,34 @@
-"""CouncilKey-Os Journal Analyzer."""
+"""CouncilKey-Os journal analyzer."""
 from __future__ import annotations
 
 import json
 import os
 import re
 from pathlib import Path
-from typing import Any
 
 JOURNAL_DIR = Path(os.environ.get("COUNCIL_HOME", "/var/lib/council")) / "journal"
 
 
-def list_journal() -> dict[str, Any]:
+def list_journal() -> dict[str, object]:
     if not JOURNAL_DIR.exists():
         return {"journal_dir": str(JOURNAL_DIR), "files": []}
     files = []
     for p in sorted(JOURNAL_DIR.glob("*.md")):
-        files.append({"file": p.name, "size": p.stat().st_size, "content": p.read_text(encoding="utf-8", errors="ignore")})
+        try:
+            content = p.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            content = ""
+        files.append({"file": p.name, "size": p.stat().st_size, "content": content})
     return {"journal_dir": str(JOURNAL_DIR), "files": files[-50:]}
 
 
-def analyze() -> dict[str, Any]:
+def analyze() -> dict[str, object]:
     data = list_journal()
     total = len(data["files"])
     best_agents: dict[str, int] = {}
     strategies: dict[str, int] = {}
     for item in data["files"]:
-        text = item.get("content", "")
+        text = str(item.get("content", "")) if isinstance(item, dict) else ""
         m = re.search(r"best_agent\": \"([^\"]+)\"", text)
         if m:
             best_agents[m.group(1)] = best_agents.get(m.group(1), 0) + 1
