@@ -7,8 +7,6 @@ pip install -e .
 councilkey serve          # dashboard + API on http://0.0.0.0:8443
 ```
 
-![Hero](images/hero-banner.png)
-
 ---
 
 ## What is it for?
@@ -92,20 +90,6 @@ Listed in the order the project was built:
 ---
 
 ## Gallery
-
-### Visuals
-
-| | |
-|---|---|
-| ![Logo](images/logo.png) | ![Council flow](images/council-flow.png) |
-| ![Privacy-first USB](images/privacy-usb.png) | ![Local AI](images/local-ai.png) |
-| ![Council chamber](images/council-chamber.png) | |
-
-Architecture diagram (vector, crisp at any zoom): [architecture-diagram.svg](images/architecture-diagram.svg)
-
-![Architecture](images/architecture-diagram.svg)
-
-### Screenshots & concepts
 
 | | |
 |---|---|

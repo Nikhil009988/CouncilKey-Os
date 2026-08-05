@@ -97,15 +97,12 @@ answers + vote + journal.
 ## v1.4.1 (2026-08-05) - Professional visuals + polish
 
 ### Added
-- New professional visuals (AI-generated, text-free): `images/logo.png`
-  (brand icon), `hero-banner.png`, `council-flow.png`, `privacy-usb.png`,
-  `local-ai.png` — mirrored to `docs/images/`
-- `images/architecture-diagram.svg` — hand-crafted crisp vector architecture
-  diagram (renders perfectly on GitHub, no text garbling)
-- README: hero banner at top + expanded Gallery (new "Visuals" section with
-  the architecture diagram)
 - Dashboard: SVG favicon (data URI, no file deps) + SEO/OpenGraph meta tags
-- docs/index.html landing gallery: new visuals added
+
+### Reverted
+- The AI-generated visual set (logo/hero/council-flow/privacy/local-ai/
+  council-chamber + SVG diagram) was removed per maintainer preference —
+  the original image set is kept and used everywhere
 
 ### Fixed (debug pass)
 - `/3d` route serves the HTML directly (removed fragile endpoint lookup)
