@@ -79,17 +79,16 @@
 **Step 2: One-Click Easy Setup (Universal):**
 ```bash
 # Linux/macOS/Windows Git Bash - One command does everything:
-curl -fsSL https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.sh | bash -s -- /mnt/council all
+curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/main/scripts/install.sh | bash
 
 # Windows PowerShell (Even More Easy, GUI):
-iwr -useb https://raw.githubusercontent.com/nikhilgundu99/CouncilKey-Os/arena/019fcbc3-councilkey-os/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/main/scripts/install.ps1 | iex
 
 # Even More Easy GUI:
-git clone https://github.com/nikhilgundu99/CouncilKey-Os -b arena/019fcbc3-councilkey-os
+git clone https://github.com/Nikhil009988/CouncilKey-Os
 cd CouncilKey-Os
-python3 setup-gui.py  # GUI with auto-detect USB, format options, progress bar real-time
-python3 setup-easy-one-click.py  # Single file, auto-downloads repo zip, no need git clone
-# Or double-click setup-windows-easy.bat (Windows) - downloads Python if needed, even more easy than single binary
+python3 scripts/build/build-portable-env.sh  # Build portable env with auto-detect USB
+# Or double-click scripts/setup-windows-easy.bat (Windows) - downloads Python if needed
 ```
 
 **Step 3: Move Pendrive To Any PC:**
