@@ -93,3 +93,27 @@ tree was unbuilt, which is exactly why `openclaw` failed in PowerShell).
 `councilkey agents verify` -> all 3 agents answer as local-llm with distinct
 role voices; `/api/status` reports mode per agent; council ask returns 3 real
 answers + vote + journal.
+
+## v1.4.1 (2026-08-05) - Professional visuals + polish
+
+### Added
+- New professional visuals (AI-generated, text-free): `images/logo.png`
+  (brand icon), `hero-banner.png`, `council-flow.png`, `privacy-usb.png`,
+  `local-ai.png` — mirrored to `docs/images/`
+- `images/architecture-diagram.svg` — hand-crafted crisp vector architecture
+  diagram (renders perfectly on GitHub, no text garbling)
+- README: hero banner at top + expanded Gallery (new "Visuals" section with
+  the architecture diagram)
+- Dashboard: SVG favicon (data URI, no file deps) + SEO/OpenGraph meta tags
+- docs/index.html landing gallery: new visuals added
+
+### Fixed (debug pass)
+- `/3d` route serves the HTML directly (removed fragile endpoint lookup)
+- Removed dead `AGENT_PORTS` constant
+- `installed_models()` cached 10s (was an extra HTTP call per agent ask)
+- Demo server moved out of the product to `scripts/dev/` (dev-only fixture)
+
+### Verified
+- 67 tests passing · ruff clean · all 53 modules import · shell syntax OK
+- Endpoint sweep 65/65 → 200 · integration 14/14 (roles, decompose, debate,
+  SSE, WS chat, terminal guard, cache, tasks, audit)

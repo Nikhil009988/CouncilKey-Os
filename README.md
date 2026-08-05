@@ -7,6 +7,8 @@ pip install -e .
 councilkey serve          # dashboard + API on http://0.0.0.0:8443
 ```
 
+![Hero](images/hero-banner.png)
+
 ---
 
 ## What is it for?
@@ -86,6 +88,35 @@ Listed in the order the project was built:
 - **OpenClaw fix**: installs the prebuilt `openclaw@latest` CLI globally (the cloned source tree was unbuilt — this is what broke `openclaw` in PowerShell)
 - **Windows native**: `scripts\setup.ps1`, `scripts\start.ps1`, fixed `start.bat`
 - **Dashboard**: Agents tab shows the real per-agent backend (🟢 gateway / 🟡 local-llm / ⚪ mock) + LLM badge in the header
+
+---
+
+## Gallery
+
+### Visuals
+
+| | |
+|---|---|
+| ![Logo](images/logo.png) | ![Council flow](images/council-flow.png) |
+| ![Privacy-first USB](images/privacy-usb.png) | ![Local AI](images/local-ai.png) |
+
+Architecture diagram (vector, crisp at any zoom): [architecture-diagram.svg](images/architecture-diagram.svg)
+
+![Architecture](images/architecture-diagram.svg)
+
+### Screenshots & concepts
+
+| | |
+|---|---|
+| ![Banner](images/banner.png) | ![Architecture](images/architecture.png) |
+| ![Dashboard](images/dashboard.png) | ![Agents](images/agents.png) |
+| ![Storage](images/storage.png) | ![Together vs Alone](images/together-alone.png) |
+| ![No Traces](images/no-traces.png) | ![Easy Setup](images/easy-setup.png) |
+| ![5GB Smart](images/5gb-smart.png) | ![Optional LLM](images/optional-llm.png) |
+| ![Terminal](images/terminal-real.png) | ![LanceDB](images/lancedb-real.png) |
+| ![3D Dashboard](images/3d-dashboard.png) | ![Voice Chat](images/voice-chat.png) |
+| ![Vision](images/vision-screenshot.png) | ![Browser](images/browser-camofox.png) |
+| ![Canvas](images/canvas-desktop.png) | ![Dashboard v4](images/dashboard-neat-v4.png) |
 
 ---
 
