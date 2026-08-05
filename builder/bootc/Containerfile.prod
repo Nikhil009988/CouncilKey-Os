@@ -1,0 +1,4 @@
+FROM quay.io/fedora/fedora-bootc:44
+LABEL containers.bootc=1
+ENV COUNCIL_HOME=/var/lib/council
+RUN mkdir -p /opt/council

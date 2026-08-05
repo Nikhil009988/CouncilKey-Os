@@ -1,0 +1,3 @@
+FROM quay.io/fedora/fedora-bootc:44
+LABEL containers.bootc=1
+RUN echo "CouncilKey-Os bootc image"
