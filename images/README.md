@@ -10,6 +10,7 @@ Screenshots and diagrams for CouncilKey-Os. All images are also mirrored under [
 | `privacy-usb.png` | Privacy concept - USB keeps knowledge, deletes the rest |
 | `local-ai.png` | Local/offline AI concept - no cloud, no keys |
 | `architecture-diagram.svg` | Crisp vector architecture diagram (render-safe on GitHub) |
+| `council-chamber.png` | The council chamber — three agents around the vote table (wide) |
 | `banner.png` | Project banner — three agents (Hermes, OpenClaw, Agent Zero) on a USB drive |
 | `architecture.png` | Partition + persistence architecture (EFI, live squashfs, LUKS-encrypted persist) |
 | `dashboard.png` | Dashboard mockup — council chat, agent cards, voting bars, storage |

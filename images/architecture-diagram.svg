@@ -1,96 +1,138 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0a0a0f"/>
-      <stop offset="1" stop-color="#12141f"/>
+      <stop offset="0" stop-color="#07070d"/>
+      <stop offset="0.5" stop-color="#0b0d17"/>
+      <stop offset="1" stop-color="#101226"/>
     </linearGradient>
     <linearGradient id="indigo" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#6366f1"/>
-      <stop offset="1" stop-color="#818cf8"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
     </linearGradient>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="b"/>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#fbbf24"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#14b8a6"/>
+      <stop offset="1" stop-color="#2dd4bf"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <filter id="card" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
   </defs>
-  <rect width="1200" height="680" fill="url(#bg)"/>
 
-  <!-- Title -->
-  <text x="600" y="46" text-anchor="middle" fill="#e2e8f0" font-size="24" font-weight="700">CouncilKey-Os — Architecture</text>
-  <text x="600" y="70" text-anchor="middle" fill="#94a3b8" font-size="13">3 agents debate → council votes → journal + memory · everything local, data on your pendrive</text>
+  <rect width="1280" height="720" fill="url(#bg)"/>
 
-  <!-- Row 1: User -->
-  <rect x="420" y="100" width="360" height="54" rx="10" fill="#1a1d29" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="600" y="125" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="600">You</text>
-  <text x="600" y="143" text-anchor="middle" fill="#94a3b8" font-size="11">Dashboard (localhost:8443) · CLI (councilkey) · REST API · WebSocket</text>
+  <!-- subtle grid -->
+  <g stroke="#1e2235" stroke-width="0.6" opacity="0.5">
+    <line x1="0" y1="120" x2="1280" y2="120"/><line x1="0" y1="240" x2="1280" y2="240"/>
+    <line x1="0" y1="360" x2="1280" y2="360"/><line x1="0" y1="480" x2="1280" y2="480"/>
+    <line x1="0" y1="600" x2="1280" y2="600"/>
+    <line x1="160" y1="0" x2="160" y2="720"/><line x1="320" y1="0" x2="320" y2="720"/>
+    <line x1="480" y1="0" x2="480" y2="720"/><line x1="640" y1="0" x2="640" y2="720"/>
+    <line x1="800" y1="0" x2="800" y2="720"/><line x1="960" y1="0" x2="960" y2="720"/>
+    <line x1="1120" y1="0" x2="1120" y2="720"/>
+  </g>
 
-  <!-- Arrow down -->
-  <line x1="600" y1="154" x2="600" y2="184" stroke="#6366f1" stroke-width="2"/>
-  <polygon points="594,180 600,192 606,180" fill="#6366f1"/>
+  <!-- Header -->
+  <rect x="360" y="22" width="560" height="66" rx="14" fill="#141630" stroke="#6366f1" stroke-width="1" opacity="0.95" filter="url(#card)"/>
+  <text x="640" y="50" text-anchor="middle" fill="#f1f5f9" font-size="24" font-weight="800" letter-spacing="1">COUNCILKEY-OS</text>
+  <text x="640" y="72" text-anchor="middle" fill="#94a3b8" font-size="12">3 agents debate · council votes · memory persists — fully local</text>
 
-  <!-- Row 2: Orchestrator -->
-  <rect x="360" y="194" width="480" height="52" rx="10" fill="#1e2033" stroke="#818cf8" stroke-width="1.5" filter="url(#glow)"/>
-  <text x="600" y="217" text-anchor="middle" fill="#c7d2fe" font-size="15" font-weight="700">Council Orchestrator (FastAPI)</text>
-  <text x="600" y="235" text-anchor="middle" fill="#94a3b8" font-size="11">ask · decompose · debate · stream · tasks · audit · search · vault · terminal guard</text>
+  <!-- Layer 1: You -->
+  <rect x="480" y="112" width="320" height="56" rx="12" fill="#12142a" stroke="#475569" stroke-width="1" filter="url(#card)"/>
+  <circle cx="512" cy="140" r="10" fill="#334155"/>
+  <text x="512" y="144" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="700">👤</text>
+  <text x="536" y="138" fill="#e2e8f0" font-size="14" font-weight="700">You</text>
+  <text x="536" y="155" fill="#94a3b8" font-size="10.5">dashboard :8443 · CLI · REST · WebSocket</text>
 
-  <!-- Row 3: three agents -->
-  <line x1="600" y1="246" x2="600" y2="272" stroke="#6366f1" stroke-width="2"/>
-  <line x1="240" y1="272" x2="960" y2="272" stroke="#475569" stroke-width="1.5"/>
-  <line x1="240" y1="272" x2="240" y2="292" stroke="#6366f1" stroke-width="2"/>
-  <line x1="600" y1="272" x2="600" y2="292" stroke="#6366f1" stroke-width="2"/>
-  <line x1="960" y1="272" x2="960" y2="292" stroke="#6366f1" stroke-width="2"/>
-  <polygon points="234,288 240,300 246,288" fill="#6366f1"/>
-  <polygon points="594,288 600,300 606,288" fill="#6366f1"/>
-  <polygon points="954,288 960,300 966,288" fill="#6366f1"/>
+  <line x1="640" y1="168" x2="640" y2="196" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="634,192 640,204 646,192" fill="#6366f1"/>
 
-  <rect x="120" y="302" width="240" height="78" rx="10" fill="#1a1d29" stroke="#10b981" stroke-width="1.5"/>
-  <text x="240" y="326" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="600">🧙 Hermes</text>
-  <text x="240" y="345" text-anchor="middle" fill="#94a3b8" font-size="11">memory &amp; analysis</text>
-  <text x="240" y="364" text-anchor="middle" fill="#6ee7b7" font-size="10">brain: Ollama qwen2.5:3b</text>
+  <!-- Layer 2: Orchestrator -->
+  <rect x="380" y="206" width="520" height="64" rx="12" fill="#171a35" stroke="url(#indigo)" stroke-width="1.6" filter="url(#glow)"/>
+  <text x="640" y="234" text-anchor="middle" fill="#c7d2fe" font-size="15" font-weight="800">Council Orchestrator — FastAPI</text>
+  <text x="640" y="254" text-anchor="middle" fill="#94a3b8" font-size="11">ask · decompose · debate · stream · tasks · audit · search · vault · guard</text>
 
-  <rect x="480" y="302" width="240" height="78" rx="10" fill="#1a1d29" stroke="#3b82f6" stroke-width="1.5"/>
-  <text x="600" y="326" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="600">🦞 OpenClaw</text>
-  <text x="600" y="345" text-anchor="middle" fill="#94a3b8" font-size="11">action &amp; execution</text>
-  <text x="600" y="364" text-anchor="middle" fill="#93c5fd" font-size="10">brain: Ollama qwen2.5:3b</text>
+  <line x1="640" y1="270" x2="640" y2="300" stroke="#6366f1" stroke-width="2"/>
+  <line x1="240" y1="300" x2="1040" y2="300" stroke="#334155" stroke-width="1.5"/>
+  <line x1="240" y1="300" x2="240" y2="318" stroke="#6366f1" stroke-width="2"/>
+  <line x1="640" y1="300" x2="640" y2="318" stroke="#6366f1" stroke-width="2"/>
+  <line x1="1040" y1="300" x2="1040" y2="318" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="234,314 240,326 246,314" fill="#6366f1"/>
+  <polygon points="634,314 640,326 646,314" fill="#6366f1"/>
+  <polygon points="1034,314 1040,326 1046,314" fill="#6366f1"/>
 
-  <rect x="840" y="302" width="240" height="78" rx="10" fill="#1a1d29" stroke="#8b5cf6" stroke-width="1.5"/>
-  <text x="960" y="326" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="600">🔧 Agent Zero</text>
-  <text x="960" y="345" text-anchor="middle" fill="#94a3b8" font-size="11">builder &amp; review</text>
-  <text x="960" y="364" text-anchor="middle" fill="#c4b5fd" font-size="10">brain: Ollama deepseek-coder</text>
+  <!-- Layer 3: agents -->
+  <g filter="url(#card)">
+    <rect x="110" y="328" width="260" height="92" rx="14" fill="#0f1322" stroke="#10b981" stroke-width="1.4"/>
+    <rect x="110" y="328" width="260" height="30" rx="14" fill="#10b981" opacity="0.14"/>
+    <text x="240" y="349" text-anchor="middle" fill="#6ee7b7" font-size="13" font-weight="800">🧙 HERMES</text>
+    <text x="240" y="372" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">memory &amp; analysis</text>
+    <text x="240" y="391" text-anchor="middle" fill="#94a3b8" font-size="10.5">brain → qwen2.5:3b</text>
+    <text x="240" y="408" text-anchor="middle" fill="#64748b" font-size="10">gateway 18790 (optional)</text>
 
-  <!-- Backend note -->
-  <text x="600" y="404" text-anchor="middle" fill="#64748b" font-size="11">backend fallback: external agent gateway (🟢) → local LLM (🟡) → explicit mock (⚪)</text>
+    <rect x="510" y="328" width="260" height="92" rx="14" fill="#0f1322" stroke="#3b82f6" stroke-width="1.4"/>
+    <rect x="510" y="328" width="260" height="30" rx="14" fill="#3b82f6" opacity="0.14"/>
+    <text x="640" y="349" text-anchor="middle" fill="#93c5fd" font-size="13" font-weight="800">🦞 OPENCLAW</text>
+    <text x="640" y="372" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">action &amp; execution</text>
+    <text x="640" y="391" text-anchor="middle" fill="#94a3b8" font-size="10.5">brain → qwen2.5:3b</text>
+    <text x="640" y="408" text-anchor="middle" fill="#64748b" font-size="10">gateway 18789 (optional)</text>
 
-  <!-- Row 4: vote -->
-  <line x1="240" y1="380" x2="240" y2="420" stroke="#475569" stroke-width="1.5"/>
-  <line x1="600" y1="380" x2="600" y2="420" stroke="#475569" stroke-width="1.5"/>
-  <line x1="960" y1="380" x2="960" y2="420" stroke="#475569" stroke-width="1.5"/>
-  <line x1="240" y1="420" x2="960" y2="420" stroke="#475569" stroke-width="1.5"/>
-  <line x1="600" y1="420" x2="600" y2="440" stroke="#f59e0b" stroke-width="2"/>
-  <polygon points="594,436 600,448 606,436" fill="#f59e0b"/>
+    <rect x="910" y="328" width="260" height="92" rx="14" fill="#0f1322" stroke="#8b5cf6" stroke-width="1.4"/>
+    <rect x="910" y="328" width="260" height="30" rx="14" fill="#8b5cf6" opacity="0.14"/>
+    <text x="1040" y="349" text-anchor="middle" fill="#c4b5fd" font-size="13" font-weight="800">🔧 AGENT ZERO</text>
+    <text x="1040" y="372" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">builder &amp; review</text>
+    <text x="1040" y="391" text-anchor="middle" fill="#94a3b8" font-size="10.5">brain → deepseek-coder</text>
+    <text x="1040" y="408" text-anchor="middle" fill="#64748b" font-size="10">gateway 50001 (optional)</text>
+  </g>
 
-  <rect x="420" y="450" width="360" height="56" rx="10" fill="#1a1d29" stroke="#f59e0b" stroke-width="1.5"/>
-  <text x="600" y="473" text-anchor="middle" fill="#fcd34d" font-size="14" font-weight="700">Council Vote</text>
-  <text x="600" y="491" text-anchor="middle" fill="#94a3b8" font-size="11">majority · weighted · LLM judge · hermes decides — 2/3 consensus by default</text>
+  <!-- backend fallback note -->
+  <text x="640" y="444" text-anchor="middle" fill="#64748b" font-size="10.5">backend fallback per agent: external gateway 🟢 → local LLM (Ollama) 🟡 → explicit mock ⚪</text>
 
-  <!-- Row 5: outputs -->
-  <line x1="600" y1="506" x2="600" y2="532" stroke="#6366f1" stroke-width="2"/>
-  <polygon points="594,528 600,540 606,528" fill="#6366f1"/>
-  <line x1="600" y1="532" x2="180" y2="532" stroke="#475569" stroke-width="1.5"/>
-  <line x1="600" y1="532" x2="1020" y2="532" stroke="#475569" stroke-width="1.5"/>
-  <line x1="180" y1="532" x2="180" y2="556" stroke="#475569" stroke-width="1.5"/>
-  <line x1="600" y1="532" x2="600" y2="556" stroke="#475569" stroke-width="1.5"/>
-  <line x1="1020" y1="532" x2="1020" y2="556" stroke="#475569" stroke-width="1.5"/>
+  <!-- Layer 4: vote -->
+  <line x1="240" y1="420" x2="240" y2="462" stroke="#475569" stroke-width="1.5"/>
+  <line x1="640" y1="420" x2="640" y2="462" stroke="#475569" stroke-width="1.5"/>
+  <line x1="1040" y1="420" x2="1040" y2="462" stroke="#475569" stroke-width="1.5"/>
+  <line x1="240" y1="462" x2="1040" y2="462" stroke="#475569" stroke-width="1.5"/>
+  <line x1="640" y1="462" x2="640" y2="482" stroke="#f59e0b" stroke-width="2"/>
+  <polygon points="634,478 640,490 646,478" fill="#f59e0b"/>
 
-  <rect x="60" y="558" width="240" height="60" rx="10" fill="#1a1d29" stroke="#475569" stroke-width="1"/>
-  <text x="180" y="582" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">Journal + Audit</text>
-  <text x="180" y="599" text-anchor="middle" fill="#94a3b8" font-size="10">every decision, latency, consensus rate</text>
+  <rect x="430" y="492" width="420" height="58" rx="14" fill="#151228" stroke="url(#amber)" stroke-width="1.4" filter="url(#card)"/>
+  <text x="640" y="517" text-anchor="middle" fill="#fcd34d" font-size="14" font-weight="800">⚖ COUNCIL VOTE</text>
+  <text x="640" y="536" text-anchor="middle" fill="#94a3b8" font-size="10.5">majority · weighted · LLM judge · hermes decides — 2/3 consensus default</text>
 
-  <rect x="480" y="558" width="240" height="60" rx="10" fill="#1a1d29" stroke="#475569" stroke-width="1"/>
-  <text x="600" y="582" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">Memory + Knowledge</text>
-  <text x="600" y="599" text-anchor="middle" fill="#94a3b8" font-size="10">graph · TF-IDF search · RAG injection</text>
+  <!-- Layer 5: outputs -->
+  <line x1="640" y1="550" x2="640" y2="574" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="634,570 640,582 646,570" fill="#6366f1"/>
+  <line x1="640" y1="574" x2="213" y2="574" stroke="#475569" stroke-width="1.5"/>
+  <line x1="640" y1="574" x2="1067" y2="574" stroke="#475569" stroke-width="1.5"/>
+  <line x1="213" y1="574" x2="213" y2="596" stroke="#475569" stroke-width="1.5"/>
+  <line x1="640" y1="574" x2="640" y2="596" stroke="#475569" stroke-width="1.5"/>
+  <line x1="1067" y1="574" x2="1067" y2="596" stroke="#475569" stroke-width="1.5"/>
 
-  <rect x="900" y="558" width="240" height="60" rx="10" fill="#1a1d29" stroke="#475569" stroke-width="1"/>
-  <text x="1020" y="582" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">Storage split</text>
-  <text x="1020" y="599" text-anchor="middle" fill="#94a3b8" font-size="10">keep: distilled · cache: auto-deleted</text>
+  <g filter="url(#card)">
+    <rect x="73" y="598" width="280" height="66" rx="12" fill="#0f1322" stroke="#475569" stroke-width="1"/>
+    <circle cx="104" cy="631" r="9" fill="#1e293b"/><text x="104" y="635" text-anchor="middle" font-size="11">📓</text>
+    <text x="124" y="626" fill="#e2e8f0" font-size="12" font-weight="700">Journal + Audit</text>
+    <text x="124" y="644" fill="#94a3b8" font-size="10">every decision, latency, consensus</text>
+
+    <rect x="500" y="598" width="280" height="66" rx="12" fill="#0f1322" stroke="#475569" stroke-width="1"/>
+    <circle cx="531" cy="631" r="9" fill="#1e293b"/><text x="531" y="635" text-anchor="middle" font-size="11">🧠</text>
+    <text x="551" y="626" fill="#e2e8f0" font-size="12" font-weight="700">Memory + Knowledge</text>
+    <text x="551" y="644" fill="#94a3b8" font-size="10">graph · TF-IDF search · RAG</text>
+
+    <rect x="927" y="598" width="280" height="66" rx="12" fill="#0f1322" stroke="#475569" stroke-width="1"/>
+    <circle cx="958" cy="631" r="9" fill="#1e293b"/><text x="958" y="635" text-anchor="middle" font-size="11">💾</text>
+    <text x="978" y="626" fill="#e2e8f0" font-size="12" font-weight="700">Storage split</text>
+    <text x="978" y="644" fill="#94a3b8" font-size="10">keep distilled · cache auto-clean</text>
+  </g>
+
+  <!-- footer -->
+  <text x="640" y="704" text-anchor="middle" fill="#475569" font-size="10">CouncilKey-Os v1.4 · python 3.11+ · MIT · dashboard http://localhost:8443</text>
 </svg>

@@ -99,6 +99,7 @@ Listed in the order the project was built:
 |---|---|
 | ![Logo](images/logo.png) | ![Council flow](images/council-flow.png) |
 | ![Privacy-first USB](images/privacy-usb.png) | ![Local AI](images/local-ai.png) |
+| ![Council chamber](images/council-chamber.png) | |
 
 Architecture diagram (vector, crisp at any zoom): [architecture-diagram.svg](images/architecture-diagram.svg)
 
