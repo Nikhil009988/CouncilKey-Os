@@ -23,8 +23,11 @@ councilkey serve          # dashboard + API on http://0.0.0.0:8443
 - **Knowledge & memory** — LanceDB vector store (offline deterministic embeddings), JSON knowledge graph with search, nightly memory consolidation, self-reflection, evolving skills.
 - **Workspaces** — sandboxed canvas file browser (path-confined to `COUNCIL_HOME`), WebSocket terminal (PTY, event-driven), browser fetch with HTML→text extraction.
 - **Vision & voice** — desktop screenshots + local vision-model analysis (llava / qwen2.5vl), TTS (Edge free default, ElevenLabs, OpenAI) and local Whisper transcription.
+- **Advanced orchestration** — task decomposition (role-based subtasks + vote), iterative multi-round debate with convergence detection, streaming council responses over SSE, prioritized background task queue (`/api/tasks`).
+- **Intelligence** — RAG-lite memory injection into prompts, TF-IDF full-text search over journal + docs, semantic result cache, JSONL audit trail with consensus/latency analytics, encrypted secrets vault (Fernet / stdlib fallback).
+- **Safety** — terminal command guard blocks dangerous commands (`rm -rf /`, `mkfs`, `dd`, fork bombs...) before they reach the PTY; `!force`/allowlist overrides.
 - **Operations** — `councilkey` CLI (`serve`, `doctor`, `storage`, `version`), systemd unit, bootc/live-ISO/portable build scripts, backup create/restore, storage audit & optimize, optional API-key auth, rate limiting, request logging.
-- **Dashboard** — 8-tab web UI: council chat with live voting bars, agent status (live probe), storage tools, journal, terminal, secrets, 3D knowledge-graph view, vision/voice panel.
+- **Dashboard** — 10-tab web UI: council chat (with streaming, debate & decompose), agent status (live probe), storage tools, journal, terminal (guarded), secrets, 3D knowledge-graph view, vision/voice, background tasks, intelligence (search/cache/audit).
 
 ## Gallery
 

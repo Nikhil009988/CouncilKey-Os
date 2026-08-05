@@ -27,3 +27,24 @@
 - Agent gateway token files are now read with proper context managers
 - `/api/status` reported agents "online" unconditionally -> live probing with timeout
 - README badges/branch names updated to match reality
+
+## v1.2.0 (2026-08-05) - Advanced Orchestration & Intelligence
+
+### Added
+- **Task decomposition** — `/api/council/decompose` splits complex prompts into role-based subtasks (Analysis→Hermes, Execution→OpenClaw, Review→Agent Zero) and votes on the combined output
+- **Iterative debate** — `/api/council/debate` runs multi-round debates with revision prompts and automatic convergence detection (similarity/CONFIRM)
+- **Streaming responses** — `/api/council/ask/stream` emits Server-Sent Events as each agent answers (start → agent → final → done); dashboard has a Stream toggle
+- **Async task queue** — prioritized background tasks (`/api/tasks*`) for ask/decompose/debate with status tracking and cancellation
+- **Audit trail** — JSONL request log with per-agent timing, request IDs, consensus rate and latency analytics (`/api/audit*`)
+- **TF-IDF full-text search** — pure-stdlib index over journal + shared docs (`/api/search*`)
+- **Semantic result cache** — TTL + size-capped cache for council asks (`/api/cache*`), hit/miss counters on `/api/status`
+- **Encrypted secrets vault** — Fernet (AES) when available, HMAC-SHA256-CTR stdlib fallback; masked hints, never stores plaintext (`/api/secrets*`)
+- **Memory injection (RAG-lite)** — relevant journal/knowledge/vector context is injected into prompts ≥ 20 chars (config `council.memory_injection`)
+- **Terminal command guard** — `rm -rf /`, `mkfs`, `dd`, fork bombs, shutdown etc. are blocked before reaching the PTY; `!force` / allowlist overrides
+- **Scheduler v2** — automatic daily backup at 04:00; queue stats in `/api/scheduler/status`
+- **Dashboard** — Tasks tab, Intelligence tab (search/cache/audit), Stream toggle, Debate/Decompose buttons
+- 13 new tests (total 50 passing)
+
+### Fixed
+- `get_secret` decryption bug (wrapper vs payload dict)
+- Terminal guard now also covers text-frame input, not only binary keystrokes

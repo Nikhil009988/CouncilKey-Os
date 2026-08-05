@@ -23,6 +23,15 @@ def _defaults() -> dict[str, object]:
                 "agent-zero": {"weight": 1, "timeout": 120},
             },
             "consensus": {"strategy": "majority", "min_agreement": 2},
+            # --- v1.2 advanced orchestration settings ---
+            "memory_injection": True,           # inject relevant journal/knowledge context
+            "cache": {                           # semantic result cache
+                "enabled": True,
+                "ttl_seconds": 3600,
+                "max_entries": 500,
+            },
+            "debate": {"default_rounds": 3},     # iterative debate rounds
+            "decomposer": {"enabled": True},     # task decomposition
         }
     }
 

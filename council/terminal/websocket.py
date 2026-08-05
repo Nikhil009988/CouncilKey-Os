@@ -19,6 +19,8 @@ from typing import Optional
 
 from fastapi import WebSocket, WebSocketDisconnect
 
+from council.terminal.guard import check_command, strip_ansi
+
 if sys.platform == "win32":  # pragma: no cover - Windows-only guards
     fcntl = None
     pty = None
@@ -240,6 +242,36 @@ async def terminal_websocket(ws: WebSocket, agent: str = "council") -> None:
 
     # Start read loop
     read_task = asyncio.create_task(session.read_loop(ws))
+    guard_buf = b""  # command-line buffer for the danger guard
+
+    async def _write_guarded(data: bytes) -> None:
+        """Write raw bytes, buffering complete lines so the command guard can
+        inspect them before they reach the PTY."""
+        nonlocal guard_buf
+        guard_buf += data
+        while True:
+            nl = guard_buf.find(b"\n")
+            if nl == -1:
+                # interactive escape/control sequences flush immediately
+                if b"\x1b" in guard_buf or any(
+                    b < 32 and b not in (9, 10, 13) for b in guard_buf
+                ):
+                    session.write(guard_buf)
+                    guard_buf = b""
+                break
+            line = guard_buf[:nl]
+            guard_buf = guard_buf[nl + 1:]
+            line = line.rstrip(b"\r")
+            clean = strip_ansi(line.decode(errors="ignore")).strip()
+            if clean:
+                allowed, reason = check_command(clean)
+                if not allowed:
+                    await ws.send_text(
+                        f"\r\n\x1b[1;33m[guard] blocked: {reason}. "
+                        "Prefix with '!force' to override.\x1b[0m\r\n"
+                    )
+                    continue
+            session.write(line + b"\n")
 
     try:
         while True:
@@ -247,7 +279,7 @@ async def terminal_websocket(ws: WebSocket, agent: str = "council") -> None:
 
             if "bytes" in message:
                 # Binary input (raw keystrokes)
-                session.write(message["bytes"])
+                await _write_guarded(message["bytes"])
             elif "text" in message:
                 # Text input (could be resize command)
                 text = message["text"]
@@ -259,7 +291,7 @@ async def terminal_websocket(ws: WebSocket, agent: str = "council") -> None:
                     except Exception:
                         pass
                 else:
-                    session.write(text.encode())
+                    await _write_guarded(text.encode())
     except WebSocketDisconnect:
         pass
     except RuntimeError:

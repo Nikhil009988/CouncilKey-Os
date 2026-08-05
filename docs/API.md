@@ -307,3 +307,56 @@ sudo ./deploy/install.sh   # installs /opt/councilkey + enables councilkey.servi
 COUNCIL_HOME=/var/lib/council ./scripts/verify-no-traces.sh         # 7 checks
 COUNCIL_HOME=/var/lib/council ./scripts/verify-no-traces.sh --clean # audit + delete
 ```
+
+---
+
+# v1.2.0 - Advanced Orchestration & Intelligence
+
+## Council modes
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/council/ask` | Standard ask — now cached (config `council.cache`) and returns `request_id` |
+| POST | `/api/council/ask/stream` | Server-Sent Events stream: `start` → `agent` (per response) → `final` → `done` |
+| POST | `/api/council/decompose` | `{"prompt": ...}` — splits the prompt into 3 role-based subtasks (Analysis/Hermes, Execution/OpenClaw, Review/AgentZero), executes them, votes on the combined result |
+| POST | `/api/council/debate` | `{"prompt": ..., "rounds": 3}` — iterative debate: agents see each other's answers and revise; stops early on convergence (similarity ≥ 0.85 or CONFIRM) |
+
+## Task queue
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/tasks` | `{"kind": "ask"|"decompose"|"debate", "prompt": ..., "priority": 0-9}` — enqueue for background execution |
+| GET | `/api/tasks?limit=` | List tasks + queue stats |
+| GET | `/api/tasks/{id}` | Task detail (status/result/error) |
+| POST | `/api/tasks/{id}/cancel` | Cancel a queued task |
+
+## Audit trail (JSONL under COUNCIL_HOME/audit/)
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/audit?limit=` | Recent audit records (request id, mode, strategy, consensus, per-agent latency/status) |
+| GET | `/api/audit/stats` | Aggregates: consensus rate, avg duration, per-agent live/mock counts, per-strategy breakdown |
+
+## Full-text search (pure-Python TF-IDF over journal + shared docs)
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/search/index` | Rebuild the TF-IDF index |
+| GET | `/api/search?q=&top_k=` | Ranked search with scores + previews |
+
+## Result cache
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/cache/stats` | Entries, expired, hits/misses |
+| POST | `/api/cache/flush` | Clear the cache |
+
+## Encrypted secrets vault (Fernet if available, HMAC-CTR stdlib fallback)
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/secrets` | Key names + backend (never values) |
+| GET | `/api/secrets/{key}` | Masked hint (`sk******90`) |
+| POST | `/api/secrets` | `{"key": ..., "value": ...}` — store encrypted (key from `COUNCIL_MASTER_KEY` or `.master_key` file) |
+| DELETE | `/api/secrets/{key}` | Remove a secret |
+
+## Other v1.2 changes
+- **Memory injection (RAG-lite)**: prompts ≥ 20 chars get relevant journal/knowledge/vector-store context injected before agents see them (config `council.memory_injection`)
+- **Terminal command guard**: dangerous commands (`rm -rf /`, `mkfs`, `dd`, fork bomb, shutdown...) are blocked before reaching the PTY; `!force` prefix or `shared/terminal-allowlist.txt` overrides
+- **Scheduler**: adds automatic daily backup at 04:00 alongside nightly consolidation; `/api/scheduler/status` shows queue stats
+- **`/api/status` and `/api/metrics`** now include queue depth, cache hits/misses and audit totals
+- **Dashboard**: new Tasks tab (enqueue/monitor background tasks), Intelligence tab (TF-IDF search, cache stats, audit analytics), and a Stream toggle for the council chat

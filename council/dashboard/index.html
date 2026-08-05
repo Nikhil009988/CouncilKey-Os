@@ -96,6 +96,8 @@
       <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="secrets">Secrets</button>
       <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="3d">3D</button>
       <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="vision">Vision+Voice</button>
+      <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="tasks">Tasks</button>
+      <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="intel">Intelligence</button>
     </div>
 
     <!-- Council Tab -->
@@ -121,7 +123,14 @@
             </select>
           </div>
           <textarea id="prompt" rows="3" placeholder="Ask council..." class="w-full bg-council-800 border border-council-700 rounded-xl p-3 text-sm focus:outline-none focus:border-council-600"></textarea>
-          <button id="ask-btn" class="w-full md:w-auto px-6 py-2 rounded-xl bg-council-600 hover:bg-council-500 text-white text-sm font-semibold shadow-lg">Ask Council</button>
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+              <input type="checkbox" id="stream-toggle" class="accent-council-600"> Stream
+            </label>
+            <button id="ask-btn" class="px-6 py-2 rounded-xl bg-council-600 hover:bg-council-500 text-white text-sm font-semibold shadow-lg">Ask Council</button>
+            <button id="debate-btn" class="px-4 py-2 rounded-xl bg-council-700 hover:bg-council-600 text-sm" title="Multi-round debate (3 rounds)">Debate</button>
+            <button id="decompose-btn" class="px-4 py-2 rounded-xl bg-council-700 hover:bg-council-600 text-sm" title="Decompose into subtasks">Decompose</button>
+          </div>
         </div>
         <div class="space-y-3">
           <div class="text-xs text-slate-400">Voting</div>
@@ -248,6 +257,49 @@
         </div>
       </div>
     </div>
+    <!-- Tasks Tab -->
+    <div id="tab-tasks" class="tab-panel hidden glass rounded-2xl p-6 space-y-4">
+      <div class="flex flex-wrap gap-2 items-end">
+        <textarea id="task-prompt" rows="2" placeholder="Task prompt..." class="flex-1 bg-council-800 border border-council-700 rounded-xl p-3 text-sm focus:outline-none focus:border-council-600"></textarea>
+        <select id="task-kind" class="bg-council-800 border border-council-700 rounded-lg px-3 py-2 text-sm">
+          <option value="ask">Council Ask</option>
+          <option value="decompose">Decompose</option>
+          <option value="debate">Debate</option>
+        </select>
+        <select id="task-priority" class="bg-council-800 border border-council-700 rounded-lg px-3 py-2 text-sm">
+          <option value="5">Priority 5</option><option value="9">Priority 9</option><option value="1">Priority 1</option>
+        </select>
+        <button id="task-enqueue" class="px-4 py-2 rounded-xl bg-council-600 hover:bg-council-500 text-white text-sm font-semibold">Enqueue Task</button>
+        <button id="task-refresh" class="px-3 py-2 rounded-xl bg-council-700 hover:bg-council-600 text-sm">Refresh</button>
+      </div>
+      <div id="task-list" class="space-y-2 text-xs"></div>
+    </div>
+
+    <!-- Intelligence Tab -->
+    <div id="tab-intel" class="tab-panel hidden glass rounded-2xl p-6 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="space-y-2">
+          <div class="text-sm text-slate-400">TF-IDF Search (journal + shared docs)</div>
+          <div class="flex gap-2">
+            <input id="search-q" placeholder="Search the council memory..." class="flex-1 bg-council-800 border border-council-700 rounded-xl px-3 py-2 text-sm" />
+            <button id="search-btn" class="px-3 py-2 rounded-xl bg-council-700 hover:bg-council-600 text-sm">Search</button>
+            <button id="index-btn" class="px-3 py-2 rounded-xl bg-council-700 hover:bg-council-600 text-sm">Rebuild</button>
+          </div>
+          <pre id="search-result" class="bg-council-800/60 border border-council-700/50 rounded-xl p-3 text-xs whitespace-pre-wrap hidden"></pre>
+        </div>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-slate-400">Cache</div>
+            <button id="cache-flush" class="px-3 py-1 rounded-lg bg-council-700 hover:bg-council-600 text-xs">Flush</button>
+          </div>
+          <pre id="cache-result" class="bg-council-800/60 border border-council-700/50 rounded-xl p-3 text-xs whitespace-pre-wrap hidden"></pre>
+        </div>
+      </div>
+      <div>
+        <div class="text-sm text-slate-400 mb-2">Audit Analytics</div>
+        <pre id="audit-result" class="bg-council-800/60 border border-council-700/50 rounded-xl p-3 text-xs whitespace-pre-wrap"></pre>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -289,24 +341,90 @@
       box.classList.remove('hidden');
       typing.classList.add('hidden');
       finalEl.textContent = data.final || JSON.stringify(data, null, 2);
-      const votes = data.votes || {};
+      renderVotes(data.votes || {});
+    }
+
+    function renderVotes(votes) {
       for (const agent of ['hermes','openclaw','agent-zero']) {
         const v = votes[agent] || '-';
-        const pct = v === 'approve' ? '100%' : v === 'reject' ? '0%' : '0%';
+        const pct = v === 'approve' ? '100%' : '0%';
         document.getElementById('vote-' + agent).textContent = v;
         document.getElementById('bar-' + agent).style.width = pct;
       }
     }
 
+    async function askStream(body) {
+      const box = document.getElementById('council-result');
+      const finalEl = document.getElementById('council-final');
+      const typing = document.getElementById('typing-indicator');
+      box.classList.remove('hidden');
+      typing.classList.remove('hidden');
+      finalEl.textContent = '';
+      try {
+        const r = await apiFetch('/api/council/ask/stream', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        if (!r.ok || !r.body) { finalEl.textContent = 'Stream error: ' + r.status; typing.classList.add('hidden'); return; }
+        const reader = r.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let idx;
+          while ((idx = buf.indexOf('\n\n')) !== -1) {
+            const evt = buf.slice(0, idx); buf = buf.slice(idx + 2);
+            let data = null;
+            for (const line of evt.split('\n')) {
+              if (line.startsWith('data: ')) { try { data = JSON.parse(line.slice(6)); } catch (e) {} }
+            }
+            if (!data) continue;
+            if (data.event === 'agent') {
+              finalEl.textContent += '[agent ' + data.agent + ' ' + data.status + ' ' + data.latency + 's]\n' + data.response + '\n';
+            } else if (data.event === 'final') {
+              typing.classList.add('hidden');
+              finalEl.textContent = data.final;
+              if (data.votes) renderVotes(data.votes);
+            } else if (data.event === 'done') { typing.classList.add('hidden'); }
+          }
+        }
+        typing.classList.add('hidden');
+      } catch (e) { finalEl.textContent = 'Stream error: ' + e.message; typing.classList.add('hidden'); }
+    }
+
     document.getElementById('ask-btn').addEventListener('click', async () => {
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) return;
+      const body = { prompt, strategy: document.getElementById('strategy-select').value, min_agreement: 2 };
+      if (document.getElementById('stream-toggle').checked) { await askStream(body); return; }
+      document.getElementById('typing-indicator').classList.remove('hidden');
+      try {
+        const r = await apiFetch('/api/council/ask', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const data = await r.json();
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(body));
+        renderCouncilResult(data);
+      } catch (e) { console.error(e); }
+    });
+
+    document.getElementById('debate-btn').addEventListener('click', async () => {
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) return;
+      document.getElementById('typing-indicator').classList.remove('hidden');
+      const body = { prompt, rounds: 3, strategy: document.getElementById('strategy-select').value, min_agreement: 2 };
+      try {
+        const r = await apiFetch('/api/council/debate', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const data = await r.json();
+        renderCouncilResult(data);
+      } catch (e) { console.error(e); }
+    });
+
+    document.getElementById('decompose-btn').addEventListener('click', async () => {
       const prompt = document.getElementById('prompt').value.trim();
       if (!prompt) return;
       document.getElementById('typing-indicator').classList.remove('hidden');
       const body = { prompt, strategy: document.getElementById('strategy-select').value, min_agreement: 2 };
       try {
-        const r = await apiFetch('/api/council/ask', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const r = await apiFetch('/api/council/decompose', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
         const data = await r.json();
-        if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(body));
         renderCouncilResult(data);
       } catch (e) { console.error(e); }
     });
@@ -466,6 +584,81 @@
       } catch (e) { document.getElementById('uptime-badge').textContent = 'Uptime: offline'; }
     }
     refreshStatus(); setInterval(refreshStatus, 5000);
+
+    // ---- Tasks ----
+    async function loadTasks() {
+      try {
+        const r = await apiFetch('/api/tasks?limit=12');
+        const data = await r.json();
+        document.getElementById('task-list').innerHTML = (data.tasks || []).map(t => {
+          const p = (t.payload && t.payload.prompt) || '';
+          return `<div class="glass rounded-lg p-2 flex items-center justify-between">
+            <div class="truncate"><span class="text-council-300">#${t.id}</span> <span class="text-slate-300">${t.kind}</span> <span class="text-slate-400">${p.slice(0, 70)}</span></div>
+            <span class="ml-2 shrink-0 ${t.status === 'done' ? 'text-emerald-300' : t.status === 'failed' ? 'text-red-300' : t.status === 'cancelled' ? 'text-slate-500' : 'text-yellow-300'}">${t.status}</span>
+          </div>`;
+        }).join('') || '<div class="text-xs text-slate-500">No tasks yet</div>';
+      } catch (e) { console.error(e); }
+    }
+    document.getElementById('task-enqueue').addEventListener('click', async () => {
+      const prompt = document.getElementById('task-prompt').value.trim();
+      if (!prompt) return;
+      const body = {
+        kind: document.getElementById('task-kind').value,
+        prompt,
+        priority: parseInt(document.getElementById('task-priority').value) || 5,
+        strategy: document.getElementById('strategy-select').value,
+        min_agreement: 2,
+      };
+      try { await apiFetch('/api/tasks', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }); }
+      catch (e) { console.error(e); }
+      document.getElementById('task-prompt').value = '';
+      loadTasks();
+    });
+    document.getElementById('task-refresh').addEventListener('click', loadTasks);
+    setInterval(loadTasks, 3000);
+
+    // ---- Intelligence ----
+    document.getElementById('search-btn').addEventListener('click', async () => {
+      const q = document.getElementById('search-q').value.trim();
+      if (!q) return;
+      const box = document.getElementById('search-result');
+      box.classList.remove('hidden');
+      try {
+        const r = await apiFetch('/api/search?q=' + encodeURIComponent(q));
+        const d = await r.json();
+        box.textContent = JSON.stringify(d, null, 2);
+      } catch (e) { box.textContent = 'Error: ' + e.message; }
+    });
+    document.getElementById('index-btn').addEventListener('click', async () => {
+      const box = document.getElementById('search-result');
+      box.classList.remove('hidden');
+      box.textContent = 'Rebuilding index...';
+      try {
+        const r = await apiFetch('/api/search/index', { method: 'POST' });
+        box.textContent = JSON.stringify(await r.json(), null, 2);
+      } catch (e) { box.textContent = 'Error: ' + e.message; }
+    });
+    document.getElementById('cache-flush').addEventListener('click', async () => {
+      try { await apiFetch('/api/cache/flush', { method: 'POST' }); } catch (e) { console.error(e); }
+      loadCacheStats();
+    });
+    async function loadCacheStats() {
+      const box = document.getElementById('cache-result');
+      box.classList.remove('hidden');
+      try {
+        const r = await apiFetch('/api/cache/stats');
+        box.textContent = JSON.stringify(await r.json(), null, 2);
+      } catch (e) { box.textContent = 'Error: ' + e.message; }
+    }
+    loadCacheStats();
+    async function loadAudit() {
+      try {
+        const r = await apiFetch('/api/audit/stats');
+        document.getElementById('audit-result').textContent = JSON.stringify(await r.json(), null, 2);
+      } catch (e) { document.getElementById('audit-result').textContent = 'Error: ' + e.message; }
+    }
+    loadAudit();
+    setInterval(loadAudit, 10000);
   </script>
 </body>
 </html>

@@ -1,35 +1,43 @@
-"""CouncilKey-Os Council Core - FastAPI + WebSocket orchestrator (v1.1.0).
+"""CouncilKey-Os Council Core - FastAPI + WebSocket orchestrator (v1.2.0).
 
-Fixes over v1.0:
-- WebSocket chat no longer crashes serializing JSONResponse bytes
-- Journal filenames are sanitized (no nested paths from "/" prompts)
-- Optional API-key auth, security headers, CORS, request logging, rate limiting
-- Startup persistence layout + background scheduler (nightly consolidation)
-- Live agent status probing, /api/version, /api/system, chat history,
-  backup restore, knowledge search, skills list, memory summary,
-  vision/voice/canvas/browser endpoints (see docs/API.md)
+v1.2 additions:
+- Task decomposition (/api/council/decompose)
+- Iterative multi-round debate (/api/council/debate)
+- Streaming council responses over SSE (/api/council/ask/stream)
+- Async task queue with priorities (/api/tasks*)
+- Semantic result cache (/api/cache/*)
+- TF-IDF full-text search (/api/search*)
+- Audit trail + analytics (/api/audit*)
+- Encrypted secrets vault (/api/secrets*)
+- Memory injection (RAG-lite) into agent prompts
+- Terminal command guard
 """
 from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import os
 import re
 import time
-from collections.abc import AsyncIterator
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, AsyncIterator
 
 from fastapi import FastAPI, File, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from council import __version__
 from council.backup.manager import create_backup as backup_create
 from council.backup.manager import list_backups as backup_list
 from council.backup.manager import restore_backup as backup_restore
+from council.cache.semantic import flush as cache_flush
+from council.cache.semantic import get as cache_get
+from council.cache.semantic import put as cache_put
+from council.cache.semantic import stats as cache_stats
 from council.config.loader import load as config_load
 from council.config.loader import save as config_save
 from council.embeddings.lancedb import add_documents as lancedb_add
@@ -46,15 +54,29 @@ from council.llm.ollama import is_running as ollama_running
 from council.llm.ollama import list_models as ollama_list_models
 from council.llm.ollama import pull as ollama_pull
 from council.memory.consolidation import memory_summary, nightly_consolidate
+from council.memory.retrieval import retrieve_context
 from council.metrics.snapshot import snapshot as metrics_snapshot
 from council.network.tailscale import setup_tailscale, tailscale_status
-from council.orchestrator.agents import build_default_clients
+from council.orchestrator.agents import AgentResult, build_default_clients
+from council.orchestrator.debate import run_debate
+from council.orchestrator.decomposer import run_decomposed
 from council.orchestrator.voting import run_council_vote
 from council.reflection.self import reflect_on_last
+from council.scheduler.queue import TaskQueue
+from council.search.tfidf import build_index as tfidf_build_index
+from council.search.tfidf import search as tfidf_search
+from council.secrets.vault import delete_secret as vault_delete
+from council.secrets.vault import list_secrets as vault_list
+from council.secrets.vault import mask_secret as vault_mask
+from council.secrets.vault import set_secret as vault_set
+from council.secrets.vault import vault_status
 from council.skills.evolution import evolve as skills_evolve
 from council.skills.evolution import list_skills, read_skill
 from council.system.info import collect as system_info
 from council.terminal.websocket import terminal_websocket
+from council.tracing.audit import recent as audit_recent
+from council.tracing.audit import record as audit_record
+from council.tracing.audit import stats as audit_stats
 from council.update.manager import check_update as update_check
 
 COUNCIL_HOME = Path(os.environ.get("COUNCIL_HOME", "/var/lib/council"))
@@ -69,6 +91,7 @@ _requests = 0
 _rate_hits: dict[str, list[float]] = {}
 _RATE_LIMIT = int(os.environ.get("COUNCIL_RATE_LIMIT", "0"))  # requests/min/IP, 0 = off
 _API_KEY = os.environ.get("COUNCIL_API_KEY", "")
+_cache_stats = {"hits": 0, "misses": 0}
 
 
 @app.middleware("http")
@@ -131,6 +154,8 @@ app.add_middleware(
 # ---------------------------------------------------------------- scheduler
 SCHEDULER: dict[str, Any] = {"started": None, "runs": 0, "last_consolidate": None, "last_prune": None}
 _consolidated_dates: set[str] = set()
+_backup_dates: set[str] = set()
+_queue = TaskQueue()
 
 
 async def _scheduler_loop() -> None:
@@ -142,6 +167,11 @@ async def _scheduler_loop() -> None:
                 _consolidated_dates.add(today)
                 result = await asyncio.to_thread(nightly_consolidate)
                 SCHEDULER["last_consolidate"] = result
+                SCHEDULER["runs"] += 1
+            if now.tm_hour == 4 and now.tm_min < 20 and today not in _backup_dates:
+                _backup_dates.add(today)
+                backup = await asyncio.to_thread(backup_create)
+                SCHEDULER["last_backup"] = backup
                 SCHEDULER["runs"] += 1
             journal_files = sorted(JOURNAL_DIR.glob("*.md")) if JOURNAL_DIR.exists() else []
             if len(journal_files) > 300:
@@ -163,6 +193,37 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
     setup_persist_structure()
     JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
+
+    async def _task_ask(payload: dict[str, Any]) -> dict[str, Any]:
+        req = AskRequest(
+            prompt=payload["prompt"],
+            strategy=payload.get("strategy", "majority"),
+            min_agreement=int(payload.get("min_agreement", 2)),
+            mode=payload.get("mode", "together"),
+            agent=payload.get("agent"),
+        )
+        return await ask_council(req)
+
+    async def _task_decompose(payload: dict[str, Any]) -> dict[str, Any]:
+        return await run_decomposed(
+            payload["prompt"],
+            strategy=payload.get("strategy", "majority"),
+            min_agreement=int(payload.get("min_agreement", 2)),
+        )
+
+    async def _task_debate(payload: dict[str, Any]) -> dict[str, Any]:
+        return await run_debate(
+            payload["prompt"],
+            rounds=int(payload.get("rounds", 3)),
+            strategy=payload.get("strategy", "majority"),
+            min_agreement=int(payload.get("min_agreement", 2)),
+        )
+
+    _queue.register_handler("ask", _task_ask)
+    _queue.register_handler("decompose", _task_decompose)
+    _queue.register_handler("debate", _task_debate)
+    _queue.start()
+
     SCHEDULER["started"] = time.strftime("%Y-%m-%dT%H:%M:%S")
     task = asyncio.create_task(_scheduler_loop())
     print(f"[council] started (v{__version__}, home={COUNCIL_HOME})", flush=True)
@@ -170,6 +231,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         yield
     finally:
         task.cancel()
+        await _queue.stop()
         try:
             await task
         except asyncio.CancelledError:
@@ -185,6 +247,13 @@ class AskRequest(BaseModel):
     min_agreement: int = 2
     mode: str = "together"
     agent: str | None = None
+
+
+class DebateRequest(BaseModel):
+    prompt: str
+    rounds: int = 3
+    strategy: str = "majority"
+    min_agreement: int = 2
 
 
 class OptimizeRequest(BaseModel):
@@ -215,6 +284,22 @@ class RestoreRequest(BaseModel):
     name: str
 
 
+class TaskRequest(BaseModel):
+    kind: str = "ask"  # ask | decompose | debate
+    prompt: str
+    strategy: str = "majority"
+    min_agreement: int = 2
+    mode: str = "together"
+    agent: str | None = None
+    rounds: int = 3
+    priority: int = 5
+
+
+class SecretRequest(BaseModel):
+    key: str
+    value: str
+
+
 # ------------------------------------------------------------------ helpers
 def _safe_slug(prompt: str, maxlen: int = 40) -> str:
     """Turn free text into a filesystem-safe slug."""
@@ -234,11 +319,41 @@ def _append_journal(prompt: str, result: dict[str, Any]) -> Path:
     path = JOURNAL_DIR / f"{ts}-{_safe_slug(prompt)}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        f"# Council Journal {ts}\n\n## Prompt\n{prompt}\n\n## Strategy\n{result.get('strategy')}\n\n"
-        f"## Votes\n{result.get('votes')}\n\n## Final\n{result.get('final')}\n",
+        f"# Council Journal {ts}\n\n## Prompt\n{prompt}\n\n## Mode\n{result.get('mode', 'council')}\n\n"
+        f"## Strategy\n{result.get('strategy')}\n\n## Votes\n{result.get('votes')}\n\n"
+        f"## Final\n{result.get('final')}\n",
         encoding="utf-8",
     )
     return path
+
+
+def _effective_prompt(prompt: str) -> str:
+    """Inject relevant prior context (RAG-lite) when memory injection is on."""
+    try:
+        cfg = config_load()
+        inject = bool(cfg.get("council", {}).get("memory_injection", True))
+    except Exception:
+        inject = True
+    if inject and len(prompt.strip()) >= 20:
+        try:
+            context = retrieve_context(prompt, top_k=3)
+        except Exception:
+            context = ""
+        if context:
+            return f"{prompt}\n\n[Relevant prior context]\n{context}"
+    return prompt
+
+
+def _cache_key(req: AskRequest) -> str:
+    raw = f"{req.prompt}|{req.strategy}|{req.mode}|{req.agent or ''}|{req.min_agreement}"
+    return hashlib.sha256(raw.encode("utf-8", errors="ignore")).hexdigest()[:32]
+
+
+def _cache_enabled() -> dict:
+    try:
+        return dict(config_load().get("council", {}).get("cache", {}))
+    except Exception:
+        return {"enabled": True, "ttl_seconds": 3600, "max_entries": 500}
 
 
 async def _probe_agents(timeout: float = 2.0) -> dict[str, Any]:
@@ -248,7 +363,12 @@ async def _probe_agents(timeout: float = 2.0) -> dict[str, Any]:
     async def _one(name: str, client: Any) -> None:
         try:
             r = await client.ask("ping", timeout=timeout)
-            results[name] = {"status": r.status, "latency": round(r.latency, 2), "role": r.role, "port": AGENT_PORTS.get(name)}
+            results[name] = {
+                "status": r.status,
+                "latency": round(r.latency, 2),
+                "role": r.role,
+                "port": AGENT_PORTS.get(name),
+            }
         except Exception as exc:  # pragma: no cover
             results[name] = {"status": f"error: {exc}", "role": "", "port": AGENT_PORTS.get(name)}
 
@@ -256,16 +376,17 @@ async def _probe_agents(timeout: float = 2.0) -> dict[str, Any]:
     return results
 
 
-async def ask_council(req: AskRequest, include_vote_detail: bool = False) -> dict[str, Any]:
-    agents = build_default_clients()
-    if req.mode == "alone" and req.agent and req.agent in agents:
-        responses = [await agents[req.agent].ask(req.prompt)]
-    else:
-        responses = await asyncio.gather(*[agents[k].ask(req.prompt) for k in agents])
-
+async def _finalize_council(
+    req: AskRequest,
+    responses: list[AgentResult],
+    request_id: str,
+    t0: float,
+    include_vote_detail: bool = False,
+    journal: bool = True,
+) -> dict[str, Any]:
+    """Vote on responses, build the result, journal it and audit it."""
     agent_responses = [
-        {"agent": r.agent, "role": r.role, "response": r.response, "status": r.status}
-        for r in responses
+        {"agent": r.agent, "role": r.role, "response": r.response, "status": r.status} for r in responses
     ]
     vote_result = await run_council_vote(req.prompt, agent_responses, req.strategy, req.min_agreement)
     votes = {v["agent"]: v["vote"] for v in vote_result.get("votes_detail", [])}
@@ -283,7 +404,9 @@ async def ask_council(req: AskRequest, include_vote_detail: bool = False) -> dic
         final = f"# Council Decision - No Consensus {approve}/{len(responses)} ❌\n\n" + final
 
     result: dict[str, Any] = {
+        "request_id": request_id,
         "strategy": req.strategy,
+        "mode": "council",
         "votes": votes,
         "approve_count": approve,
         "consensus_reached": consensus,
@@ -303,8 +426,39 @@ async def ask_council(req: AskRequest, include_vote_detail: bool = False) -> dic
     }
     if include_vote_detail:
         result["vote_result"] = vote_result
-    _append_journal(req.prompt, result)
+    if journal:
+        _append_journal(req.prompt, result)
+    audit_record(
+        {
+            "id": request_id,
+            "mode": req.mode,
+            "strategy": req.strategy,
+            "prompt": req.prompt[:200],
+            "consensus": consensus,
+            "approve": approve,
+            "total_agents": len(responses),
+            "duration_ms": round((time.perf_counter() - t0) * 1000, 1),
+            "agents": [
+                {"agent": r.agent, "status": r.status, "latency": round(r.latency, 2)} for r in responses
+            ],
+        }
+    )
     return result
+
+
+async def ask_council(
+    req: AskRequest, include_vote_detail: bool = False, request_id: str | None = None
+) -> dict[str, Any]:
+    """Ask all (or one) agent(s), vote, journal, audit. No result caching."""
+    rid = request_id or uuid.uuid4().hex[:12]
+    t0 = time.perf_counter()
+    prompt_used = _effective_prompt(req.prompt)
+    agents = build_default_clients()
+    if req.mode == "alone" and req.agent and req.agent in agents:
+        responses = [await agents[req.agent].ask(prompt_used)]
+    else:
+        responses = await asyncio.gather(*[agents[k].ask(prompt_used) for k in agents])
+    return await _finalize_council(req, responses, rid, t0, include_vote_detail=include_vote_detail)
 
 
 def _ws_authorized(ws: WebSocket) -> bool:
@@ -351,6 +505,8 @@ async def status() -> JSONResponse:
             "agents": agents,
             "council": {"mode": "debate", "consensus": {"strategy": "majority"}},
             "ollama": {"running": bool(ollama.get("running"))},
+            "queue": _queue.stats(),
+            "cache": dict(_cache_stats),
             "journal": journal,
         }
     )
@@ -363,12 +519,123 @@ async def agents_status() -> JSONResponse:
 
 @app.post("/api/council/ask")
 async def ask(req: AskRequest) -> JSONResponse:
-    return JSONResponse(await ask_council(req))
+    cache_cfg = _cache_enabled()
+    key = _cache_key(req)
+    if cache_cfg.get("enabled", True):
+        hit = cache_get(key, ttl=float(cache_cfg.get("ttl_seconds", 3600)))
+        if hit is not None:
+            _cache_stats["hits"] += 1
+            hit["cached"] = True
+            return JSONResponse(hit)
+        _cache_stats["misses"] += 1
+    result = await ask_council(req)
+    if cache_cfg.get("enabled", True):
+        cache_put(key, result, max_entries=int(cache_cfg.get("max_entries", 500)))
+    return JSONResponse(result)
 
 
 @app.post("/api/council/vote")
 async def council_vote(req: AskRequest) -> JSONResponse:
     return JSONResponse(await ask_council(req, include_vote_detail=True))
+
+
+@app.post("/api/council/decompose")
+async def council_decompose(req: AskRequest) -> JSONResponse:
+    """Decompose a complex prompt into focused subtasks and execute them."""
+    t0 = time.perf_counter()
+    rid = uuid.uuid4().hex[:12]
+    result = await run_decomposed(req.prompt, req.strategy, req.min_agreement)
+    _append_journal(req.prompt, result)
+    audit_record(
+        {
+            "id": rid,
+            "mode": "decomposed",
+            "strategy": req.strategy,
+            "prompt": req.prompt[:200],
+            "consensus": result["consensus_reached"],
+            "approve": result["approve_count"],
+            "duration_ms": round((time.perf_counter() - t0) * 1000, 1),
+            "agents": [{"agent": s["agent"], "status": s["status"], "latency": s["latency"]} for s in result["subtasks"]],
+        }
+    )
+    result["request_id"] = rid
+    return JSONResponse(result)
+
+
+@app.post("/api/council/debate")
+async def council_debate(req: DebateRequest) -> JSONResponse:
+    """Iterative multi-round debate with revision + convergence detection."""
+    t0 = time.perf_counter()
+    rid = uuid.uuid4().hex[:12]
+    result = await run_debate(req.prompt, rounds=req.rounds, strategy=req.strategy, min_agreement=req.min_agreement)
+    _append_journal(req.prompt, result)
+    audit_record(
+        {
+            "id": rid,
+            "mode": "debate",
+            "strategy": req.strategy,
+            "prompt": req.prompt[:200],
+            "consensus": result["consensus_reached"],
+            "approve": result["approve_count"],
+            "rounds": result["rounds"],
+            "duration_ms": round((time.perf_counter() - t0) * 1000, 1),
+        }
+    )
+    result["request_id"] = rid
+    return JSONResponse(result)
+
+
+@app.post("/api/council/ask/stream")
+async def ask_stream(req: AskRequest) -> StreamingResponse:
+    """Stream council progress over Server-Sent Events."""
+
+    async def gen() -> AsyncIterator[str]:
+        rid = uuid.uuid4().hex[:12]
+        t0 = time.perf_counter()
+
+        def ev(event: str, data: dict[str, Any]) -> str:
+            payload = {"event": event, **data}
+            return f"data: {json.dumps(payload, default=str)}\n\n"
+
+        yield ev("start", {"prompt": req.prompt, "request_id": rid})
+        prompt_used = _effective_prompt(req.prompt)
+        agents = build_default_clients()
+        tasks = {k: asyncio.create_task(c.ask(prompt_used)) for k, c in agents.items()}
+        responses: dict[str, AgentResult] = {}
+        for name, task in tasks.items():
+            try:
+                r = await task
+                responses[name] = r
+                yield ev(
+                    "agent",
+                    {
+                        "agent": name,
+                        "role": r.role,
+                        "status": r.status,
+                        "latency": round(r.latency, 2),
+                        "response": r.response[:1500],
+                    },
+                )
+            except Exception as exc:  # pragma: no cover
+                yield ev("error", {"agent": name, "error": str(exc)})
+        if len(responses) == len(tasks):
+            result = await _finalize_council(req, list(responses.values()), rid, t0)
+            yield ev(
+                "final",
+                {
+                    "final": result["final"],
+                    "votes": result["votes"],
+                    "consensus_reached": result["consensus_reached"],
+                    "best_agent": result["best_agent"],
+                },
+            )
+        yield ev("done", {})
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.websocket("/ws")
@@ -421,6 +688,106 @@ def chat_history(limit: int = 20) -> JSONResponse:
     return JSONResponse({"entries": journal_history(limit=max(1, min(limit, 200)))})
 
 
+# ------------------------------------------------------------------- tasks
+@app.post("/api/tasks")
+async def tasks_enqueue(req: TaskRequest) -> JSONResponse:
+    payload: dict[str, Any] = {
+        "prompt": req.prompt,
+        "strategy": req.strategy,
+        "min_agreement": req.min_agreement,
+        "mode": req.mode,
+        "agent": req.agent,
+        "rounds": req.rounds,
+    }
+    task_id = await _queue.enqueue(req.kind, payload, priority=req.priority)
+    return JSONResponse({"ok": True, "id": task_id, "kind": req.kind, "status": "queued"})
+
+
+@app.get("/api/tasks")
+async def tasks_list(limit: int = 50) -> JSONResponse:
+    return JSONResponse({"tasks": await _queue.list(limit=limit), "stats": _queue.stats()})
+
+
+@app.get("/api/tasks/{task_id}")
+async def tasks_get(task_id: str) -> JSONResponse:
+    task = await _queue.get(task_id)
+    if task is None:
+        return JSONResponse({"ok": False, "error": "task not found"}, status_code=404)
+    return JSONResponse(task)
+
+
+@app.post("/api/tasks/{task_id}/cancel")
+async def tasks_cancel(task_id: str) -> JSONResponse:
+    cancelled = await _queue.cancel(task_id)
+    return JSONResponse({"ok": cancelled})
+
+
+# ------------------------------------------------------------------- audit
+@app.get("/api/audit")
+def audit_recent_route(limit: int = 50) -> JSONResponse:
+    return JSONResponse({"entries": audit_recent(limit=limit)})
+
+
+@app.get("/api/audit/stats")
+def audit_stats_route() -> JSONResponse:
+    return JSONResponse(audit_stats())
+
+
+# ------------------------------------------------------------------- search
+@app.post("/api/search/index")
+async def search_index_route() -> JSONResponse:
+    result = await asyncio.to_thread(tfidf_build_index)
+    return JSONResponse(result)
+
+
+@app.get("/api/search")
+def search_route(q: str = "", top_k: int = 10) -> JSONResponse:
+    if not q:
+        return JSONResponse({"ok": True, "query": q, "results": [], "total": 0})
+    return JSONResponse(tfidf_search(q, top_k=top_k))
+
+
+# ------------------------------------------------------------------- cache
+@app.get("/api/cache/stats")
+def cache_stats_route() -> JSONResponse:
+    return JSONResponse({**cache_stats(), **{"hits": _cache_stats["hits"], "misses": _cache_stats["misses"]}})
+
+
+@app.post("/api/cache/flush")
+def cache_flush_route() -> JSONResponse:
+    cache_flush()
+    _cache_stats["hits"] = 0
+    _cache_stats["misses"] = 0
+    return JSONResponse({"ok": True})
+
+
+# ------------------------------------------------------------------ secrets
+@app.get("/api/secrets")
+def secrets_list_route() -> JSONResponse:
+    return JSONResponse(vault_list())
+
+
+@app.get("/api/secrets/status")
+def secrets_status_route() -> JSONResponse:
+    return JSONResponse(vault_status())
+
+
+@app.get("/api/secrets/{key}")
+def secrets_mask_route(key: str) -> JSONResponse:
+    return JSONResponse(vault_mask(key))
+
+
+@app.post("/api/secrets")
+def secrets_set_route(req: SecretRequest) -> JSONResponse:
+    return JSONResponse(vault_set(req.key, req.value))
+
+
+@app.delete("/api/secrets/{key}")
+def secrets_delete_route(key: str) -> JSONResponse:
+    return JSONResponse(vault_delete(key))
+
+
+# ----------------------------------------------------------------- storage
 @app.get("/api/storage/audit")
 def storage_audit() -> JSONResponse:
     from council.storage.optimizer import audit as audit_fn
@@ -631,7 +998,7 @@ def knowledge_add_edge(body: dict[str, object]) -> JSONResponse:
 
 @app.get("/api/terminal/status")
 def terminal_status_route() -> JSONResponse:
-    return JSONResponse({"pty": True, "agent": "council"})
+    return JSONResponse({"pty": True, "agent": "council", "guard": True})
 
 
 @app.get("/api/optional/agents")
@@ -646,12 +1013,21 @@ def update_check_route() -> JSONResponse:
 
 @app.get("/api/metrics")
 def metrics_route() -> JSONResponse:
-    return JSONResponse(metrics_snapshot(request_count=_requests))
+    queue_stats = _queue.stats()
+    audit = audit_stats()
+    return JSONResponse(
+        {
+            **metrics_snapshot(request_count=_requests),
+            "queue": queue_stats,
+            "cache": dict(_cache_stats),
+            "audit": {"total": audit.get("total", 0), "consensus_rate": audit.get("consensus_rate")},
+        }
+    )
 
 
 @app.get("/api/scheduler/status")
 def scheduler_status_route() -> JSONResponse:
-    return JSONResponse(SCHEDULER)
+    return JSONResponse({**SCHEDULER, "queue": _queue.stats()})
 
 
 # ------------------------------------------------------------------- vision
