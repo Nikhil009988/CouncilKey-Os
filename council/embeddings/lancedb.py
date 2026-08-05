@@ -40,8 +40,16 @@ def add_documents(docs: list[str]) -> dict[str, object]:
     if lancedb is None:
         return {"ok": False, "error": "lancedb not installed"}
     try:
+        import pyarrow as pa
         db = lancedb.connect(str(LANE_DIR))
-        tbl = db.open_table("council_knowledge") if "council_knowledge" in db.table_names() else db.create_table("council_knowledge", schema=[{"name": "vector", "type": "fixed_size_list", "list_size": 384, "data_type": "float32"}, {"name": "text", "type": "text"}])
+        if "council_knowledge" in db.list_tables():
+            tbl = db.open_table("council_knowledge")
+        else:
+            schema = pa.schema([
+                pa.field("vector", pa.list_(pa.float32(), 384)),
+                pa.field("text", pa.string())
+            ])
+            tbl = db.create_table("council_knowledge", schema=schema)
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
     rows = [{"vector": embed_text(t), "text": t} for t in docs]

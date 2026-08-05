@@ -14,10 +14,19 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from council.orchestrator.agents import AgentResult, build_default_clients
+from council.orchestrator.voting import run_council_vote, VoteResult
 
 from council.config.loader import load as config_load, save as config_save
 from council.embeddings.lancedb import add_documents as lancedb_add, search as lancedb_search
-from council.llm.ollama import chat as ollama_chat, embeddings as ollama_embeddings, is_running as ollama_running
+from council.llm.ollama import (
+    chat as ollama_chat, 
+    embeddings as ollama_embeddings, 
+    is_running as ollama_running,
+    pull as ollama_pull,
+    list_models as ollama_list_models,
+    ensure_models as ollama_ensure_models,
+    get_model_defaults as ollama_get_defaults
+)
 from council.journal.analyzer import analyze as journal_analyze, list_journal
 from council.backup.manager import create_backup as backup_create, list_backups as backup_list
 from council.llm.manager import available as llm_available
@@ -25,6 +34,8 @@ from council.memory.consolidation import nightly_consolidate
 from council.network.tailscale import tailscale_status, setup_tailscale
 from council.reflection.self import reflect_on_last
 from council.skills.evolution import evolve
+from council.knowledge.graph import add_node, add_edge, _load as graph_load
+from council.terminal.websocket import terminal_websocket
 
 COUNCIL_HOME = Path(os.environ.get("COUNCIL_HOME", "/var/lib/council"))
 JOURNAL_DIR = COUNCIL_HOME / "journal"
@@ -278,6 +289,125 @@ def update_check_route() -> JSONResponse:
 def metrics_route() -> JSONResponse:
     from council.metrics.snapshot import snapshot as metrics_fn
     return JSONResponse(metrics_fn())
+
+
+# Ollama model management endpoints
+@app.get("/api/ollama/models")
+def ollama_models_route() -> JSONResponse:
+    from council.llm.ollama import list_models as ollama_list_models
+    return JSONResponse(ollama_list_models())
+
+
+@app.post("/api/ollama/pull")
+def ollama_pull_route(body: dict[str, object]) -> JSONResponse:
+    model = str(body.get("model", "qwen2.5:3b"))
+    from council.llm.ollama import pull as ollama_pull
+    return JSONResponse(ollama_pull(model))
+
+
+@app.post("/api/ollama/ensure")
+def ollama_ensure_route(body: dict[str, object]) -> JSONResponse:
+    models = body.get("models")
+    if not isinstance(models, list):
+        models = ["qwen2.5:3b", "deepseek-coder:1.3b", "nomic-embed-text"]
+    from council.llm.ollama import ensure_models as ollama_ensure_models
+    return JSONResponse(ollama_ensure_models(models))
+
+
+@app.get("/api/ollama/defaults")
+def ollama_defaults_route() -> JSONResponse:
+    from council.llm.ollama import get_model_defaults as ollama_get_defaults
+    return JSONResponse(ollama_get_defaults())
+
+
+# Knowledge Graph endpoints
+@app.get("/api/knowledge/graph")
+def knowledge_graph_route() -> JSONResponse:
+    return JSONResponse(graph_load())
+
+
+@app.post("/api/knowledge/node")
+def knowledge_add_node(body: dict[str, object]) -> JSONResponse:
+    node_id = str(body.get("id", ""))
+    label = str(body.get("label", ""))
+    kind = str(body.get("kind", "concept"))
+    if not node_id or not label:
+        return JSONResponse({"ok": False, "error": "id and label required"})
+    return JSONResponse(add_node(node_id, label, kind))
+
+
+@app.post("/api/knowledge/edge")
+def knowledge_add_edge(body: dict[str, object]) -> JSONResponse:
+    source = str(body.get("source", ""))
+    target = str(body.get("target", ""))
+    relation = str(body.get("relation", "related"))
+    if not source or not target:
+        return JSONResponse({"ok": False, "error": "source and target required"})
+    return JSONResponse(add_edge(source, target, relation))
+
+
+# Enhanced voting endpoint with strategy support
+@app.post("/api/council/vote")
+async def council_vote(req: AskRequest) -> JSONResponse:
+    agents = build_default_clients()
+    if req.mode == "alone" and req.agent and req.agent in agents:
+        responses: list[AgentResult] = [await agents[req.agent].ask(req.prompt)]
+    else:
+        responses = await asyncio.gather(*[agents[k].ask(req.prompt) for k in agents])
+    
+    # Convert to format expected by voting
+    agent_responses = [
+        {"agent": r.agent, "role": r.role, "response": r.response}
+        for r in responses
+    ]
+    
+    vote_result = await run_council_vote(req.prompt, agent_responses, req.strategy, req.min_agreement)
+    
+    # Build final response
+    votes = {r.agent: ("approve" if "danger" not in r.response.lower() else "reject") for r in responses}
+    approve = sum(1 for v in votes.values() if v == "approve")
+    consensus = vote_result.get("consensus_reached", approve >= req.min_agreement)
+    best = max(responses, key=lambda r: len(r.response))
+    
+    final = "\n\n".join(
+        f"## {r.agent} ({r.role})\n{r.response}\n_Status: {r.status}, latency: {r.latency:.2f}s_"
+        for r in responses
+    )
+    if consensus:
+        final = f"# Council Decision - Consensus {approve}/{len(responses)} ✅\n\n" + final
+    else:
+        final = f"# Council Decision - No Consensus {approve}/{len(responses)} ❌\n\n" + final
+    
+    result = {
+        "strategy": req.strategy,
+        "vote_result": vote_result,
+        "votes": votes,
+        "approve_count": approve,
+        "consensus_reached": consensus,
+        "best_agent": vote_result.get("best_agent", best.agent),
+        "final": final,
+        "responses": [
+            {
+                "agent": r.agent,
+                "role": r.role,
+                "response": r.response,
+                "latency": round(r.latency, 2),
+                "status": r.status,
+            }
+            for r in responses
+        ],
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+    }
+    _append_journal(req.prompt, result)
+    return JSONResponse(result)
+
+
+# WebSocket terminal endpoint
+@app.websocket("/ws/terminal")
+async def terminal_ws(ws: WebSocket) -> None:
+    # Get agent from query params
+    agent = ws.query_params.get("agent", "council")
+    await terminal_websocket(ws, agent)
 
 
 def cli_dashboard(port: int = 8000, host: str = "0.0.0.0") -> None:
