@@ -9,11 +9,14 @@ OPENCLAW_REF ?= 2026.7.1
 HERMES_REF ?= main
 AGENTZERO_REF ?= main
 
+# Prefer the project venv when it exists, fall back to system python
+PY := $(if $(wildcard .venv/bin/python),.venv/bin/python,python)
+
 help:
 	@echo "CouncilKey-Os Makefile v$(VERSION)"
 	@echo ""
-	@echo "  deps        Install build deps"
-	@echo "  lint        Lint shell + python"
+	@echo "  deps        Install the project + dev dependencies"
+	@echo "  lint        Lint python (ruff)"
 	@echo "  test        Run pytest"
 	@echo "  clean       Remove build artifacts"
 	@echo "  version     Show version"
@@ -24,16 +27,19 @@ version:
 	@echo $(VERSION)
 
 deps:
-	@echo "Install deps manually per BUILD.md"
+	@echo "Installing project + dev dependencies..."
+	@if [ ! -d .venv ]; then python3 -m venv .venv; fi
+	@.venv/bin/pip install -q -e ".[dev]"
+	@echo "ok - run 'make test' and 'make lint'"
 
 lint:
 	@echo "Lint..."
-	@python -m ruff check council tests scripts || true
+	@$(PY) -m ruff check council tests scripts || true
 
 test:
 	@echo "Run tests..."
-	@python -m pytest tests -q
+	@$(PY) -m pytest tests -q
 
 clean:
 	@echo "Clean..."
-	@rm -rf .venv dist build output tmp .pytest_cache .mypy_cache __pycache__
+	@rm -rf .venv dist build output tmp .pytest_cache .mypy_cache .ruff_cache __pycache__

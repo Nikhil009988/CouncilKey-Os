@@ -138,3 +138,23 @@ def test_openclaw_prebuilt_cli_step():
 def test_windows_scripts_exist():
     for rel in ("scripts/setup.ps1", "scripts/start.ps1", "scripts/start.bat"):
         assert (ROOT / rel).exists(), rel
+
+
+def test_three_d_route_importable_and_served():
+    """The 3D dashboard is importable (package name '3d' can't be imported
+    normally) and served at /3d on the main app."""
+    from fastapi.testclient import TestClient
+
+    from council.dashboard.three_d import create_app_3d
+
+    standalone = TestClient(create_app_3d())
+    r = standalone.get("/")
+    assert r.status_code == 200
+    assert "three.min.js" in r.text
+
+    from council.orchestrator.main import app
+
+    m = TestClient(app)
+    r2 = m.get("/3d")
+    assert r2.status_code == 200
+    assert "three.min.js" in r2.text

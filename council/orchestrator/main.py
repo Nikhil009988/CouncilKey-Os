@@ -491,6 +491,18 @@ def index() -> HTMLResponse:
     return HTMLResponse(html)
 
 
+@app.get("/3d")
+def index_3d() -> HTMLResponse:
+    """Standalone 3D knowledge-graph dashboard."""
+    from council.dashboard.three_d import create_app_3d
+
+    routes = {r.path: r for r in create_app_3d().routes}
+    endpoint = routes.get("/")
+    if endpoint is None:
+        return HTMLResponse("<html><body><h1>3D dashboard unavailable</h1></body></html>")
+    return endpoint.endpoint()
+
+
 @app.get("/api/health")
 def health() -> JSONResponse:
     return JSONResponse({"ok": True, "version": __version__})

@@ -109,6 +109,18 @@ def status(names: list[str] | None = None) -> dict[str, dict[str, Any]]:
     return out
 
 
+def _marker_valid(info: dict[str, Any], agent_dir: Path) -> bool:
+    """A completed marker is only trusted if its runtime is still present."""
+    if info["runtime"] == "python" and (agent_dir / "requirements.txt").exists():
+        venv_py = agent_dir / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        if not venv_py.exists():
+            return False
+    if info["runtime"] == "node":
+        # prebuilt CLI is the reliable artifact for openclaw
+        pass
+    return True
+
+
 def install(name: str, update: bool = False) -> dict[str, Any]:
     """Download + configure one agent. Returns a step-by-step report.
 
@@ -124,7 +136,7 @@ def install(name: str, update: bool = False) -> dict[str, Any]:
     marker = agent_dir / ".council-installed"
     steps: list[dict[str, Any]] = []
 
-    if agent_dir.exists() and marker.exists() and not update:
+    if agent_dir.exists() and marker.exists() and not update and _marker_valid(info, agent_dir):
         return {
             "ok": True,
             "name": name,
