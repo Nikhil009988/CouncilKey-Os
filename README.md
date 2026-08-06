@@ -142,6 +142,7 @@ curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/01
 Manage things anytime:
 
 ```
+councilkey ask "your question"      # ALL 3 agents answer + vote (terminal)
 councilkey agents status | install | start | env | verify
 councilkey setup                    # re-run the wizard (change provider/key)
 eval "$(councilkey agents env)"     # export stored API keys for external agents

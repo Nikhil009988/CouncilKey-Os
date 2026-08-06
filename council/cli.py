@@ -307,6 +307,62 @@ def cmd_agents(action: str, names: list[str]) -> int:
     return 2
 
 
+def cmd_ask(
+    prompt: str,
+    strategy: str = "majority",
+    mode: str = "together",
+    agent: str | None = None,
+    decompose: bool = False,
+    debate: bool = False,
+    rounds: int = 3,
+) -> int:
+    """Ask the council - ALL THREE agents at once, then the vote.
+
+    Examples:
+      councilkey ask "plan a trip"                 # 3 agents + vote (together)
+      councilkey ask "..." --strategy weighted     # weighted voting
+      councilkey ask "..." --alone hermes          # single agent
+      councilkey ask "..." --decompose             # split into subtasks
+      councilkey ask "..." --debate --rounds 3     # iterative debate
+    """
+    import asyncio
+
+    from council.orchestrator.main import AskRequest, ask_council
+
+    if decompose:
+        from council.orchestrator.decomposer import run_decomposed
+
+        print("== Council: decomposed into subtasks (all 3 agents) ==")
+        result = asyncio.run(run_decomposed(prompt, strategy, 2))
+    elif debate:
+        from council.orchestrator.debate import run_debate
+
+        print(f"== Council: debate ({rounds} rounds, all 3 agents) ==")
+        result = asyncio.run(run_debate(prompt, rounds=rounds, strategy=strategy, min_agreement=2))
+    else:
+        label = f"alone ({agent})" if mode == "alone" else f"together ({strategy})"
+        print(f"== Council: {label} ==")
+        req = AskRequest(prompt=prompt, strategy=strategy, min_agreement=2, mode=mode, agent=agent)
+        result = asyncio.run(ask_council(req))
+
+    # votes summary
+    votes = result.get("votes", {})
+    approve = sum(1 for v in votes.values() if v == "approve")
+    total = len(votes)
+    consensus = result.get("consensus_reached", False)
+    mark = "✅" if consensus else "❌"
+    print(f"   votes: {', '.join(f'{a}:{v}' for a, v in votes.items())}")
+    for r in result.get("responses", []):
+        print(f"   - {r['agent']:<11} {r['status']:<30} {r['latency']:.1f}s")
+    if mode == "alone":
+        print(f"   single agent answer: {agent}")
+    else:
+        print(f"   consensus: {mark} {approve}/{total}")
+    print()
+    print(result.get("final", ""))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="councilkey", description="CouncilKey-Os control tool")
     parser.add_argument("--version", action="store_true", help="print version and exit")
@@ -332,6 +388,14 @@ def main(argv: list[str] | None = None) -> None:
     p_llm.add_argument("action", nargs="?", default="status", choices=["status", "install", "pull"])
     p_llm.add_argument("model", nargs="?", help="model to pull (default: qwen2.5:3b)")
 
+    p_ask = sub.add_parser("ask", help="ask the council - ALL 3 agents at once + vote")
+    p_ask.add_argument("prompt", help="the question to ask")
+    p_ask.add_argument("--strategy", default="majority", choices=["majority", "weighted", "llm_judge", "hermes_decides"])
+    p_ask.add_argument("--alone", metavar="AGENT", help="ask a single agent (hermes/openclaw/agent-zero)")
+    p_ask.add_argument("--decompose", action="store_true", help="split into role-based subtasks")
+    p_ask.add_argument("--debate", action="store_true", help="iterative multi-round debate")
+    p_ask.add_argument("--rounds", type=int, default=3, help="debate rounds (default 3)")
+
     p_setup = sub.add_parser("setup", help="interactive setup wizard (provider, API keys, agents)")
     p_setup.add_argument("--provider", choices=["openai", "anthropic", "gemini", "openrouter", "none"],
                          help="model provider for the council + external agents")
@@ -347,6 +411,16 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.command == "serve":
         sys.exit(cmd_serve(args.host, args.port))
+    elif args.command == "ask":
+        sys.exit(cmd_ask(
+            prompt=args.prompt,
+            strategy=args.strategy,
+            mode="alone" if args.alone else "together",
+            agent=args.alone,
+            decompose=args.decompose,
+            debate=args.debate,
+            rounds=args.rounds,
+        ))
     elif args.command == "doctor":
         sys.exit(cmd_doctor())
     elif args.command == "storage":

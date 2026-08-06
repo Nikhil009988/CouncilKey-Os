@@ -182,3 +182,27 @@ def test_client_modes_mock(monkeypatch):
     monkeypatch.setattr(oa, "gateway_reachable", lambda *a, **k: False)
     modes = oa.client_modes()
     assert all(m["mode"] == "mock" for m in modes.values())
+
+
+def test_cli_ask_together():
+    """councilkey ask must run all 3 agents and print votes (mock mode ok)."""
+    import subprocess
+
+    r = subprocess.run(
+        [str(ROOT / ".venv/bin/councilkey"), "ask", "ping"],
+        capture_output=True, text=True, timeout=120,
+    )
+    assert r.returncode == 0, r.stdout[-300:]
+    assert "votes:" in r.stdout
+    assert "hermes" in r.stdout and "openclaw" in r.stdout and "agent-zero" in r.stdout
+
+
+def test_cli_ask_alone():
+    import subprocess
+
+    r = subprocess.run(
+        [str(ROOT / ".venv/bin/councilkey"), "ask", "ping", "--alone", "openclaw"],
+        capture_output=True, text=True, timeout=120,
+    )
+    assert r.returncode == 0
+    assert "single agent answer: openclaw" in r.stdout

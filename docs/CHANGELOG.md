@@ -223,3 +223,15 @@ now centers on model providers:
 Verified live: provider mode with a local OpenAI-compatible endpoint ->
 all 3 roles answer with distinct voices, council ask returns vote +
 journal, endpoint sweep 59/59, setup status endpoint reports correctly.
+
+## v1.7.1 (2026-08-05) - councilkey ask: all 3 agents at once from the terminal
+
+- New `councilkey ask "question"` command - the three council roles
+  (Hermes/OpenClaw/Agent Zero) answer the same prompt, then the vote runs.
+  Flags: --strategy (majority/weighted/llm_judge/hermes_decides),
+  --debate --rounds N, --decompose, --alone <agent>.
+- Guide: new "Use all 3 agents at once" section (terminal / dashboard
+  Together mode / API) with a real output example.
+- README quick start updated.
+- Tested live: together (3/3 consensus), decompose, debate (2 rounds),
+  alone - all verified against the provider client.

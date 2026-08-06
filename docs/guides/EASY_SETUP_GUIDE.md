@@ -206,6 +206,55 @@ or `openclaw` (bare) after onboarding - it opens the interactive chat.
 > first run? OpenClaw has no default model configured until you run
 > `openclaw onboard` once. After that it opens chat directly.
 
+## 4.5 Use all 3 agents at once
+
+The whole point of the council: one question, three answers, one vote.
+Three ways to do it:
+
+### 1. Terminal — one command (new)
+```bash
+councilkey ask "plan a 3-day trip to Goa"
+```
+```
+== Council: together (majority) ==
+   votes: hermes:approve, openclaw:approve, agent-zero:approve
+   - hermes       openai (gpt-4o-mini)           0.4s
+   - openclaw     openai (gpt-4o-mini)           0.5s
+   - agent-zero   openai (gpt-4o-mini)           0.4s
+   consensus: ✅ 3/3
+
+# Council Decision - Consensus 3/3 ✅
+## hermes (council-role) ... ## openclaw (council-role) ... ## agent-zero ...
+```
+Variants:
+```bash
+councilkey ask "..." --strategy weighted      # weighted voting
+councilkey ask "..." --strategy llm_judge     # LLM judge strategy
+councilkey ask "..." --debate --rounds 3      # all 3 debate, then vote
+councilkey ask "..." --decompose              # split into subtasks, then vote
+councilkey ask "..." --alone openclaw         # just one agent
+```
+
+### 2. Dashboard — one click
+Open http://localhost:8443 → **Council tab**:
+- Mode: **Together** (all 3 debate + vote) or Alone (pick one)
+- Strategy: majority / weighted / LLM judge / hermes decides
+- Buttons: **Ask Council** · **Debate** (multi-round) · **Decompose** (subtasks) · **Stream** toggle
+- The voting bars fill live as each agent answers.
+
+### 3. API — one POST
+```bash
+curl -X POST http://localhost:8443/api/council/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt": "plan a 3-day trip to Goa", "strategy": "majority"}'
+# responses: 3 agents + votes + consensus + final
+```
+
+All three hit the same engine: each of the 3 roles (Hermes=analysis,
+OpenClaw=execution, Agent Zero=review) answers independently with its own
+system prompt, then the council votes (2/3 by default) and journals the
+decision.
+
 ## 5. Where your data lives
 
 | What | Where |
