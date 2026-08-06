@@ -24,13 +24,13 @@ from __future__ import annotations
 import getpass
 import json
 import os
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Any
 
 from council import __version__
+from council.agents.proc import run_cmd
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 COUNCIL_HOME = Path(os.environ.get("COUNCIL_HOME", "/var/lib/council"))
@@ -127,14 +127,9 @@ def _configure_openclaw(provider: str, key: str) -> dict[str, Any]:
     if info["choice"] != "skip":
         flag = "--" + info["choice"].replace("_", "-")
         cmd += [flag, key]
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-        out = (proc.stdout or "") + (proc.stderr or "")
-        tail = out[-300:]
-        success = proc.returncode == 0 or ("Updated config" in out or "Auth" in out and "ok" in out.lower())
-        return {"ok": success, "detail": tail[:250]}
-    except Exception as exc:
-        return {"ok": False, "error": str(exc)}
+    ok, out = run_cmd(cmd, cwd=Path.home(), timeout=600)
+    success = ok or ("Updated config" in out or "Auth" in out and "ok" in out.lower())
+    return {"ok": success, "detail": out[-250:]}
 
 
 def run_wizard(
@@ -239,11 +234,9 @@ def run_wizard(
     if skip_tests:
         note("test suite", True, "skipped (--skip-tests)")
     else:
-        r = subprocess.run(
-            [sys.executable, "-m", "pytest", "tests", "-q"], cwd=ROOT, capture_output=True, text=True, timeout=600
-        )
-        tail = (r.stdout or "").strip().splitlines()[-1] if r.stdout else "?"
-        note("test suite", r.returncode == 0, tail[:80])
+        ok, out = run_cmd([sys.executable, "-m", "pytest", "tests", "-q"], cwd=ROOT, timeout=600)
+        tail = out.strip().splitlines()[-1] if out.strip() else "?"
+        note("test suite", ok, tail[:80])
 
     # 5. verify
     from council.cli import cmd_agents

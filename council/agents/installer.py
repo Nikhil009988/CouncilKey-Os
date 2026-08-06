@@ -20,12 +20,13 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 import httpx
+
+from council.agents.proc import run_cmd
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 AGENTS_DIR = Path(os.environ.get("COUNCIL_AGENTS_DIR", REPO_ROOT / "tools" / "linux"))
@@ -75,18 +76,8 @@ AGENTS: dict[str, dict[str, Any]] = {
 
 # ------------------------------------------------------------------ helpers
 def _run(cmd: list[str], cwd: Path | None = None, timeout: int = 900) -> tuple[bool, str]:
-    try:
-        proc = subprocess.run(
-            cmd,
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-        tail = (proc.stdout or "")[-600:] + (proc.stderr or "")[-600:]
-        return proc.returncode == 0, tail.strip()
-    except Exception as exc:
-        return False, str(exc)
+    """Cross-platform command runner (handles Windows .cmd/.exe)."""
+    return run_cmd(cmd, cwd=cwd, timeout=timeout)
 
 
 def _on_path(binary: str) -> bool:
@@ -209,18 +200,9 @@ def _install_official(info: dict[str, Any]) -> dict[str, Any]:
                 "error": "run the official PowerShell installer on Windows",
                 "hint": "iex (irm https://hermes-agent.nousresearch.com/install.ps1)"}
     print("  running the official installer (this can take several minutes)...")
-    try:
-        proc = subprocess.run(
-            ["bash"],
-            input=script,
-            capture_output=True,
-            text=True,
-            timeout=1800,
-        )
-        tail = (proc.stdout or "")[-600:] + (proc.stderr or "")[-600:]
-        ok = proc.returncode == 0
-    except Exception as exc:
-        return {"ok": False, "name": "hermes", "error": f"installer failed: {exc}"}
+    ok, tail = run_cmd(["bash"], cwd=Path.home(), timeout=1800, input_text=script)
+    if not ok:
+        return {"ok": False, "name": "hermes", "error": f"installer failed: {tail[:300]}"}
     if not ok:
         return {"ok": False, "name": "hermes", "error": f"installer failed: {tail[:300]}"}
     return {"ok": True, "name": "hermes",
@@ -233,8 +215,8 @@ def _install_agent_zero(info: dict[str, Any]) -> dict[str, Any]:
     `docker compose up` works; otherwise explain the launcher path."""
     if not _on_path("docker"):
         return {"ok": False, "name": "agent-zero",
-                "error": "Agent Zero needs Docker (it runs a full Linux desktop in a container)",
-                "hint": "install Docker Desktop (https://docker.com), then the A0 Launcher from agent-zero.ai"}
+                "error": "Agent Zero was NOT skipped - it requires Docker (by design: it runs a full Linux desktop in a container). Install Docker Desktop (https://docker.com), then run this again, or use the A0 Launcher from agent-zero.ai",
+                "hint": "Windows: winget install Docker.DockerDesktop   then reopen and rerun this step"}
     src = AGENTS_DIR / "agent-zero"
     if src.exists():
         return {"ok": True, "name": "agent-zero",

@@ -261,3 +261,23 @@ journal, endpoint sweep 59/59, setup status endpoint reports correctly.
 - Guide: "Automatic pendrive setup" section, 5-agent table with run
   commands, together/solo notes. README: pendrive mode + 5 agents.
 - 4 new tests (83 total), ruff clean.
+
+## v1.8.1 (2026-08-05) - Fix OpenClaw install on Windows (WinError 2)
+
+Real-world report from a Windows machine: `councilkey agents install openclaw`
+failed with `npm install failed: [WinError 2] The system cannot find the file
+specified` - and Hermes installed fine, so it wasn't a network issue.
+
+Root cause: on Windows, `npm` is `npm.cmd`; calling it by bare name through
+subprocess without a shell raises WinError 2. Same latent issue for any
+`.cmd`/`.exe` tool invoked by the installers.
+
+Fix:
+- New `council/agents/proc.py`: `which_resolved()` (adds PATHEXT suffix
+  lookup: npm -> npm.cmd) and `run_cmd()` (cross-platform runner used by
+  the agent installer, the setup wizard's OpenClaw configuration and the
+  official-installer step).
+- Agent Zero step message clarified: it is not a failure - Docker is a
+  hard requirement by design; message now says so and gives the Windows
+  install command (winget install Docker.DockerDesktop).
+- 2 new tests for Windows command resolution (85 total), ruff clean.

@@ -224,3 +224,37 @@ def test_pendrive_script_exists_and_syntax():
 
     for rel in ("scripts/pendrive-setup.sh",):
         subprocess.run(["bash", "-n", str(ROOT / rel)], check=True)
+
+
+def test_proc_resolves_windows_suffixes(monkeypatch):
+    """Windows: bare 'npm' -> npm.cmd resolution (fixes WinError 2)."""
+    from council.agents import proc
+
+    # simulate Windows PATHEXT lookup for a missing bare command
+    monkeypatch.setattr(proc.shutil, "which", lambda c: None)
+    monkeypatch.setattr(proc.os, "name", "nt")
+    monkeypatch.setattr(proc.os, "environ", {"PATHEXT": ".COM;.EXE;.BAT;.CMD"})
+    # fake that npm.cmd exists
+    def fake_which(cmd):
+        if cmd.lower().endswith(".cmd"):
+            return "C:\\Program Files\\nodejs\\npm.cmd"
+        return None
+    monkeypatch.setattr(proc.shutil, "which", fake_which)
+    assert proc.which_resolved("npm") == "C:\\Program Files\\nodejs\\npm.cmd"
+
+
+def test_run_cmd_resolves_executable(monkeypatch):
+    """run_cmd resolves the command through which_resolved."""
+    import subprocess as sp
+
+    from council.agents import proc
+
+    captured = {}
+    def fake_run(cmd, **kw):
+        captured["cmd"] = cmd
+        return sp.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+    monkeypatch.setattr(proc.subprocess, "run", fake_run)
+    monkeypatch.setattr(proc, "which_resolved", lambda c: "/usr/bin/" + c)
+    ok, out = proc.run_cmd(["npm", "--version"], timeout=10)
+    assert ok and out == "ok"
+    assert captured["cmd"][0] == "/usr/bin/npm"
