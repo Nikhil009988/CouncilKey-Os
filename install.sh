@@ -4,9 +4,9 @@
 #   curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/main/install.sh | bash
 #
 # Clones the repo (into ~/councilkey-os by default) and runs the full setup:
-# Python env + local LLM (Ollama, makes the council answer) + optional
-# external agents via their official installers.
-# Flags: --no-agents, --no-llm, --skip-tests
+# Python env + the interactive wizard (model provider + API key) + optional
+# external agents.
+# Flags: --no-agents, --skip-tests
 set -euo pipefail
 
 DEST="${1:-$HOME/councilkey-os}"
