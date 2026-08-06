@@ -46,7 +46,8 @@ def cmd_doctor() -> int:
             __import__(opt)
             check(f"optional {opt}", True)
         except Exception:
-            check(f"optional {opt}", False, "not installed")
+            # optional modules are informative, not failures
+            checks.append((f"optional {opt}", True, "not installed (optional - feature disabled)"))
 
     home = Path(os.environ.get("COUNCIL_HOME", "/var/lib/council"))
     writable = False
