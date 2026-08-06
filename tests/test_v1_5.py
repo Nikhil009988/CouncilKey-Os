@@ -576,3 +576,51 @@ def test_pendrive_agent_menu_and_readme():
     ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
     assert "AGENTS.bat" in ps
     assert "PENDRIVE-README.txt" in ps
+
+
+def test_active_provider_prefers_configured(monkeypatch, tmp_path):
+    """The configured provider (from setup) must win over any stale key -
+    this was the 401 bug: openai was picked because a stale key existed."""
+    from council.llm import provider as pv
+
+    summary_file = tmp_path / "setup-summary.json"
+    summary_file.write_text('{"provider": "openrouter"}', encoding="utf-8")
+    monkeypatch.setattr(pv, "_provider_cache", None)
+
+    # both an openai key AND the configured openrouter key exist
+    def fake_key_for(name):
+        return "sk-x" if name in ("openai", "openrouter") else None
+    monkeypatch.setattr(pv, "_key_for", fake_key_for)
+    monkeypatch.setattr("council.agents.setup_wizard.COUNCIL_HOME", tmp_path)
+    monkeypatch.setattr("council.agents.setup_wizard.summary",
+                        lambda: {"provider": "openrouter"})
+
+    assert pv.active_provider() == "openrouter"
+
+
+def test_401_error_message_mentions_key(monkeypatch):
+    """A 401 must tell the user their API key is wrong/expired."""
+    from council.llm import provider as pv
+
+    monkeypatch.setattr(pv, "_key_for", lambda n: "sk-x")
+    monkeypatch.setattr(pv, "active_provider", lambda: "openai")
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://127.0.0.1:9")  # unreachable
+
+    import asyncio
+    client = pv.ProviderAgentClient("hermes", provider="openai")
+    # force the httpx call to fail with 401
+    import httpx
+    class FakeResp:
+        status_code = 401
+        def raise_for_status(self):
+            raise httpx.HTTPStatusError("401 Unauthorized", request=None, response=None)
+    class FakeTransport:
+        async def handle_async_request(self, req):
+            raise httpx.HTTPStatusError("Client error '401 Unauthorized'", request=req, response=None)
+    # simpler: stub the _ask_openai_compat to raise 401
+    async def boom(prompt, system, model, timeout):
+        raise httpx.HTTPStatusError("Client error '401 Unauthorized' for url 'https://api.openai.com'", request=None, response=None)
+    monkeypatch.setattr(client, "_ask_openai_compat", boom)
+    result = asyncio.run(client.ask("hi"))
+    assert "401" in result.status
+    assert "wrong or expired" in result.status or "wrong or expired" in result.response

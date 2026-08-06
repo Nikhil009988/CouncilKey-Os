@@ -615,3 +615,25 @@ server stopped, memory intact on stick); agent menu launches the
 dashboard.
 
 2 new tests (109 total), ruff clean, shell OK.
+
+## v1.14.1 (2026-08-05) - fix 401 provider bug + aider PATH
+
+User report (real Windows run):
+1. Chose OpenRouter, but the council called api.openai.com -> 401.
+   ROOT CAUSE: active_provider() picked the FIRST provider with any key
+   (openai first), so a stale OPENAI_API_KEY (env or vault) overrode the
+   OpenRouter key the user configured.
+   FIX: active_provider() now honors the provider the user explicitly
+   configured in setup (from setup-summary.json) first; the hardcoded
+   openai-first order is only a fallback. Verified: with OpenRouter
+   configured AND a stale OPENAI_API_KEY env present, active = openrouter.
+   Also: 401 errors now say "your <Provider> API key (<ENV>) is wrong or
+   expired - re-run 'councilkey setup'".
+2. 'aider' not recognized in PowerShell: aider/crewai were pip-installed
+   into the project venv, whose Scripts dir isn't on PATH.
+   FIX: they now install GLOBALLY via 'python -m pip install', so the
+   command works in any terminal (like openclaw). New terminals may be
+   needed on Windows for PATH refresh.
+3. configure OpenClaw retry: still runs after agents install (unchanged).
+
+2 new tests (111 total), ruff clean.

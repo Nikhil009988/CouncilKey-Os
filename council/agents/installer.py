@@ -176,19 +176,19 @@ def _install_npm(info: dict[str, Any]) -> dict[str, Any]:
 
 
 def _install_pip(info: dict[str, Any]) -> dict[str, Any]:
-    """Install a pip-based agent (crewai / aider) - official pip package."""
-    print(f"  installing {info['package']} via pip (into the project venv)...")
-    venv_pip = REPO_ROOT / ".venv" / ("Scripts/pip.exe" if os.name == "nt" else "bin/pip")
-    if venv_pip.exists():
-        ok, tail = _run([str(venv_pip), "install", "-q", info["package"]], REPO_ROOT, timeout=1800)
-    else:
-        ok, tail = _run([sys.executable, "-m", "pip", "install", "-q", info["package"]], REPO_ROOT, timeout=1800)
+    """Install a pip-based agent (crewai / aider) globally so the command
+    works in ANY terminal (Windows: Scripts on PATH via pip's Scripts dir)."""
+    print(f"  installing {info['package']} globally via pip (so '{info['bin']}' works in any terminal)...")
+    # -m pip installs into the user/global site-packages and puts the exe on
+    # PATH (Windows: %APPDATA%\Python\Scripts or the Python Scripts dir)
+    ok, tail = _run([sys.executable, "-m", "pip", "install", "-q", info["package"]], REPO_ROOT, timeout=1800)
     if not ok:
         return {"ok": False, "name": info["bin"],
-                "error": f"pip install {info['package']} failed: {tail[:300]}"}
+                "error": f"pip install {info['package']} failed: {tail[:300]}",
+                "hint": f"run it manually in a NEW terminal:\n  pip install {info['package']}"}
     ver = _run([info["bin"], "--version"], REPO_ROOT, timeout=30)
     return {"ok": True, "name": info["bin"],
-            "steps": [{"step": f"pip install {info['package']}", "ok": True, "detail": ver[1][:80] or "installed"}],
+            "steps": [{"step": f"pip install {info['package']} (global)", "ok": True, "detail": ver[1][:80] or "installed"}],
             "next": info["start_hint"].splitlines()[0]}
 
 

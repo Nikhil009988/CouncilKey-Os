@@ -103,11 +103,31 @@ def _key_for(provider: str) -> str | None:
 
 
 def active_provider() -> str | None:
-    """The provider with a key available (env or vault). Cached briefly."""
+    """The provider the user configured - stored by the setup wizard.
+
+    The wizard writes `$COUNCIL_HOME/setup-summary.json` with the chosen
+    provider, so we honor THAT first (falling back to any key that exists
+    for backward compatibility). This prevents picking openai just because
+    a stale OPENAI_API_KEY is around while the user actually configured
+    OpenRouter (which caused 401s against api.openai.com).
+    """
     global _provider_cache
     now = time.monotonic()
     if _provider_cache and now - _provider_cache[0] < _PROVIDER_TTL:
         return _provider_cache[1]
+
+    # 1. the provider the user explicitly configured in setup
+    try:
+        from council.agents.setup_wizard import summary
+
+        configured = summary().get("provider")
+        if configured in PROVIDERS and _key_for(configured):
+            _provider_cache = (now, configured)
+            return configured
+    except Exception:
+        pass
+
+    # 2. fallback: the first provider with a key (env or vault)
     for name in ("openai", "openrouter", "gemini", "anthropic"):
         if _key_for(name):
             _provider_cache = (now, name)
@@ -175,11 +195,14 @@ class ProviderAgentClient:
                 status=f"{self.provider} ({model})",
             )
         except Exception as exc:
+            err = str(exc)
+            if "401" in err or "Unauthorized" in err:
+                err += f" - your {self.cfg['name']} API key ({self.cfg['env']}) is wrong or expired - re-run 'councilkey setup'"
             return AgentResult(
                 self.agent, "council-role",
-                f"[provider error: {exc}]",
+                f"[provider error: {err}]",
                 time.monotonic() - start,
-                f"error ({exc})",
+                f"error ({err})",
             )
 
     async def _ask_openai_compat(self, prompt: str, system: str, model: str, timeout: float) -> str:
