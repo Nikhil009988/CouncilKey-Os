@@ -1,27 +1,80 @@
 # CouncilKey-Os 🗝️
 
-**Your private AI council on a USB stick.** Three AI agents — Hermes, OpenClaw and Agent Zero — debate every question, vote on the answer, and remember what they learn. Unplug the stick and your data goes with you. Nothing stays on the host machine.
+**Your private AI council.** Three AI agents — Hermes, OpenClaw and Agent Zero — debate every question, vote on the answer, and remember what they learn. Runs on your machine, on a USB stick, or in the cloud — your data stays yours.
+
+<p align="center">
+  <img src="images/banner.png" alt="CouncilKey-Os" width="640">
+</p>
+
+---
+
+## Quick Start
+
+### 1. Install (one command)
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/Nikhil009988/CouncilKey-Os.git
+cd CouncilKey-Os
+powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
+```
+
+**Linux / macOS:**
+```bash
+git clone https://github.com/Nikhil009988/CouncilKey-Os.git
+cd CouncilKey-Os
+./scripts/setup.sh
+```
+
+**Or one-liner (clones to `~/councilkey-os`):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
+```
+
+### 2. Run the setup wizard
 
 ```
-pip install -e .
-councilkey serve          # dashboard + API on http://0.0.0.0:8443
+councilkey setup
+```
+
+The wizard asks what it needs and stores answers securely:
+
+1. **Model provider** — OpenAI · Anthropic · Gemini · OpenRouter (or skip and configure later)
+2. **API key** — asked with hidden input, stored **encrypted** in the secrets vault; one key powers the whole council
+3. **External agents** *(optional)* — Hermes, OpenClaw, Agent Zero, CrewAI, Aider via their official installers
+
+> Non-interactive / CI:
+> ```bash
+> councilkey setup --provider openai --api-key sk-... --no-agents --skip-tests
+> ```
+
+### 3. Start & use
+
+```bash
+councilkey serve        # dashboard + API on http://localhost:8443
+```
+
+```bash
+councilkey ask "plan a 3-day trip to Goa"   # ALL 3 agents answer + vote
+```
+
+### Pendrive mode (optional)
+
+Put everything on a USB stick with one command — plug into any PC, click **START.bat**, done:
+
+```bash
+./scripts/pendrive-setup.sh /media/USB --wizard
 ```
 
 ---
 
 ## What is it for?
 
-CouncilKey-Os turns one AI into three that argue, check each other, and agree before answering — so you get a second opinion on everything, automatically.
-
-**Use it for:**
-
-- **Private AI work** — run agents fully local (Ollama) with your data on your own USB drive, not on a cloud server
-- **No-trace sessions** — boot anywhere (Windows/Linux), work, unplug: heavy caches are auto-deleted, only distilled knowledge is kept
-- **Important decisions** — get 3 independent answers + a vote instead of one model's opinion: research plans, code reviews, risky commands
-- **A learning companion** — the council journals every session, builds a knowledge graph, and injects relevant past decisions into future answers
-- **Offline/air-gapped machines** — everything runs on your hardware; no internet required beyond optional model downloads
-
----
+- **Second opinions, automatically** — one question, three independent answers, a vote
+- **Private AI work** — your data on your machine or USB stick, not a cloud server
+- **No-trace sessions** — work anywhere, unplug, nothing stays on the host
+- **A learning companion** — journals every session, builds a knowledge graph, remembers what it learned
+- **Offline-capable** — optional local LLM (Ollama) support via `councilkey llm`
 
 ## How it works
 
@@ -33,62 +86,21 @@ You ask ──► 3 agents answer ──► council votes ──► journal + me
                                          └──► final answer + reasoning
 ```
 
-- **Together** mode: debate + vote (2/3 agreement needed by default)
-- **Alone** mode: one agent, direct and fast
-- **Debate** mode: multiple rounds where agents revise after seeing each other
-- **Decompose** mode: complex tasks split into analysis → plan → review subtasks
+- **Together** — debate + vote (2/3 agreement by default)
+- **Alone** — one agent, direct and fast
+- **Debate** — multi-round revision with convergence detection
+- **Decompose** — complex tasks split into analysis → plan → review
 
----
+## Features
 
-## What's inside
-
-Listed in the order the project was built:
-
-### v1.0 — Core council (first version)
-- FastAPI orchestrator with ~30 REST endpoints + WebSocket chat
-- 3 agent gateways (Hermes / OpenClaw / Agent Zero) with circuit breakers and offline mock fallback
-- 4 voting strategies: majority, weighted, LLM judge, hermes-decides
-- Web dashboard: council chat, live voting bars, storage tools, journal, terminal, secrets, 3D knowledge graph
-- Keep/cache storage split — distilled knowledge kept, raw cache auto-deleted on unplug
-- Ollama integration: model management, chat, embeddings
-- LanceDB vector store (offline embeddings), journal, backups, metrics, update checker
-- Build tooling: portable USB, live ISO, bootc images
-
-### v1.1 — Real features + hardening
-- Working **vision** (screenshots + local vision-model analysis), **voice** (Edge TTS free default + local Whisper), **canvas** (sandboxed file browser), **browser** (fetch + text extraction)
-- `councilkey` CLI: `serve`, `doctor`, `storage`, `version`
-- Security: optional API-key auth, rate limiting, CORS, security headers, request logging
-- Background scheduler (nightly consolidation + journal pruning), systemd service
-- Real no-traces audit script (7 checks) and Tailscale setup script
-- 5 optional external agents: Hermes, OpenClaw, Agent Zero, **CrewAI** (role-based teams that work together natively) and **Aider** (pair-programming chat, same API keys) — each installed via its official installer (`councilkey agents install`)
-
-### v1.2 — Advanced orchestration & intelligence (latest)
-- **Task decomposition** — complex prompts split into role-based subtasks, then voted on
-- **Iterative debate** — multi-round revision with automatic convergence detection
-- **Streaming responses** — Server-Sent Events as each agent answers
-- **Async task queue** — prioritized background jobs with status + cancellation
-- **Audit trail** — every request logged with per-agent latency and consensus analytics
-- **TF-IDF full-text search** — search the council's journal and documents (pure Python, offline)
-- **Semantic result cache** — repeated questions answered from cache (TTL + size capped)
-- **Encrypted secrets vault** — API keys stored encrypted (Fernet or stdlib fallback), never plaintext
-- **Memory injection (RAG-lite)** — relevant past decisions auto-injected into new prompts
-- **Terminal command guard** — `rm -rf /`, `mkfs`, `dd`, fork bombs blocked before reaching the shell
-
-### v1.3 — One-command setup
-- `./scripts/setup.sh` — installs CouncilKey-Os, the local LLM (Ollama + model) and the external agents via their **official installers**
-- `install.sh` — one-liner installer (`curl | bash`)
-- `councilkey agents` CLI — `status` (installed? which method?), `install` (official installers), `start` (interactive agents hand over to their own UI), `verify`
-- Agents can also be installed from the API as background tasks: `POST /api/tasks {"kind": "install_agent", "name": "hermes"}`
-
-### v1.4 — Agents that actually work (latest)
-- **Local-LLM agents**: the 3 council roles (Hermes analysis / OpenClaw execution / Agent Zero review) run on a local Ollama model with distinct system prompts — real inference, offline, no API keys. Fallback chain per agent: external gateway → local LLM → explicit mock (never silent).
-- **`councilkey llm` CLI**: `status` / `install` (Ollama, incl. `winget` on Windows) / `pull` (default qwen2.5:3b)
-- **`councilkey agents verify`** — smoke-tests each agent with a real ask and shows the active backend
-- **OpenClaw fix**: installs the prebuilt `openclaw@latest` CLI globally (the cloned source tree was unbuilt — this is what broke `openclaw` in PowerShell)
-- **Windows native**: `scripts\setup.ps1`, `scripts\start.ps1`, fixed `start.bat`
-- **Dashboard**: Agents tab shows the real per-agent backend (🟢 gateway / 🟡 local-llm / ⚪ mock) + LLM badge in the header
-
----
+| Area | What you get |
+|---|---|
+| **Council core** | ask / alone / debate / decompose, 4 voting strategies, SSE streaming, WebSocket chat, background task queue |
+| **Intelligence** | memory injection (RAG-lite), TF-IDF search, knowledge graph, journal + audit analytics, semantic result cache |
+| **Security** | encrypted secrets vault, optional API-key auth, rate limiting, terminal command guard, no-traces audit |
+| **Agents** | 5 optional external agents (Hermes, OpenClaw, Agent Zero, CrewAI, Aider) via official installers |
+| **Workspaces** | sandboxed canvas file browser, guarded WebSocket terminal, browser fetch, vision + voice panels |
+| **Portable** | one-command pendrive setup, bootc/live-ISO/portable build scripts, systemd service |
 
 ## Gallery
 
@@ -104,126 +116,45 @@ Listed in the order the project was built:
 | ![Vision](images/vision-screenshot.png) | ![Browser](images/browser-camofox.png) |
 | ![Canvas](images/canvas-desktop.png) | ![Dashboard v4](images/dashboard-neat-v4.png) |
 
----
-
-## Quick start
-
-```bash
-# 1. clone
-git clone https://github.com/Nikhil009988/CouncilKey-Os.git
-cd CouncilKey-Os
-
-# 2. one-command setup - installs CouncilKey-Os AND downloads the 3 agents
-#    (Hermes, OpenClaw, Agent Zero) from their official repos automatically
-./scripts/setup.sh
-
-# 3. run
-./scripts/start.sh                # open http://localhost:8443
-
-# 4. ask
-curl -X POST http://localhost:8443/api/council/ask \
-  -H 'Content-Type: application/json' \
-  -d '{"prompt": "plan a 3-day trip to Goa"}'
-```
-
-**Full step-by-step setup & usage instructions (Windows / Linux / macOS, troubleshooting):**
-[Complete Setup & Usage Guide](docs/guides/EASY_SETUP_GUIDE.md)
-
-Or as a one-liner (clones to `~/councilkey-os`, runs the full setup):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
-```
-
-**Pendrive mode:** one command puts everything on a USB stick
-(`./scripts/pendrive-setup.sh /media/USB`), and plugging it into any PC
-starts the dashboard from the stick (START.bat / autoplay on Windows,
-`bash start.sh` on Linux) — data stays on the stick.
-
-**`setup.sh` runs an interactive wizard** — it asks what you need and stores answers securely:
-1. choose a **model provider**: OpenAI / Anthropic / Gemini / OpenRouter (or skip and configure later)
-2. it asks for the **API key** and stores it **encrypted** in the secrets vault — the same key powers the three council roles AND the external agents (OpenClaw gets configured automatically)
-3. optionally install the external agents (Hermes / OpenClaw / Agent Zero) via each project's official installer
-
-Manage things anytime:
+## CLI reference
 
 ```
-councilkey ask "your question"      # ALL 3 agents answer + vote (terminal)
+councilkey serve [--host 0.0.0.0] [--port 8443]   start the dashboard + API
+councilkey ask "..." [--strategy X] [--debate] [--decompose] [--alone A]
+councilkey setup [--provider X] [--api-key K] [--no-agents] [--skip-tests]
 councilkey agents status | install | start | env | verify
-councilkey setup                    # re-run the wizard (change provider/key)
-eval "$(councilkey agents env)"     # export stored API keys for external agents
+councilkey pendrive /media/USB [--wizard]          build a USB stick
+councilkey llm status | install | pull             optional local LLM (Ollama)
+councilkey doctor                                  environment health report
+councilkey storage [--dry-run]                     audit / optimize storage
 ```
 
-Windows: run `scripts\setup.ps1` in PowerShell (installs Ollama via winget automatically), then `scripts\start.bat` or `scripts\start.ps1` to open the dashboard.
-
-Works out of the box: if an agent gateway is offline it answers in mock mode so the pipeline is always testable. Point the gateways at real agents for live operation.
-
-### CLI
-
-```
-councilkey serve [--host 0.0.0.0] [--port 8443]
-councilkey doctor               # environment health report
-councilkey storage [--dry-run]  # audit / optimize storage
-councilkey version
-```
-
-### systemd (server install)
-
+Export stored API keys for the external agents:
 ```bash
-sudo ./deploy/install.sh        # installs to /opt/councilkey + enables the service
+eval "$(councilkey agents env)"        # bash/zsh
+councilkey agents env | Invoke-Expression   # PowerShell
 ```
 
----
+## Documentation
 
-## Docs
-
-| Topic | Where |
+| Topic | Link |
 |---|---|
-| API reference (all ~70 endpoints) | [docs/API.md](docs/API.md) |
+| Complete setup & usage guide (Windows/Linux/macOS, troubleshooting) | [docs/guides/EASY_SETUP_GUIDE.md](docs/guides/EASY_SETUP_GUIDE.md) |
+| API reference (all endpoints) | [docs/API.md](docs/API.md) |
 | Architecture | [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) |
-| Security model | [docs/SECURITY.md](docs/SECURITY.md) |
-| Build guide (USB / ISO / bootc) | [docs/guides/BUILD.md](docs/guides/BUILD.md) |
+| Security | [docs/SECURITY.md](docs/SECURITY.md) |
 | Pendrive guide | [docs/guides/PENDRIVE_GUIDE.md](docs/guides/PENDRIVE_GUIDE.md) |
-| Complete setup & usage guide | [docs/guides/EASY_SETUP_GUIDE.md](docs/guides/EASY_SETUP_GUIDE.md) |
-| Collaboration modes | [docs/guides/COLLABORATION_MODES.md](docs/guides/COLLABORATION_MODES.md) |
+| Build guide (USB / ISO / bootc) | [docs/guides/BUILD.md](docs/guides/BUILD.md) |
+| Collaboration modes (together / alone) | [docs/guides/COLLABORATION_MODES.md](docs/guides/COLLABORATION_MODES.md) |
 | Change history | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
 | Roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
-
----
-
-## How it compares
-
-CouncilKey-Os is not another agent framework — it's a **council wrapper** around three proven agents, focused on portability and privacy.
-
-| | CouncilKey-Os | OpenClaw | Hermes Agent | Agent Zero | CrewAI |
-|---|---|---|---|---|---|
-| Core idea | 3 agents debate + vote | Multi-channel assistant | Self-improving learning loop | General autonomous agent | Role-based agent teams |
-| Multi-agent voting | **Native (built-in)** | Subagents only | Single agent | Single agent | Via workflows |
-| Runs from USB, no traces | **Yes (core feature)** | No | No | No | No |
-| Offline / local LLM | **Yes (Ollama)** | Yes | Yes | Yes | Yes |
-| Setup time | Minutes | Minutes | Minutes | Minutes | Hours |
-
-Everyone is free to use these great open-source projects — CouncilKey-Os sits on top of them and adds the council layer, the voting, and the pendrive-first storage.
-
----
-
-## Project timeline
-
-| Version | Date | What was added |
-|---|---|---|
-| v1.0 | 2026-07 | Core council: 3 agents, voting, dashboard, storage split |
-| v1.1 | 2026-08-05 | Vision, voice, canvas, browser, CLI, security, scheduler |
-| v1.2 | 2026-08-05 | Decomposition, debate, streaming, task queue, audit, search, vault, memory injection, terminal guard |
-| v1.3 | 2026-08-05 | One-command setup that downloads the 3 agents automatically + `councilkey agents` CLI |
-| v1.4 | 2026-08-05 | Agents really work: local-LLM role agents (Ollama), `llm` + `agents verify` CLI, OpenClaw prebuilt fix, Windows scripts, honest dashboard statuses |
-
----
 
 ## Development
 
 ```bash
-make test        # pytest (50 tests)
-make lint        # ruff
+make deps      # install project + dev deps
+make test      # pytest (83 tests)
+make lint      # ruff
 ```
 
 Python 3.11+ · MIT License
