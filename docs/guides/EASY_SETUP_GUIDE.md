@@ -210,7 +210,7 @@ interfaces. Each is installed with its **official installer**:
 |---|---|---|
 | Hermes | `curl -fsSL https://hermes-agent.nousresearch.com/install.sh \| bash` (Linux/macOS) · `iex (irm https://hermes-agent.nousresearch.com/install.ps1)` (Windows) | `hermes` → interactive chat · `hermes gateway` → messaging |
 | OpenClaw | `npm install -g openclaw@latest` | `openclaw onboard --install-daemon` → guided onboarding |
-| Agent Zero | Docker + the A0 Launcher (agent-zero.ai) | runs a full Linux desktop in Docker |
+| Agent Zero | `git clone` + Python venv (`pip install -r requirements.txt`) - **no Docker needed** | `cd tools/linux/agent-zero && .venv/bin/python agent.py` - interactive chat. Docker optional: adds the built-in terminal/browser tools. Needs **Python 3.12+** |
 | **CrewAI** (4th) | `pip install crewai` (official package) | `crewai create crew my_crew && cd my_crew && crewai run` — role-based teams work **together** natively |
 | **Aider** (5th) | `pip install aider-chat` (official package) | `aider` — chat with your repo; uses the **same API keys** as our setup (OpenAI/Anthropic/Gemini/OpenRouter) |
 
@@ -347,8 +347,8 @@ is kept.
 | `provider error: TLS/SSL` | No internet to the provider, or a custom `*_BASE_URL` is unreachable |
 | Wizard looks stuck (blinking cursor after an install) | It's working - installs/tests/API calls print a message first and run silently after. Watch for the next ✅ line; long steps show timing. Tests are skippable (answer **n**) |
 | Hermes installer won't download | Run it manually: `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash` |
-| Agent Zero won't install | It needs Docker — install Docker Desktop, then use the A0 Launcher (agent-zero.ai) |
-| Does Agent Zero work like Hermes/OpenClaw? | No — Hermes/OpenClaw run standalone (Python/npm), Agent Zero is a Dockerized Linux desktop by design. Docker is required for it; the council itself works without any of them |
+| Agent Zero won't install | If your Python is < 3.12: it needs Python 3.12+ (`type` syntax). Install Python 3.12+ from python.org and re-run. Docker is NOT required anymore |
+| Does Agent Zero work like Hermes/OpenClaw? | Yes now — it installs standalone (source + Python venv). Docker is optional (adds terminal/browser tools), not required |
 | `llm pull` fails | Check internet; try a smaller model: `councilkey llm pull qwen2.5:1.5b` |
 | Ollama installed but "not running" | Start it: `ollama serve` (Linux/macOS) or the Ollama app (Windows) |
 | Port 8443 busy | `COUNCIL_PORT=9000 ./scripts/start.sh` |

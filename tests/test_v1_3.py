@@ -15,7 +15,8 @@ def test_agents_installer_known_agents():
     # each agent documents its official install method
     assert AGENTS["hermes"]["install"] == "official-installer"
     assert AGENTS["openclaw"]["install"] == "npm"
-    assert AGENTS["agent-zero"]["install"] == "docker-launcher"
+    assert AGENTS["agent-zero"]["install"] == "source-venv"
+    assert AGENTS["agent-zero"]["repo"].startswith("https://")
     assert AGENTS["crewai"]["install"] == "pip"
     assert AGENTS["aider"]["install"] == "pip"
     # official URLs/commands are present

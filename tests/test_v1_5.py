@@ -219,6 +219,16 @@ def test_agents_include_crewai_aider():
     assert AGENTS["aider"]["package"] == "aider-chat"
 
 
+def test_agent_zero_no_docker_install():
+    """Agent Zero installs like hermes/openclaw: source + venv, no Docker."""
+    from council.agents.installer import AGENTS
+
+    assert AGENTS["agent-zero"]["install"] == "source-venv"
+    # runtime note says docker is optional, not required
+    assert "no Docker needed" in AGENTS["agent-zero"]["runtime"]
+    assert "required" not in AGENTS["agent-zero"]["runtime"]
+
+
 def test_pendrive_script_exists_and_syntax():
     import subprocess
 

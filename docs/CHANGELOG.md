@@ -304,3 +304,20 @@ Fixes:
 - Guide: total setup time table (~10-25 min, per-step) + troubleshooting
   row for the "blinking cursor" case.
 - 85 tests passing, ruff clean.
+
+
+## v1.9.0 (2026-08-05) - Agent Zero without Docker
+
+Per maintainer request, Agent Zero now installs and runs like Hermes/OpenClaw:
+
+- Install method changed from docker-launcher to source-venv: clone the
+  official repo + create a Python venv + `pip install -r requirements.txt`
+  - no Docker needed for basic chat. Docker is now OPTIONAL (only adds the
+  built-in terminal/browser tools, matching their hybrid dev approach).
+- Verified from their code: agent.py and the API never import Docker at
+  startup - only the terminal tool uses the Docker SDK.
+- Requires Python 3.12+ (their code uses `type X = ...` syntax); the
+  installer now checks and prints a clear hint instead of failing late.
+- `councilkey agents status` detects agent-zero by its venv, not Docker;
+  start() hands over with `cd tools/linux/agent-zero && .venv/bin/python agent.py`.
+- Guide updated (agent table + troubleshooting). 86 tests, ruff clean.

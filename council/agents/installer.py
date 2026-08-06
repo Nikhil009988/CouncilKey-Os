@@ -50,11 +50,12 @@ AGENTS: dict[str, dict[str, Any]] = {
         "start_hint": "openclaw                     # interactive chat\nopenclaw onboard --install-daemon   # guided onboarding",
     },
     "agent-zero": {
-        "install": "docker-launcher",
-        "bin": "a0",
+        "install": "source-venv",
+        "repo": "https://github.com/agent0ai/agent-zero.git",
+        "bin": "agent-zero",
         "role": "builder & review (external, optional)",
-        "runtime": "docker (required - unlike hermes/openclaw)",
-        "start_hint": "Agent Zero runs where Docker runs. Use the A0 Launcher (see agent-zero.ai)\nor: docker compose up in the agent-zero source tree.",
+        "runtime": "python/venv (no Docker needed for chat; Docker optional for terminal/browser tools)",
+        "start_hint": "cd tools/linux/agent-zero && .venv/bin/python agent.py   # interactive chat (needs Python 3.12+)\n# Docker optional: enables the built-in terminal/browser (docker compose up)",
     },
     "crewai": {
         "install": "pip",
@@ -112,7 +113,9 @@ def status(names: list[str] | None = None) -> dict[str, dict[str, Any]]:
             win_bin = Path(os.environ.get("LOCALAPPDATA", "")) / "hermes" / "hermes.exe"
             installed = installed or home_bin.exists() or win_bin.exists()
         if name == "agent-zero":
-            installed = _on_path("docker") or _on_path("a0")
+            az_dir = AGENTS_DIR / "agent-zero"
+            venv_py = az_dir / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+            installed = installed or (az_dir.exists() and venv_py.exists())
         # crewai/aider install into the project venv
         if name in ("crewai", "aider"):
             venv_bin = REPO_ROOT / ".venv" / ("Scripts" if os.name == "nt" else "bin") / binary
@@ -144,8 +147,8 @@ def install(name: str) -> dict[str, Any]:
         return _install_pip(info)
     if info["install"] == "official-installer":
         return _install_official(info)
-    if info["install"] == "docker-launcher":
-        return _install_agent_zero(info)
+    if info["install"] == "source-venv":
+        return _install_source_venv(info)
     return {"ok": False, "error": "no installer defined"}
 
 
@@ -210,32 +213,63 @@ def _install_official(info: dict[str, Any]) -> dict[str, Any]:
             "next": "hermes setup   # guided configuration"}
 
 
-def _install_agent_zero(info: dict[str, Any]) -> dict[str, Any]:
-    """Agent Zero runs in Docker. With docker present, clone the source so
-    `docker compose up` works; otherwise explain the launcher path."""
-    if not _on_path("docker"):
-        return {"ok": False, "name": "agent-zero",
-                "error": "Agent Zero was NOT skipped - it requires Docker (by design: it runs a full Linux desktop in a container). Install Docker Desktop (https://docker.com), then run this again, or use the A0 Launcher from agent-zero.ai",
-                "hint": "Windows: winget install Docker.DockerDesktop   then reopen and rerun this step"}
+def _install_source_venv(info: dict[str, Any]) -> dict[str, Any]:
+    """Install agent-zero like hermes/openclaw: clone the source + create a
+    Python venv + install requirements. NO Docker needed for basic use -
+    the agent framework runs on the host; Docker only adds the optional
+    terminal/browser tools (their hybrid dev approach).
+
+    Note: agent-zero's code uses Python 3.12+ syntax - check before the
+    multi-GB dependency install."""
+    name = "agent-zero"
+    if sys.version_info < (3, 12):
+        return {"ok": False, "name": name,
+                "error": "agent-zero needs Python 3.12+ (its code uses 3.12 syntax)",
+                "hint": "install Python 3.12+ from https://python.org, then re-run: councilkey agents install agent-zero"}
     src = AGENTS_DIR / "agent-zero"
-    if src.exists():
-        return {"ok": True, "name": "agent-zero",
-                "steps": [{"step": "docker", "ok": True, "detail": "docker found + source present"}],
-                "next": "cd tools/linux/agent-zero && docker compose up   (or use the A0 Launcher)"}
-    print("  cloning the agent-zero source for Docker...")
-    AGENTS_DIR.mkdir(parents=True, exist_ok=True)
-    ok, tail = _run(
-        ["git", "clone", "--depth", "1", "https://github.com/agent0ai/agent-zero.git", str(src)],
-        AGENTS_DIR,
-        timeout=900,
-    )
+    steps: list[dict[str, Any]] = []
+
+    # 1. clone
+    if src.exists() and not (src / ".git").exists():
+        shutil.rmtree(src, ignore_errors=True)
+    if not src.exists():
+        print("  cloning the agent-zero source...")
+        AGENTS_DIR.mkdir(parents=True, exist_ok=True)
+        ok, tail = _run(
+            ["git", "clone", "--depth", "1", info["repo"], str(src)],
+            AGENTS_DIR,
+            timeout=900,
+        )
+        steps.append({"step": "clone", "ok": ok, "detail": tail or "source ready"})
+        if not ok:
+            return {"ok": False, "name": name,
+                    "error": f"clone failed (no internet?): {tail[:200]}",
+                    "hint": "retry later with: councilkey agents install agent-zero"}
+
+    # 2. venv + deps (heavy: includes torch - several GB)
+    venv = src / ".venv"
+    venv_py = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    if not venv_py.exists():
+        print("  creating the Python environment (one-time, a few GB)...")
+        ok, tail = _run([sys.executable, "-m", "venv", str(venv)], src, timeout=600)
+        steps.append({"step": "venv", "ok": ok, "detail": tail or "venv ready"})
+        if not ok:
+            return {"ok": False, "name": name, "error": f"venv failed: {tail[:200]}"}
+    else:
+        steps.append({"step": "venv", "ok": True, "detail": "already present"})
+
+    pip = venv / ("Scripts/pip.exe" if os.name == "nt" else "bin/pip")
+    _run([str(pip), "install", "-q", "--upgrade", "pip", "setuptools", "wheel"], src, timeout=300)
+    print("  installing agent-zero dependencies (can take several minutes, please wait)...")
+    ok, tail = _run([str(pip), "install", "-q", "-r", str(src / "requirements.txt")], src, timeout=1800)
+    steps.append({"step": "deps", "ok": ok, "detail": tail[:120] or "deps installed"})
     if not ok:
-        return {"ok": False, "name": "agent-zero",
-                "error": f"clone failed (no internet?): {tail[:200]}",
-                "hint": "download the A0 Launcher from agent-zero.ai instead"}
-    return {"ok": True, "name": "agent-zero",
-            "steps": [{"step": "docker", "ok": True, "detail": "docker found"}, {"step": "clone", "ok": True, "detail": "source ready"}],
-            "next": "cd tools/linux/agent-zero && docker compose up   (or use the A0 Launcher)"}
+        return {"ok": False, "name": name,
+                "error": f"dependency install failed: {tail[:300]}",
+                "hint": "retry: councilkey agents install agent-zero   (partial state is reused)"}
+
+    return {"ok": True, "name": name, "steps": steps,
+            "next": "cd tools/linux/agent-zero && .venv/bin/python agent.py   # interactive chat"}
 
 
 def start(name: str, wait: int = 30) -> dict[str, Any]:
@@ -244,7 +278,15 @@ def start(name: str, wait: int = 30) -> dict[str, Any]:
     info = AGENTS.get(name)
     if not info:
         return {"ok": False, "error": f"unknown agent {name!r}"}
-    if not (_on_path(info["bin"]) or (name == "agent-zero" and _on_path("docker"))):
+    if name == "agent-zero":
+        az_dir = AGENTS_DIR / "agent-zero"
+        venv_py = az_dir / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        if not (az_dir.exists() and venv_py.exists()):
+            return {"ok": False, "name": name, "error": "agent-zero is not installed",
+                    "hint": "councilkey agents install agent-zero"}
+        return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"],
+                "first_run": "python agent.py runs an interactive chat - it will ask for a model provider"}
+    if not _on_path(info["bin"]):
         return {"ok": False, "name": name, "error": f"{name} is not installed",
                 "hint": f"councilkey agents install {name}"}
     # Interactive CLIs: verify the binary runs, then hand over.

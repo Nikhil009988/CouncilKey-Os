@@ -209,7 +209,8 @@ def cmd_agents(action: str, names: list[str]) -> int:
         if missing:
             print("not installed:", ", ".join(missing))
             print("install with: councilkey agents install")
-        print("\nnote: hermes + openclaw run standalone; agent-zero needs Docker.")
+        print("\nnote: all 5 external agents install standalone (agent-zero: python venv,")
+        print("Docker only adds its optional terminal/browser tools).")
         print("the council itself always answers via your model provider:")
         print("      councilkey setup   /   councilkey agents env")
         return 0
