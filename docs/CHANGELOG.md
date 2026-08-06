@@ -637,3 +637,32 @@ User report (real Windows run):
 3. configure OpenClaw retry: still runs after agents install (unchanged).
 
 2 new tests (111 total), ruff clean.
+
+## v1.15.0 (2026-08-05) - councilkey pendrive-push: mirror your PC onto the stick
+
+User request: "things are installing in user not in pendrive - make a tool
+that pushes ALL the things into pendrive; when plugged in it starts
+working; when removed all data erased except important things."
+
+New command:
+  councilkey pendrive-push <path>        (Windows: councilkey.bat pendrive-push E:\)
+  councilkey pendrive-push <path> --data-only   # just copy the data
+
+What it does:
+1. builds the stick (project + portable venv + all agents + launchers) -
+   same as pendrive-setup
+2. copies the PC's council data (encrypted API keys vault, journal,
+   memory, config, setup summary) into the stick's council-data/ - so the
+   stick is a FULL mirror of your working PC setup and works standalone
+
+Plus the existing behaviors:
+- plug into any PC -> START.bat (dashboard) or AGENTS.bat (menu) starts
+  everything from the stick
+- session mode (START-SESSION.bat / end-session) keeps memory on the
+  stick and wipes the PC copy on end
+- unplug -> nothing of yours stays on the PC; memory is on the stick
+
+Verified: built a fake PC home (key + journal), pushed it, stick's
+council-data has the key (councilkey agents env shows it) + journal.
+
+2 new tests (113 total), ruff clean.

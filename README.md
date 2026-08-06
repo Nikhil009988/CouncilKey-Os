@@ -165,6 +165,7 @@ councilkey ask "..." [--strategy X] [--debate] [--decompose] [--alone A]
 councilkey setup [--provider X] [--api-key K] [--no-agents] [--skip-tests]
 councilkey agents status | install | start | env | verify
 councilkey pendrive /media/USB [--wizard]          build a USB stick
+councilkey pendrive-push /media/USB [--data-only]   build stick AND copy this PC's data (keys/journal/memory)
 councilkey llm status | install | pull             optional local LLM (Ollama)
 councilkey doctor                                  environment health report
 councilkey storage [--dry-run]                     audit / optimize storage

@@ -503,6 +503,10 @@ def main(argv: list[str] | None = None) -> None:
     p_pendrive.add_argument("path", help="mount point of the pendrive (e.g. /media/USB)")
     p_pendrive.add_argument("--wizard", action="store_true", help="also run the API-key wizard into the stick")
 
+    p_push = sub.add_parser("pendrive-push", help="build the stick AND copy this PC's data (keys, journal, memory) onto it")
+    p_push.add_argument("path", help="mount point of the pendrive (e.g. /media/USB or E:\\)")
+    p_push.add_argument("--data-only", action="store_true", help="only copy the data, skip rebuilding the stick")
+
     p_setup = sub.add_parser("setup", help="interactive setup wizard (provider, API keys, agents)")
     p_setup.add_argument("--provider", choices=["openai", "anthropic", "gemini", "openrouter", "none"],
                          help="model provider for the council + external agents")
@@ -539,6 +543,10 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(cmd_agents(args.action, args.names))
     elif args.command == "llm":
         sys.exit(cmd_llm(args.action, args.model))
+    elif args.command == "pendrive-push":
+        from council.agents.pendrive_push import push
+
+        sys.exit(push(args.path, skip_builder=args.data_only))
     elif args.command == "pendrive":
         import subprocess
 

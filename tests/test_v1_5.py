@@ -624,3 +624,33 @@ def test_401_error_message_mentions_key(monkeypatch):
     result = asyncio.run(client.ask("hi"))
     assert "401" in result.status
     assert "wrong or expired" in result.status or "wrong or expired" in result.response
+
+
+def test_pendrive_push_copies_data(tmp_path):
+    """pendrive-push copies the PC's council data (keys, journal, memory)
+    onto the stick so the stick works standalone."""
+    from council.agents.pendrive_push import _copy_tree, pc_council_home
+
+    src = tmp_path / "home"
+    (src / "journal").mkdir(parents=True)
+    (src / "journal" / "entry.md").write_text("x", encoding="utf-8")
+    (src / "secrets").mkdir()
+    (src / "shared").mkdir()
+
+    dst = tmp_path / "stick" / "council-data"
+    copied = _copy_tree(src, dst)
+    assert set(copied) == {"journal", "secrets", "shared"}
+    assert (dst / "journal" / "entry.md").exists()
+
+    # pc_council_home respects COUNCIL_HOME
+    import os
+    os.environ["COUNCIL_HOME"] = str(src)
+    assert pc_council_home() == src
+
+
+def test_cli_has_pendrive_push():
+    import council.cli as cli_mod
+
+    src = open(cli_mod.__file__, encoding="utf-8").read()
+    assert "pendrive-push" in src
+    assert "pendrive_push" in src
