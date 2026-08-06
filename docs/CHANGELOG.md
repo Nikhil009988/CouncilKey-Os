@@ -235,3 +235,29 @@ journal, endpoint sweep 59/59, setup status endpoint reports correctly.
 - README quick start updated.
 - Tested live: together (3/3 consensus), decompose, debate (2 rounds),
   alone - all verified against the provider client.
+
+## v1.8.0 (2026-08-05) - Automatic pendrive setup + CrewAI (4th) + Aider (5th) agents
+
+### Pendrive auto-setup (one command, plug-and-start)
+- New `scripts/pendrive-setup.sh <mount>` (and `councilkey pendrive <mount>`):
+  copies the project, creates a **portable venv on the stick**, points
+  COUNCIL_HOME at `council-data/` on the stick, writes `START.bat` +
+  `start.sh` plug-in launchers (auto-bootstrap on first run) and an
+  `autorun.inf` so Windows shows a "Start CouncilKey-Os" prompt on plug-in.
+- `--wizard` flag bakes the API key + agents into the stick during the build.
+- Verified live: built a stick in a temp dir, ran its `start.sh` with a
+  free port -> server booted from the stick's own data.
+
+### Two new optional agents
+- **CrewAI** (4th): `pip install crewai` - role-based agent crews; designed
+  to work together natively (`crewai create crew && crewai run`), solo too.
+- **Aider** (5th): `pip install aider-chat` - pair-programming chat agent
+  that uses the same API keys as our setup (OpenAI/Anthropic/Gemini/
+  OpenRouter) - easy, Hermes-like, best fit for the project.
+- `councilkey agents status` shows all 5 with install method + runtime;
+  install supports the pip method.
+
+### Docs
+- Guide: "Automatic pendrive setup" section, 5-agent table with run
+  commands, together/solo notes. README: pendrive mode + 5 agents.
+- 4 new tests (83 total), ruff clean.

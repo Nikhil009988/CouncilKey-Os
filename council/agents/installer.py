@@ -55,6 +55,22 @@ AGENTS: dict[str, dict[str, Any]] = {
         "runtime": "docker (required - unlike hermes/openclaw)",
         "start_hint": "Agent Zero runs where Docker runs. Use the A0 Launcher (see agent-zero.ai)\nor: docker compose up in the agent-zero source tree.",
     },
+    "crewai": {
+        "install": "pip",
+        "package": "crewai",
+        "bin": "crewai",
+        "role": "role-based agent teams (external, optional)",
+        "runtime": "python/pip",
+        "start_hint": "crewai create crew my_crew   # scaffold a crew\ncd my_crew && crewai run      # run the crew (all agents together)",
+    },
+    "aider": {
+        "install": "pip",
+        "package": "aider-chat",
+        "bin": "aider",
+        "role": "pair-programming chat agent (external, optional)",
+        "runtime": "python/pip",
+        "start_hint": "aider                # chat in your repo (uses the same API keys)\naider --model gpt-4o-mini   # pick a model",
+    },
 }
 
 # ------------------------------------------------------------------ helpers
@@ -106,6 +122,10 @@ def status(names: list[str] | None = None) -> dict[str, dict[str, Any]]:
             installed = installed or home_bin.exists() or win_bin.exists()
         if name == "agent-zero":
             installed = _on_path("docker") or _on_path("a0")
+        # crewai/aider install into the project venv
+        if name in ("crewai", "aider"):
+            venv_bin = REPO_ROOT / ".venv" / ("Scripts" if os.name == "nt" else "bin") / binary
+            installed = installed or venv_bin.exists()
         out[name] = {
             "role": info["role"],
             "install": info["install"],
@@ -129,6 +149,8 @@ def install(name: str) -> dict[str, Any]:
 
     if info["install"] == "npm":
         return _install_npm(info)
+    if info["install"] == "pip":
+        return _install_pip(info)
     if info["install"] == "official-installer":
         return _install_official(info)
     if info["install"] == "docker-launcher":
@@ -149,6 +171,23 @@ def _install_npm(info: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True, "name": "openclaw",
             "steps": [{"step": "npm install -g", "ok": True, "detail": ver[1][:80] or "installed"}],
             "next": "openclaw onboard --install-daemon   # first-run onboarding"}
+
+
+def _install_pip(info: dict[str, Any]) -> dict[str, Any]:
+    """Install a pip-based agent (crewai / aider) - official pip package."""
+    print(f"  installing {info['package']} via pip (into the project venv)...")
+    venv_pip = REPO_ROOT / ".venv" / ("Scripts/pip.exe" if os.name == "nt" else "bin/pip")
+    if venv_pip.exists():
+        ok, tail = _run([str(venv_pip), "install", "-q", info["package"]], REPO_ROOT, timeout=1800)
+    else:
+        ok, tail = _run([sys.executable, "-m", "pip", "install", "-q", info["package"]], REPO_ROOT, timeout=1800)
+    if not ok:
+        return {"ok": False, "name": info["bin"],
+                "error": f"pip install {info['package']} failed: {tail[:300]}"}
+    ver = _run([info["bin"], "--version"], REPO_ROOT, timeout=30)
+    return {"ok": True, "name": info["bin"],
+            "steps": [{"step": f"pip install {info['package']}", "ok": True, "detail": ver[1][:80] or "installed"}],
+            "next": info["start_hint"].splitlines()[0]}
 
 
 def _install_official(info: dict[str, Any]) -> dict[str, Any]:

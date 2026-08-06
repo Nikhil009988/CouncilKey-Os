@@ -206,3 +206,21 @@ def test_cli_ask_alone():
     )
     assert r.returncode == 0
     assert "single agent answer: openclaw" in r.stdout
+
+
+def test_agents_include_crewai_aider():
+    """CrewAI (4th) and Aider (5th) are registered optional agents."""
+    from council.agents.installer import AGENTS
+
+    assert "crewai" in AGENTS and "aider" in AGENTS
+    assert AGENTS["crewai"]["install"] == "pip"
+    assert AGENTS["crewai"]["package"] == "crewai"
+    assert AGENTS["aider"]["install"] == "pip"
+    assert AGENTS["aider"]["package"] == "aider-chat"
+
+
+def test_pendrive_script_exists_and_syntax():
+    import subprocess
+
+    for rel in ("scripts/pendrive-setup.sh",):
+        subprocess.run(["bash", "-n", str(ROOT / rel)], check=True)

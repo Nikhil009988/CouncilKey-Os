@@ -60,6 +60,7 @@ Listed in the order the project was built:
 - Security: optional API-key auth, rate limiting, CORS, security headers, request logging
 - Background scheduler (nightly consolidation + journal pruning), systemd service
 - Real no-traces audit script (7 checks) and Tailscale setup script
+- 5 optional external agents: Hermes, OpenClaw, Agent Zero, **CrewAI** (role-based teams that work together natively) and **Aider** (pair-programming chat, same API keys) — each installed via its official installer (`councilkey agents install`)
 
 ### v1.2 — Advanced orchestration & intelligence (latest)
 - **Task decomposition** — complex prompts split into role-based subtasks, then voted on
@@ -133,6 +134,11 @@ Or as a one-liner (clones to `~/councilkey-os`, runs the full setup):
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
 ```
+
+**Pendrive mode:** one command puts everything on a USB stick
+(`./scripts/pendrive-setup.sh /media/USB`), and plugging it into any PC
+starts the dashboard from the stick (START.bat / autoplay on Windows,
+`bash start.sh` on Linux) — data stays on the stick.
 
 **`setup.sh` runs an interactive wizard** — it asks what you need and stores answers securely:
 1. choose a **model provider**: OpenAI / Anthropic / Gemini / OpenRouter (or skip and configure later)

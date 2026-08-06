@@ -396,6 +396,10 @@ def main(argv: list[str] | None = None) -> None:
     p_ask.add_argument("--debate", action="store_true", help="iterative multi-round debate")
     p_ask.add_argument("--rounds", type=int, default=3, help="debate rounds (default 3)")
 
+    p_pendrive = sub.add_parser("pendrive", help="one-command setup of everything onto a USB stick")
+    p_pendrive.add_argument("path", help="mount point of the pendrive (e.g. /media/USB)")
+    p_pendrive.add_argument("--wizard", action="store_true", help="also run the API-key wizard into the stick")
+
     p_setup = sub.add_parser("setup", help="interactive setup wizard (provider, API keys, agents)")
     p_setup.add_argument("--provider", choices=["openai", "anthropic", "gemini", "openrouter", "none"],
                          help="model provider for the council + external agents")
@@ -429,6 +433,14 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(cmd_agents(args.action, args.names))
     elif args.command == "llm":
         sys.exit(cmd_llm(args.action, args.model))
+    elif args.command == "pendrive":
+        import subprocess
+
+        script = ROOT / "scripts" / "pendrive-setup.sh"
+        cmd = [str(script), args.path]
+        if args.wizard:
+            cmd.append("--wizard")
+        sys.exit(subprocess.call(cmd))
     elif args.command == "setup":
         from council.agents.setup_wizard import run_wizard
 

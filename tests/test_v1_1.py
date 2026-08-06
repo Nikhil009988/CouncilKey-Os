@@ -39,7 +39,7 @@ def test_update_always_includes_current():
 def test_current_version_reads_v1_1():
     from council.update.manager import current_version
 
-    assert current_version().startswith("1.7")
+    assert current_version().startswith("1.8")
 
 
 # ---------------------------------------------------------------- voting
@@ -163,7 +163,7 @@ def test_api_health_version_system_metrics():
 
     client = TestClient(app)
     assert client.get("/api/health").json()["ok"] is True
-    assert client.get("/api/version").json()["version"].startswith("1.7")
+    assert client.get("/api/version").json()["version"].startswith("1.8")
     sys_info = client.get("/api/system").json()
     assert "uptime_seconds" in sys_info
     assert sys_info["council_home"] == str(HOME)
@@ -294,7 +294,7 @@ def test_browser_fetch_rejects_bad_urls():
 def test_cli_version():
     from council.cli import cmd_version
 
-    assert cmd_version() == "1.7.0"
+    assert cmd_version() == "1.8.0"
 
 
 def test_cli_console_script_installed():
@@ -303,7 +303,7 @@ def test_cli_console_script_installed():
     if not exe.exists():
         pytest.skip("console script not installed")
     out = subprocess.run([str(exe), "version"], capture_output=True, text=True, check=True)
-    assert out.stdout.strip() == "1.7.0"
+    assert out.stdout.strip() == "1.8.0"
 
 
 # ---------------------------------------------------------------- scripts

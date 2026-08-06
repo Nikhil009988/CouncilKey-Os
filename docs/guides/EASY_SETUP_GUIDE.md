@@ -22,6 +22,41 @@ Optional but recommended:
 
 ---
 
+## 1.5 Automatic pendrive setup — one command, plug-and-start
+
+Build the whole thing onto a USB stick with ONE command:
+
+```bash
+./scripts/pendrive-setup.sh /media/USB            # Linux/macOS
+# or from anywhere:
+councilkey pendrive /media/USB
+# Windows:
+#   councilkey pendrive E:\   (PowerShell)
+```
+
+What it puts on the stick:
+
+| On the stick | Purpose |
+|---|---|
+| `CouncilKey-Os/` | the whole project + a **portable Python venv** (works on PCs without Python) |
+| `council-data/` | the council home — **all data stays on the stick** |
+| `START.bat` / `start.sh` | **plug-in launchers** — double-click (Win) or `bash start.sh` (Linux), it bootstraps the venv on first run and starts the dashboard automatically |
+| `autorun.inf` | Windows shows a **"Start CouncilKey-Os" prompt** when you plug the stick in |
+
+Add `--wizard` to bake in your API key + agents during the build:
+```bash
+./scripts/pendrive-setup.sh /media/USB --wizard
+```
+
+**On any PC afterwards:**
+- **Windows**: plug in → click "Start CouncilKey-Os" (or double-click `START.bat`) → dashboard at http://localhost:8443
+- **Linux/macOS**: `bash /media/USB/start.sh`
+
+> Why not silent autorun? Windows blocks real autorun from USB for security
+> (that's a feature). The autoplay prompt / one double-click is the
+> supported equivalent, and it works on any PC without installing anything.
+
+---
 ## 2. Complete setup
 
 ### Option A — Windows (PowerShell, one command)
@@ -153,6 +188,13 @@ interfaces. Each is installed with its **official installer**:
 | Hermes | `curl -fsSL https://hermes-agent.nousresearch.com/install.sh \| bash` (Linux/macOS) · `iex (irm https://hermes-agent.nousresearch.com/install.ps1)` (Windows) | `hermes` → interactive chat · `hermes gateway` → messaging |
 | OpenClaw | `npm install -g openclaw@latest` | `openclaw onboard --install-daemon` → guided onboarding |
 | Agent Zero | Docker + the A0 Launcher (agent-zero.ai) | runs a full Linux desktop in Docker |
+| **CrewAI** (4th) | `pip install crewai` (official package) | `crewai create crew my_crew && cd my_crew && crewai run` — role-based teams work **together** natively |
+| **Aider** (5th) | `pip install aider-chat` (official package) | `aider` — chat with your repo; uses the **same API keys** as our setup (OpenAI/Anthropic/Gemini/OpenRouter) |
+
+CrewAI and Aider are optional, like the others — the council itself works
+without them. Together/solo: CrewAI runs a whole crew together by design
+(and single agents solo); Aider is a solo pair-programmer that can be one
+more voice in your workflow.
 
 `councilkey agents install` runs these official installers for you.
 If an external agent exposes an HTTP endpoint, point the council at it with
