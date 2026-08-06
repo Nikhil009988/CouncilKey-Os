@@ -146,3 +146,26 @@ official methods:
   with the exact manual command printed - works on real machines
 - Agent Zero path prints the Docker requirement clearly
 - 67 tests passing, ruff clean
+
+## v1.5.1 (2026-08-05) - "Does openclaw actually start?" - tested and answered
+
+Tested the exact user scenario in this workspace: after setup, typing
+`openclaw` in a terminal.
+
+Findings (from running the real CLI):
+- `openclaw` installs and starts; on FIRST run it says "Onboarding needs
+  an interactive TTY" because no model provider is configured yet
+- `openclaw doctor` runs real health checks (config, gateway, memory)
+- `openclaw agent -m "..." --local --agent main` runs a one-shot turn
+- OpenClaw works with the SAME local Ollama from our setup: set
+  OLLAMA_API_KEY (any value) + `--model ollama/qwen2.5:3b`
+- Without a provider it errors "No API key found for provider openai"
+  (cloud-model default) - documented, with the local-Ollama fix
+
+Changes:
+- `councilkey agents start openclaw` now prints the exact steps: run it
+  yourself, first-run wizard, health check, one-shot test command
+- EASY_SETUP_GUIDE: new "Testing an external agent after setup" section
+  (start? / first run / one-shot test / chat) + troubleshooting rows for
+  "Onboarding needs an interactive TTY" and "No API key found"
+- 67 tests passing, ruff clean

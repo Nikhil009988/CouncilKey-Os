@@ -242,8 +242,14 @@ def cmd_agents(action: str, names: list[str]) -> int:
             result = start(name)
             if result.get("ok"):
                 if result.get("interactive"):
-                    print(f"  ✅ {name} is an interactive agent - run it yourself:")
+                    print(f"  ✅ {name} is installed and starts. It's an interactive agent - run it yourself:")
                     print(f"     {result.get('hint', '')}")
+                    if result.get("first_run"):
+                        print(f"  first run: {result['first_run']}")
+                    if result.get("diagnose"):
+                        print(f"  health check: {result['diagnose']}")
+                    if result.get("one_shot"):
+                        print(f"  quick test (one-shot): {result['one_shot']}")
                 else:
                     print(f"  ✅ {name}: {result.get('detail', 'ok')}")
             else:

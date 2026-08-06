@@ -231,7 +231,17 @@ def start(name: str, wait: int = 30) -> dict[str, Any]:
         ver = _run([info["bin"], "--version"], Path.home(), timeout=30)
         if ver[0]:
             return {"ok": True, "name": name, "detail": ver[1][:80], "interactive": True,
-                    "hint": info["start_hint"]}
+                    "hint": info["start_hint"],
+                    "diagnose": "openclaw doctor",
+                    "one_shot": 'openclaw agent -m "your question" --local --agent main',
+                    "first_run": "openclaw onboard   (interactive wizard - configure model provider)"}
     if name == "hermes":
-        return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"]}
+        return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"],
+                "first_run": "hermes setup   (interactive wizard - configure model provider)"}
     return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"]}
+
+
+def openclaw_local_command() -> str:
+    """The one-shot command that makes an installed OpenClaw answer using the
+    same local Ollama model as the council - with a placeholder for the message."""
+    return "openclaw agent -m \"<your question>\" --local --agent main --model ollama/qwen2.5:3b"

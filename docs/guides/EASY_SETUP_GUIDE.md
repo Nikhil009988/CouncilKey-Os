@@ -158,6 +158,47 @@ it becomes the 🟢 gateway backend for that role.
 > installer, and Agent Zero needs Docker. Official installers are the
 > supported path for all three.
 
+### Testing an external agent after setup (e.g. OpenClaw)
+
+The external agents are interactive tools, so "does it start?" is the first
+check, and "does it answer?" is the second (it needs a model provider).
+
+**1. Does it start?**
+```bash
+openclaw --version        # -> "OpenClaw 2026.7.1-2 ..." = installed + starts
+openclaw doctor           # real health checks + fixes (suggests config)
+```
+
+**2. First run - tell it which model to use (one-time wizard):**
+```bash
+openclaw onboard          # interactive wizard: model provider, workspace, etc.
+```
+> No API key? OpenClaw works with the same local Ollama you already have
+> from setup - just make sure Ollama is running and set `OLLAMA_API_KEY`
+> (any value registers the provider):
+> ```bash
+> export OLLAMA_API_KEY=council
+> ```
+
+**3. Quick one-shot test - does it actually answer?**
+```bash
+openclaw agent -m "reply with exactly: openclaw works" --local --agent main
+```
+You should see OpenClaw's reply. (Add `--model ollama/qwen2.5:3b` to force
+the local model.)
+
+**4. Chat with it:**
+```bash
+openclaw chat             # terminal chat UI
+```
+or `openclaw` (bare) after onboarding - it opens the interactive chat.
+
+`councilkey agents start openclaw` prints exactly these steps.
+
+> Why does bare `openclaw` say "Onboarding needs an interactive TTY" on
+> first run? OpenClaw has no default model configured until you run
+> `openclaw onboard` once. After that it opens chat directly.
+
 ## 5. Where your data lives
 
 | What | Where |
@@ -177,6 +218,8 @@ is kept.
 | Symptom | Fix |
 |---|---|
 | `openclaw` fails with "missing dist/entry.mjs" | That error only happens with a source clone (unbuilt pnpm tree). The official package fixes it: `npm install -g openclaw@latest` (setup does this automatically) |
+| `openclaw` says "Onboarding needs an interactive TTY" | Normal on first run - it wants the interactive wizard. Run `openclaw onboard` once (in a real terminal), or test with the one-shot: `openclaw agent -m "hi" --local --agent main` |
+| `openclaw agent` says "No API key found for provider openai" | It defaults to cloud models. Point it at your local Ollama: `export OLLAMA_API_KEY=council` (any value) + `--model ollama/qwen2.5:3b`, or run `openclaw onboard` to pick a provider |
 | Dashboard shows all agents ⚪ mock | No LLM running: `councilkey llm status` → `councilkey llm install` → `councilkey llm pull` |
 | Hermes installer won't download | Run it manually: `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash` |
 | Agent Zero won't install | It needs Docker — install Docker Desktop, then use the A0 Launcher (agent-zero.ai) |
