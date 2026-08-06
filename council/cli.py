@@ -259,6 +259,26 @@ def cmd_agents(action: str, names: list[str]) -> int:
                     print(f"     hint: {result['hint']}")
         return 1 if failed else 0
 
+    if action == "env":
+        """Export the API keys stored in the vault for the external agents.
+
+        Usage:  eval "$(councilkey agents env)"        (bash/zsh)
+                councilkey agents env | Invoke-Expression   (PowerShell)
+        """
+        from council.secrets.vault import get_secret, list_secrets
+
+        keys = [k for k in list_secrets().get("keys", []) if k.endswith("_API_KEY") or k.endswith("_KEY")]
+        if not keys:
+            print("# no API keys stored yet - run: councilkey setup")
+            return 0
+        for k in sorted(keys):
+            v = get_secret(k) or ""
+            if os.name == "nt":
+                print(f'$env:{k} = "{v}"')
+            else:
+                print(f'export {k}="{v}"')
+        return 0
+
     if action == "verify":
         """Real smoke test: ask every council role and show what backend answered."""
         import asyncio
@@ -303,13 +323,22 @@ def main(argv: list[str] | None = None) -> None:
 
     sub.add_parser("version", help="print version")
 
-    p_agents = sub.add_parser("agents", help="manage the 3 agents (status/install/start/verify)")
-    p_agents.add_argument("action", nargs="?", default="status", choices=["status", "install", "start", "verify"])
+    p_agents = sub.add_parser("agents", help="manage the 3 agents (status/install/start/env/verify)")
+    p_agents.add_argument("action", nargs="?", default="status",
+                          choices=["status", "install", "start", "env", "verify"])
     p_agents.add_argument("names", nargs="*", help="agent names (default: all)")
 
     p_llm = sub.add_parser("llm", help="manage the local LLM backend (status/install/pull)")
     p_llm.add_argument("action", nargs="?", default="status", choices=["status", "install", "pull"])
     p_llm.add_argument("model", nargs="?", help="model to pull (default: qwen2.5:3b)")
+
+    p_setup = sub.add_parser("setup", help="interactive setup wizard (prereqs, LLM, agents, API keys)")
+    p_setup.add_argument("--provider", choices=["ollama", "openai", "anthropic", "gemini", "openrouter", "none"],
+                         help="model provider for the external agents")
+    p_setup.add_argument("--api-key", help="API key for the provider (stored encrypted)")
+    p_setup.add_argument("--no-agents", action="store_true", help="skip external agent installs")
+    p_setup.add_argument("--no-llm", action="store_true", help="skip Ollama + model")
+    p_setup.add_argument("--skip-tests", action="store_true", help="don't run pytest at the end")
 
     args = parser.parse_args(argv)
 
@@ -327,6 +356,16 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(cmd_agents(args.action, args.names))
     elif args.command == "llm":
         sys.exit(cmd_llm(args.action, args.model))
+    elif args.command == "setup":
+        from council.agents.setup_wizard import run_wizard
+
+        sys.exit(run_wizard(
+            provider=args.provider,
+            api_key=args.api_key,
+            no_agents=args.no_agents,
+            no_llm=args.no_llm,
+            skip_tests=args.skip_tests,
+        ))
     elif args.command == "version":
         print(cmd_version())
     else:

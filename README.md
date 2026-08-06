@@ -134,7 +134,12 @@ Or as a one-liner (clones to `~/councilkey-os`, runs the full setup):
 curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
 ```
 
-**The setup installs a local LLM (Ollama + qwen2.5:3b) — so the 3 council roles genuinely answer, no API keys, no cloud.** The external agents (Hermes, OpenClaw, Agent Zero) are optional interactive tools, installed via each project's official installer (`setup.sh` does it for you; use `--no-agents` to skip). Manage things anytime:
+**`setup.sh` runs an interactive wizard** — it asks what you need and stores answers securely:
+1. install the local LLM (Ollama + qwen2.5:3b) so the council answers with real local AI
+2. choose a model provider for the external agents: **local Ollama (free)** or OpenAI / Anthropic / Gemini / OpenRouter — if you pick a cloud provider it asks for the API key and stores it **encrypted** in the secrets vault
+3. optionally install the external agents (Hermes / OpenClaw / Agent Zero) via each project's official installer
+
+Manage things anytime:
 
 ```
 councilkey agents status | install | start | verify

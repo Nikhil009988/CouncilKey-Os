@@ -48,16 +48,19 @@ curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/01
 
 ### What setup does (step by step)
 
-| Step | What happens | Time (first run) |
-|---|---|---|
-| 1 | Creates a Python venv and installs CouncilKey-Os (`councilkey` CLI) | ~1 min |
-| 2 | **Installs Ollama** (the local AI server; `winget` on Windows) and **pulls `qwen2.5:3b`** (~1.9 GB) — this is what makes the 3 agents genuinely answer (real local inference, offline, no API keys) | 5–15 min |
-| 3 | **Optional:** installs the 3 external agents (Hermes, OpenClaw, Agent Zero) using **each project's official installer** (`curl install.sh` for Hermes, `npm install -g openclaw@latest` for OpenClaw, Docker/A0 Launcher for Agent Zero) | 5–10 min |
-| 4 | Runs the test suite | ~1 min |
-| 5 | **Verifies the council** by asking each role a real question | ~30 s |
+`setup.sh` runs the **interactive wizard** (`councilkey setup`) which asks you
+exactly what you need:
 
-Flags if you ever need them: `--no-agents` (skip external agents),
-`--no-llm` (skip Ollama/model), `--skip-tests`.
+| Prompt | What it does | Default |
+|---|---|---|
+| "Install Ollama + pull qwen2.5:3b?" | Installs the local AI server (winget on Windows) and downloads the model — this is what makes the council answer with real local inference | Yes |
+| "Choose model provider" | Local Ollama (free) · OpenAI · Anthropic · Gemini · OpenRouter · Skip | Local Ollama |
+| "API key" | If you picked a cloud provider, it asks for the key and stores it **encrypted** in the secrets vault (`councilkey agents env` exports them for the external agents) | — |
+| "Install the external agents?" | Installs Hermes / OpenClaw / Agent Zero via each project's official installer | No |
+| Tests + verify | Runs the test suite, then asks each council role a real question | Yes |
+
+Flags for automation: `councilkey setup --provider openai --api-key sk-... --no-agents --no-llm --skip-tests`
+(or the same flags via `setup.sh`, which detects non-interactive shells).
 
 > If a step fails because of a temporary network problem, just re-run
 > `./scripts/setup.sh` — completed steps are skipped.

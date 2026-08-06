@@ -2,18 +2,20 @@
 # setup.sh - One-command setup for CouncilKey-Os.
 #
 #   [1] Python environment + CouncilKey-Os
-#   [2] LOCAL LLM (Ollama + qwen2.5:3b) -> the council really answers
-#       (real local inference, offline, no API keys, no demo)
-#   [3] OPTIONAL: the 3 external agents (Hermes, OpenClaw, Agent Zero),
-#       each installed with its own official installer
-#   [4] test suite
-#   [5] verify the council with a real ask
+#   [2] INTERACTIVE WIZARD (councilkey setup):
+#       - local LLM (Ollama + qwen2.5:3b) -> the council really answers
+#       - model provider + API keys (local Ollama free, or OpenAI/Anthropic/
+#         Gemini/OpenRouter) - keys stored in the encrypted vault
+#       - optional external agents (Hermes/OpenClaw/Agent Zero) via their
+#         official installers
+#       - tests + verify
 #
 # Usage:
-#   ./scripts/setup.sh                # everything (recommended)
-#   ./scripts/setup.sh --no-agents    # council + local LLM only
-#   ./scripts/setup.sh --no-llm       # council + external agents only
-#   ./scripts/setup.sh --skip-tests   # don't run pytest at the end
+#   ./scripts/setup.sh                # interactive wizard (recommended)
+#   ./scripts/setup.sh --no-agents    # wizard, skip external agents
+#   ./scripts/setup.sh --no-llm       # wizard, skip the local LLM
+#   ./scripts/setup.sh --skip-tests   # wizard, don't run pytest
+#   echo "y\n1\nn" | ./scripts/setup.sh   # non-interactive -> defaults
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -29,69 +31,26 @@ for arg in "$@"; do
   esac
 done
 
-echo "=============================================="
-echo " CouncilKey-Os setup"
-echo "=============================================="
-
-# 1. Python environment + package
+# 1. Python environment + package (always needed for the wizard too)
 echo ""
-echo "[1/5] Installing CouncilKey-Os..."
+echo "[1/2] Installing CouncilKey-Os..."
 if [ ! -d "$ROOT/.venv" ]; then
   python3 -m venv "$ROOT/.venv"
 fi
 "$ROOT/.venv/bin/pip" install -q -e "$ROOT[dev]"
 echo "      ok - 'councilkey' CLI ready"
 
-# 2. Local LLM - makes the council REALLY answer
-if [ "$NO_LLM" -eq 1 ]; then
-  echo "[2/5] Skipping local LLM (--no-llm)"
+# 2. Interactive wizard (asks: local LLM, provider + API keys, external agents)
+WIZARD_ARGS=""
+[ "$NO_AGENTS" -eq 1 ] && WIZARD_ARGS="$WIZARD_ARGS --no-agents"
+[ "$NO_LLM" -eq 1 ] && WIZARD_ARGS="$WIZARD_ARGS --no-llm"
+[ "$SKIP_TESTS" -eq 1 ] && WIZARD_ARGS="$WIZARD_ARGS --skip-tests"
+
+if [ -t 0 ] && [ -t 1 ]; then
+  # interactive terminal -> guided wizard with prompts (API keys etc.)
+  exec "$ROOT/.venv/bin/councilkey" setup $WIZARD_ARGS
 else
-  echo "[2/5] Local LLM (Ollama + qwen2.5:3b) - this makes the 3 agents answer"
-  if "$ROOT/.venv/bin/councilkey" llm status >/dev/null 2>&1; then
-    echo "      ollama already running"
-  else
-    echo "      installing ollama (one-time)..."
-    "$ROOT/.venv/bin/councilkey" llm install || {
-      echo "      ⚠ could not install ollama automatically."
-      echo "        install it from https://ollama.com/download, then run:"
-      echo "        councilkey llm pull"
-    }
-  fi
-  echo "      pulling model qwen2.5:3b (~1.9GB, one-time)..."
-  "$ROOT/.venv/bin/councilkey" llm pull qwen2.5:3b || {
-    echo "      ⚠ model pull failed - check: councilkey llm status"
-  }
+  # non-interactive (CI/pipes) -> default flags (local Ollama, no external agents)
+  echo "[2/2] Non-interactive mode - running setup with defaults (local Ollama, no external agents)"
+  "$ROOT/.venv/bin/councilkey" setup --provider ollama $WIZARD_ARGS
 fi
-
-# 3. Optional: external agents via their official installers
-if [ "$NO_AGENTS" -eq 1 ]; then
-  echo "[3/5] Skipping external agents (--no-agents)"
-else
-  echo "[3/5] External agents (optional, interactive tools - official installers)"
-  echo "      Hermes/OpenClaw/Agent Zero are interactive chat agents with their"
-  echo "      own UIs. The council works without them (local LLM above)."
-  "$ROOT/.venv/bin/councilkey" agents install || true
-fi
-
-# 4. Tests
-if [ "$SKIP_TESTS" -eq 1 ]; then
-  echo "[4/5] Skipping tests (--skip-tests)"
-else
-  echo "[4/5] Running the test suite..."
-  (cd "$ROOT" && "$ROOT/.venv/bin/python" -m pytest tests -q) || true
-fi
-
-# 5. Verify - real ask
-echo ""
-echo "[5/5] Verifying the council (real ask)..."
-"$ROOT/.venv/bin/councilkey" agents verify || true
-
-echo ""
-echo "=============================================="
-echo " ✅ Setup complete"
-echo ""
-echo "   Start the dashboard:   ./scripts/start.sh"
-echo "   Open:                  http://localhost:8443"
-echo "   Agents status:         councilkey agents status"
-echo "   LLM status:            councilkey llm status"
-echo "=============================================="

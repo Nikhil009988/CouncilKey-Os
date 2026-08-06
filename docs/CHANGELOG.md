@@ -169,3 +169,29 @@ Changes:
   (start? / first run / one-shot test / chat) + troubleshooting rows for
   "Onboarding needs an interactive TTY" and "No API key found"
 - 67 tests passing, ruff clean
+
+## v1.6.0 (2026-08-05) - Interactive setup wizard (asks for API keys etc.)
+
+Researched how the real agent projects handle first-run config (OpenClaw's
+`openclaw onboard --non-interactive --auth-choice <x> --<provider>-api-key`,
+Hermes' `hermes setup`/`hermes model`, their env API keys) and built the
+same kind of guided flow for CouncilKey-Os:
+
+- **`councilkey setup`** - interactive wizard:
+  - prerequisite check
+  - install local LLM (Ollama + qwen2.5:3b)? (default yes)
+  - model provider menu: Local Ollama (free) / OpenAI / Anthropic / Gemini /
+    OpenRouter / skip
+  - prompts for the API key (hidden input) and stores it **encrypted** in
+    the secrets vault - never plaintext
+  - configures the installed OpenClaw CLI non-interactively with the chosen
+    provider (verified against the real `openclaw onboard` flags)
+  - optionally installs the external agents via their official installers
+  - tests + real verification
+  - writes a setup summary to `$COUNCIL_HOME/setup-summary.json`
+- **`councilkey agents env`** - exports the vault API keys for the external
+  agents: `eval "$(councilkey agents env)"` (bash) / `| Invoke-Expression` (PS)
+- **`setup.sh` / `setup.ps1`** now delegate to the wizard; interactive shells
+  get prompts, non-interactive shells run defaults (`--provider ollama`)
+- Non-interactive mode for automation: `councilkey setup --provider openai --api-key ... --no-agents --no-llm --skip-tests`
+- 5 new tests (72 total), ruff clean
