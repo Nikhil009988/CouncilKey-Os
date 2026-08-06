@@ -14,7 +14,15 @@ $ErrorActionPreference = "Stop"
 $ROOT = Split-Path -Parent $PSScriptRoot
 
 if (-not (Test-Path $Path)) {
-  Write-Host "❌ $Path is not a directory - mount your pendrive first"
+  Write-Host "❌ $Path is not a directory - mount your pendrive first."
+  Write-Host ""
+  Write-Host "   Available drives:"
+  Get-PSDrive -PSProvider FileSystem | ForEach-Object {
+    Write-Host "     $($_.Name):\  ($($_.Root))"
+  }
+  Write-Host ""
+  Write-Host "   Plug in the pendrive, find its letter above, then re-run:"
+  Write-Host "     .\scripts\pendrive-setup.ps1 -Path <letter>:\ -Wizard"
   exit 1
 }
 
