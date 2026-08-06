@@ -544,3 +544,35 @@ def test_pendrive_launchers_print_running_from():
     assert "Running from:" in sh
     assert "Running from: %~dp0" in sh          # START.bat + RUN-OPENCLAW.bat
     assert "Running from: $STICK" in sh         # run-openclaw.sh
+
+
+def test_pendrive_session_mode():
+    """The stick has session-mode launchers: code clones to the PC, memory
+    stays on the stick, and the PC copy is wiped on end."""
+    sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    assert "start-session.sh" in sh
+    assert "end-session.sh" in sh
+    assert "START-SESSION.bat" in sh
+    assert "END-SESSION.bat" in sh
+    assert "server.pid" in sh          # session tracks its own process
+    assert "rm -rf" in sh              # cleanup on end
+    assert "council-data" in sh        # memory stays on the stick
+
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    assert "START-SESSION.bat" in ps
+    assert "END-SESSION.bat" in ps
+
+
+def test_pendrive_agent_menu_and_readme():
+    """The stick has an agent menu (any agent or all at once) + README."""
+    sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    assert "AGENTS.bat" in sh
+    assert "agents-menu.sh" in sh
+    assert "launch-all.sh" in sh
+    assert "PENDRIVE-README.txt" in sh
+    assert "ALL agents + dashboard" in sh   # all-at-once option
+    assert "council-data" in sh
+
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    assert "AGENTS.bat" in ps
+    assert "PENDRIVE-README.txt" in ps

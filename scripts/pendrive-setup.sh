@@ -149,7 +149,7 @@ EOF
 echo "      ok (note: Windows shows a 'Start CouncilKey-Os' prompt on plug-in)"
 
 # 6. ALL agents on the stick - nothing runs from the host PC
-echo "[6/7] Installing the agents ONTO the stick (everything stays on the stick)..."
+echo "[6/8] Installing the agents ONTO the stick (everything stays on the stick)..."
 if [ "$NO_AGENTS" -eq 1 ]; then
   echo "      skipped agent installs (--no-agents) - launchers are still written"
 else
@@ -337,7 +337,245 @@ chmod +x "$USB"/run-*.sh
 echo "      ok (launchers: RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-AGENT-ZERO)"
 
 
-# 7. optional: run the wizard so the stick has an API key baked in
+# 7. session mode + agent menu + launch-all + stick README
+echo "[7/8] Writing session-mode, agent menu and launch-all launchers..."
+
+# --- session mode: code cloned to the PC for speed, MEMORY stays on the
+#     stick, and the session is wiped when it ends (no traces on the PC) ---
+cat > "$USB/start-session.sh" <<'EOF'
+#!/usr/bin/env bash
+# start-session.sh - SESSION MODE (Linux/macOS)
+# Clones the code to this PC (fast), keeps ALL data/memory on the stick,
+# and wipes the PC copy when the session ends.
+set -euo pipefail
+STICK="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$STICK/CouncilKey-Os"
+export COUNCIL_HOME="$STICK/council-data"
+export COUNCIL_PENDRIVE=1
+SESSION="${TMPDIR:-/tmp}/councilkey-session"
+rm -rf "$SESSION"
+mkdir -p "$SESSION"
+cp -r "$ROOT"/council "$ROOT"/VERSION "$ROOT"/pyproject.toml "$SESSION"/
+echo "== CouncilKey-Os SESSION mode =="
+echo "  code:   $SESSION (temporary, wiped on end)"
+echo "  memory: $COUNCIL_HOME (stays on the stick)"
+echo "  dashboard: http://localhost:${COUNCIL_PORT:-8443}  (Ctrl+C to stop)"
+cd "$SESSION"
+echo $$ > "$SESSION/server.pid"
+exec "$ROOT/.venv/bin/python" -m uvicorn council.orchestrator.main:app --host 0.0.0.0 --port "${COUNCIL_PORT:-8443}"
+EOF
+
+cat > "$USB/end-session.sh" <<'EOF'
+#!/usr/bin/env bash
+# end-session.sh - stop the session and WIPE it from this PC
+set -u
+SESSION="${TMPDIR:-/tmp}/councilkey-session"
+if [ -f "$SESSION/server.pid" ]; then
+  kill "$(cat "$SESSION/server.pid")" 2>/dev/null || true
+  sleep 1
+fi
+rm -rf "$SESSION"
+echo "== session ended =="
+echo "  PC copy deleted - nothing left on this PC."
+echo "  Memory is safe on the stick: council-data/"
+EOF
+
+cat > "$USB/START-SESSION.bat" <<'EOF'
+@echo off
+rem START-SESSION.bat - SESSION MODE (Windows)
+rem Clones the code to this PC (fast), keeps ALL data/memory on the stick,
+rem and wipes the PC copy when the session ends (END-SESSION.bat).
+setlocal
+set "STICK=%~dp0"
+set "ROOT=%STICK%CouncilKey-Os"
+set "COUNCIL_HOME=%STICK%council-data"
+set "COUNCIL_PENDRIVE=1"
+set "SESSION=%TEMP%\councilkey-session"
+
+echo == CouncilKey-Os SESSION mode ==
+echo   code:   %SESSION% (temporary, wiped on end)
+echo   memory: %COUNCIL_HOME% (stays on the stick)
+echo.
+
+if exist "%SESSION%" rmdir /s /q "%SESSION%"
+mkdir "%SESSION%"
+xcopy /e /i /q /y "%ROOT%\council" "%SESSION%\council" >nul
+copy /y "%ROOT%\VERSION" "%SESSION%" >nul
+copy /y "%ROOT%\pyproject.toml" "%SESSION%" >nul
+
+echo   dashboard: http://localhost:8443  (close this window to stop)
+echo.
+cd /d "%SESSION%"
+"%ROOT%\.venv\Scripts\python.exe" -m uvicorn council.orchestrator.main:app --host 0.0.0.0 --port 8443
+endlocal
+EOF
+
+cat > "$USB/END-SESSION.bat" <<'EOF'
+@echo off
+rem END-SESSION.bat - stop the session and WIPE it from this PC
+set "SESSION=%TEMP%\councilkey-session"
+if exist "%SESSION%" rmdir /s /q "%SESSION%"
+echo == session ended ==
+echo   PC copy deleted - nothing left on this PC.
+echo   Memory is safe on the stick: council-datapause
+EOF
+
+# --- agent menu: use ANY one agent, or ALL at once ---
+cat > "$USB/AGENTS.bat" <<'EOF'
+@echo off
+rem AGENTS.bat - choose what to run (any agent, or everything at once)
+:menu
+cls
+echo ==============================================
+echo  CouncilKey-Os - what do you want to run?
+echo ==============================================
+echo   A) ALL agents + dashboard  (everything at once)
+echo   1) Dashboard  (council chat: 3 agents + vote)
+echo   2) OpenClaw
+echo   3) Hermes
+echo   4) CrewAI
+echo   5) Aider
+echo   6) Agent Zero   (needs Python 3.12+ setup on the stick)
+echo   0) Quit
+echo ==============================================
+set /p choice="Choose (A/1-6/0): "
+if /i "%choice%"=="A" goto all
+if "%choice%"=="1" goto dash
+if "%choice%"=="2" goto oc
+if "%choice%"=="3" goto hermes
+if "%choice%"=="4" goto crewai
+if "%choice%"=="5" goto aider
+if "%choice%"=="6" goto az
+if "%choice%"=="0" exit /b 0
+goto menu
+:all
+start "Council Dashboard" cmd /c "%~dp0START.bat"
+start "OpenClaw" cmd /c "%~dp0RUN-OPENCLAW.bat"
+start "Hermes" cmd /c "%~dp0RUN-HERMES.bat"
+start "CrewAI" cmd /c "%~dp0RUN-CREWAI.bat"
+start "Aider" cmd /c "%~dp0RUN-AIDER.bat"
+goto done
+:dash
+call "%~dp0START.bat"
+goto done
+:oc
+call "%~dp0RUN-OPENCLAW.bat"
+goto done
+:hermes
+call "%~dp0RUN-HERMES.bat"
+goto done
+:crewai
+call "%~dp0RUN-CREWAI.bat"
+goto done
+:aider
+call "%~dp0RUN-AIDER.bat"
+goto done
+:az
+call "%~dp0RUN-AGENT-ZERO.bat"
+goto done
+:done
+echo.
+echo  (run AGENTS.bat again to choose something else)
+pause
+goto menu
+EOF
+
+cat > "$USB/agents-menu.sh" <<'EOF'
+#!/usr/bin/env bash
+# agents-menu.sh - choose what to run (any agent, or everything at once)
+STICK="$(cd "$(dirname "$0")" && pwd)"
+echo "=============================================="
+echo " CouncilKey-Os - what do you want to run?"
+echo "=============================================="
+echo "  A) ALL agents + dashboard  (everything at once)"
+echo "  1) Dashboard  (council chat: 3 agents + vote)"
+echo "  2) OpenClaw"
+echo "  3) Hermes"
+echo "  4) CrewAI"
+echo "  5) Aider"
+echo "  6) Agent Zero   (needs Python 3.12+ setup on the stick)"
+echo "  0) Quit"
+echo "=============================================="
+read -rp "Choose (A/1-6/0): " choice
+case "$choice" in
+  A|a)
+    bash "$STICK/start.sh" &
+    bash "$STICK/run-openclaw.sh" &
+    bash "$STICK/run-hermes.sh" &
+    bash "$STICK/run-crewai.sh" &
+    bash "$STICK/run-aider.sh" &
+    ;;
+  1) bash "$STICK/start.sh" ;;
+  2) bash "$STICK/run-openclaw.sh" ;;
+  3) bash "$STICK/run-hermes.sh" ;;
+  4) bash "$STICK/run-crewai.sh" ;;
+  5) bash "$STICK/run-aider.sh" ;;
+  6) bash "$STICK/run-agent-zero.sh" ;;
+  0) exit 0 ;;
+  *) echo "try again"; bash "$0" ;;
+esac
+EOF
+chmod +x "$USB/agents-menu.sh" "$USB/start-session.sh" "$USB/end-session.sh"
+
+# --- launch-all: everything at once, directly ---
+cat > "$USB/launch-all.sh" <<'EOF'
+#!/usr/bin/env bash
+# launch-all.sh - start EVERYTHING at once (dashboard + all agents)
+STICK="$(cd "$(dirname "$0")" && pwd)"
+bash "$STICK/start.sh" &
+sleep 2
+for launcher in run-openclaw.sh run-hermes.sh run-crewai.sh run-aider.sh; do
+  [ -x "$STICK/$launcher" ] && bash "$STICK/$launcher" &
+done
+echo "all agents launched - dashboard at http://localhost:8443"
+wait
+EOF
+chmod +x "$USB/launch-all.sh"
+
+# --- README on the stick ---
+cat > "$USB/PENDRIVE-README.txt" <<EOF
+==============================================
+ CouncilKey-Os - PENDRAVE GUIDE (read me)
+==============================================
+
+WHAT YOU HAVE
+  This stick contains the whole CouncilKey-Os: the app, a portable
+  Python environment, and all 5 agents (Hermes, OpenClaw, CrewAI,
+  Aider, Agent Zero). ALL data - journal, memory, API keys, agent
+  workspaces - lives on this stick in the "council-data" folder.
+
+START ANY AGENT OR EVERYTHING AT ONCE
+  Windows:  double-click AGENTS.bat  -> menu: A = ALL, 1-6 = one agent
+  Linux:    bash agents-menu.sh
+  Or directly:
+    START.bat          dashboard (council chat: 3 agents + vote)
+    RUN-OPENCLAW.bat   OpenClaw      RUN-HERMES.bat   Hermes
+    RUN-CREWAI.bat     CrewAI        RUN-AIDER.bat    Aider
+    RUN-AGENT-ZERO.bat Agent Zero    LAUNCH-ALL.bat   everything
+
+SESSION MODE (clone to PC, memory on stick, no traces)
+  The stick runs everything by itself. Want it FASTER on this PC?
+    start-session.bat  -> copies the code to this PC temporarily,
+                           MEMORY stays on the stick
+    end-session.bat    -> stops it and DELETES the PC copy
+  Unplug the stick any time: nothing of yours is on this PC.
+
+FIRST TIME ON A NEW PC
+  1. The first start creates the portable environment (a few minutes).
+  2. The agents need an API key to answer. Run:
+       councilkey.bat setup
+     (choose OpenAI / Anthropic / Gemini / OpenRouter, paste the key -
+      it is stored encrypted on the stick)
+  3. councilkey.bat agents verify   -> confirms everything works
+
+EVERYTHING STAYS ON THE STICK
+  council-data/  = journal, memory, API keys, agent workspaces
+  Unplug -> this PC is exactly as it was before.
+==============================================
+EOF
+echo "      ok (session mode, agent menu, launch-all, PENDRIVE-README.txt)"
+
+# 8. optional: run the wizard so the stick has an API key baked in
 if [ "$WIZARD" -eq 1 ]; then
   echo "[6/6] Running the interactive wizard (API key + agents)..."
   COUNCIL_HOME="$USB/council-data" "$USB/CouncilKey-Os/.venv/bin/councilkey" setup

@@ -589,3 +589,29 @@ Fixes to make it impossible to confuse:
   respond" case with the 5-step fix (mount, `councilkey which`, use
   stick launchers, rebuild stick, slow-USB first-run is normal).
 - 3 new tests (107 total), ruff clean.
+
+## v1.14.0 (2026-08-05) - pendrive session mode + agent menu + use-all-at-once
+
+User request: agents + memory on the pendrive; plug into a PC, use
+anything (any agent or ALL at once); unplug -> session gone, memory stays
+on the stick; easy for every user.
+
+Added to BOTH pendrive builders (pendrive-setup.sh + .ps1), so every stick
+now has:
+- **AGENTS.bat / agents-menu.sh** - interactive menu: A = ALL agents +
+  dashboard at once, or pick 1-6 (dashboard / OpenClaw / Hermes / CrewAI /
+  Aider / Agent Zero)
+- **LAUNCH-ALL.bat / launch-all.sh** - start everything together
+- **SESSION MODE**: START-SESSION.bat / start-session.sh clone the code
+  to the PC temporarily (fast SSD speed) while COUNCIL_HOME points at the
+  stick's council-data (memory stays on the stick); END-SESSION.bat /
+  end-session.sh kill the server and DELETE the PC copy. Unplug any time
+  -> no traces on the PC. (PID-tracked so cleanup is precise.)
+- **PENDRIVE-README.txt** - full instructions right on the stick
+
+Verified live in the sandbox: built a stick -> session start (code in
+PC temp, memory on stick, server up) -> session end (PC copy deleted,
+server stopped, memory intact on stick); agent menu launches the
+dashboard.
+
+2 new tests (109 total), ruff clean, shell OK.

@@ -72,6 +72,17 @@ Add `--wizard` to bake in your API key + agents during the build:
 the stick.** Rebuild with `./scripts/pendrive-setup.sh /media/USB --wizard`
 (or the PowerShell builder on Windows) and the stick is fully self-contained.
 
+### Three ways to use the stick (any agent, or all at once)
+
+| Mode | How | What happens |
+|---|---|---|
+| **Agent menu** | double-click `AGENTS.bat` (or `bash agents-menu.sh`) | menu: **A = ALL agents + dashboard**, or pick 1–6 (dashboard / OpenClaw / Hermes / CrewAI / Aider / Agent Zero) |
+| **Everything at once** | `LAUNCH-ALL.bat` / `launch-all.sh` | starts the dashboard + every installed agent together |
+| **Session mode** | `START-SESSION.bat` (or `start-session.sh`) | **clones the code to this PC temporarily** (fast), keeps ALL memory on the stick (`council-data`); `END-SESSION.bat` stops it and **deletes the PC copy** — unplug any time, nothing of yours is on the PC |
+
+The stick also contains **`PENDRIVE-README.txt`** with these instructions, so
+a new user who plugs it in can read everything right there.
+
 > **"OpenClaw said it lives on my PC"** — that's the *global* install
 > (`npm install -g openclaw@latest`); OpenClaw's default workspace is
 > `C:\Users\you\.openclaw`. On the pendrive build, use **`RUN-OPENCLAW.bat`**

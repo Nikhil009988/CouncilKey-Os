@@ -101,7 +101,7 @@ endlocal
 Write-Host "      ok"
 
 # 5. ALL agents on the stick
-Write-Host "[5/6] Installing the agents ONTO the stick (everything stays on the stick)..."
+Write-Host "[5/7] Installing the agents ONTO the stick (everything stays on the stick)..."
 if ($NoAgents) {
   Write-Host "      skipped agent installs (-NoAgents) - launchers are still written"
 } else {
@@ -222,7 +222,155 @@ Write-Host "      ok (launchers: RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AI
 
 # 6. autorun.inf + optional wizard
 
-Write-Host "[6/6] Writing autorun.inf..."
+# 7. session mode + agent menu + stick README
+Write-Host "[7/7] Writing session-mode, agent menu and launch-all launchers..."
+
+# --- session mode (clone to PC, memory on stick, wipe on end) ---
+@"
+@echo off
+rem START-SESSION.bat - SESSION MODE (Windows)
+rem Clones the code to this PC (fast), keeps ALL data/memory on the stick,
+rem and wipes the PC copy when the session ends (END-SESSION.bat).
+setlocal
+set "STICK=%~dp0"
+set "ROOT=%STICK%CouncilKey-Os"
+set "COUNCIL_HOME=%STICK%council-data"
+set "COUNCIL_PENDRIVE=1"
+set "SESSION=%TEMP%\councilkey-session"
+
+echo == CouncilKey-Os SESSION mode ==
+echo   code:   %SESSION% (temporary, wiped on end)
+echo   memory: %COUNCIL_HOME% (stays on the stick)
+echo.
+
+if exist "%SESSION%" rmdir /s /q "%SESSION%"
+mkdir "%SESSION%"
+xcopy /e /i /q /y "%ROOT%\council" "%SESSION%\council" >nul
+copy /y "%ROOT%\VERSION" "%SESSION%\" >nul
+copy /y "%ROOT%\pyproject.toml" "%SESSION%\" >nul
+
+echo   dashboard: http://localhost:8443  (close this window to stop)
+echo.
+cd /d "%SESSION%"
+"%ROOT%\.venv\Scripts\python.exe" -m uvicorn council.orchestrator.main:app --host 0.0.0.0 --port 8443
+endlocal
+"@ | Set-Content -Encoding ASCII (Join-Path $Path "START-SESSION.bat")
+
+@"
+@echo off
+rem END-SESSION.bat - stop the session and WIPE it from this PC
+set "SESSION=%TEMP%\councilkey-session"
+if exist "%SESSION%" rmdir /s /q "%SESSION%"
+echo == session ended ==
+echo   PC copy deleted - nothing left on this PC.
+echo   Memory is safe on the stick: council-data\
+pause
+"@ | Set-Content -Encoding ASCII (Join-Path $Path "END-SESSION.bat")
+
+# --- agent menu: any agent or all at once ---
+@"
+@echo off
+rem AGENTS.bat - choose what to run (any agent, or everything at once)
+:menu
+cls
+echo ==============================================
+echo  CouncilKey-Os - what do you want to run?
+echo ==============================================
+echo   A) ALL agents + dashboard  (everything at once)
+echo   1) Dashboard  (council chat: 3 agents + vote)
+echo   2) OpenClaw
+echo   3) Hermes
+echo   4) CrewAI
+echo   5) Aider
+echo   6) Agent Zero   (needs Python 3.12+ setup on the stick)
+echo   0) Quit
+echo ==============================================
+set /p choice="Choose (A/1-6/0): "
+if /i "%choice%"=="A" goto all
+if "%choice%"=="1" goto dash
+if "%choice%"=="2" goto oc
+if "%choice%"=="3" goto hermes
+if "%choice%"=="4" goto crewai
+if "%choice%"=="5" goto aider
+if "%choice%"=="6" goto az
+if "%choice%"=="0" exit /b 0
+goto menu
+:all
+start "Council Dashboard" cmd /c "%~dp0START.bat"
+start "OpenClaw" cmd /c "%~dp0RUN-OPENCLAW.bat"
+start "Hermes" cmd /c "%~dp0RUN-HERMES.bat"
+start "CrewAI" cmd /c "%~dp0RUN-CREWAI.bat"
+start "Aider" cmd /c "%~dp0RUN-AIDER.bat"
+goto done
+:dash
+call "%~dp0START.bat"
+goto done
+:oc
+call "%~dp0RUN-OPENCLAW.bat"
+goto done
+:hermes
+call "%~dp0RUN-HERMES.bat"
+goto done
+:crewai
+call "%~dp0RUN-CREWAI.bat"
+goto done
+:aider
+call "%~dp0RUN-AIDER.bat"
+goto done
+:az
+call "%~dp0RUN-AGENT-ZERO.bat"
+goto done
+:done
+echo.
+echo  (run AGENTS.bat again to choose something else)
+pause
+goto menu
+"@ | Set-Content -Encoding ASCII (Join-Path $Path "AGENTS.bat")
+
+# --- README on the stick ---
+@"
+==============================================
+ CouncilKey-Os - PENDRAVE GUIDE (read me)
+==============================================
+
+WHAT YOU HAVE
+  This stick contains the whole CouncilKey-Os: the app, a portable
+  Python environment, and all 5 agents (Hermes, OpenClaw, CrewAI,
+  Aider, Agent Zero). ALL data - journal, memory, API keys, agent
+  workspaces - lives on this stick in the "council-data" folder.
+
+START ANY AGENT OR EVERYTHING AT ONCE
+  Windows:  double-click AGENTS.bat  -> menu: A = ALL, 1-6 = one agent
+  Linux:    bash agents-menu.sh
+  Or directly:
+    START.bat          dashboard (council chat: 3 agents + vote)
+    RUN-OPENCLAW.bat   OpenClaw      RUN-HERMES.bat   Hermes
+    RUN-CREWAI.bat     CrewAI        RUN-AIDER.bat    Aider
+    RUN-AGENT-ZERO.bat Agent Zero
+
+SESSION MODE (clone to PC, memory on stick, no traces)
+  start-session.bat  -> copies the code to this PC temporarily,
+                         MEMORY stays on the stick
+  end-session.bat    -> stops it and DELETES the PC copy
+  Unplug the stick any time: nothing of yours is on this PC.
+
+FIRST TIME ON A NEW PC
+  1. The first start creates the portable environment (a few minutes).
+  2. The agents need an API key to answer. Run:
+       councilkey.bat setup
+     (choose OpenAI / Anthropic / Gemini / OpenRouter, paste the key -
+      it is stored encrypted on the stick)
+  3. councilkey.bat agents verify   -> confirms everything works
+
+EVERYTHING STAYS ON THE STICK
+  council-data/  = journal, memory, API keys, agent workspaces
+  Unplug -> this PC is exactly as it was before.
+==============================================
+"@ | Set-Content -Encoding ASCII (Join-Path $Path "PENDRIVE-README.txt")
+
+Write-Host "      ok (session mode, agent menu, PENDRIVE-README.txt)"
+
+Write-Host "[6/7] Writing autorun.inf..."
 @"
 [autorun]
 open=START.bat
