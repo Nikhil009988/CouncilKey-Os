@@ -73,7 +73,7 @@ pyinstaller --onefile --windowed --name CouncilKey-Os-Setup --icon=icon.icns set
 
 **Without a single binary (recommended):**
 
-- One-liner: `curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash -s -- /mnt/council all` (Bash) and `iwr -useb .../install.ps1 | iex` (PowerShell) - Auto-detects USB, GUI selector, progress bar
+- One-liner: `curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/main/install.sh | bash -s -- /mnt/council all` (Bash) and `iwr -useb .../install.ps1 | iex` (PowerShell) - Auto-detects USB, GUI selector, progress bar
 - GUI: `python3 setup-gui.py` or `python3 setup-easy-one-click.py` - GUI with auto-detect USB, format options exFAT/F2FS/ext4, progress bar real-time, log real-time
 - Batch fallback: double-click `setup-windows-easy.bat` — checks for Python, downloads it via winget/PowerShell if missing, then runs the GUI setup
 

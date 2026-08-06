@@ -28,7 +28,7 @@ cd CouncilKey-Os
 
 **Or one-liner (clones to `~/councilkey-os`):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/main/install.sh | bash
 ```
 
 ### 2. Run the setup wizard

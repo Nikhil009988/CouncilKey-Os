@@ -348,4 +348,4 @@ python3 council/orchestrator/main.py dashboard --port 8443 --host 0.0.0.0
 5. Test storage optimizer daily, watch keep growth slow linear, cache auto delete
 6. Build in public early, ISO final stage (ClawOS approach)
 
-All code in branch arena/019fd1ec-councilkey-os, ready to push.
+All code in branch main, ready to push.

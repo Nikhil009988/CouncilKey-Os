@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # install.sh - One-line installer for CouncilKey-Os.
 #
-#   curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/main/install.sh | bash
 #
 # Clones the repo (into ~/councilkey-os by default) and runs the full setup:
 # Python env + local LLM (Ollama, makes the council answer) + optional
