@@ -121,6 +121,27 @@ def cmd_serve(host: str, port: int) -> int:
     return 0
 
 
+def cmd_update() -> int:
+    """Pull the latest code + reinstall the package (git pull)."""
+    import subprocess
+
+    print("== updating CouncilKey-Os ==")
+    if not (ROOT / ".git").exists():
+        print("  ❌ not a git checkout - re-clone instead:")
+        print("     git clone https://github.com/Nikhil009988/CouncilKey-Os.git")
+        return 1
+    r = subprocess.run(["git", "pull", "--ff-only"], cwd=ROOT, capture_output=True, text=True, timeout=120)
+    print((r.stdout or r.stderr).strip()[-400:])
+    if r.returncode != 0:
+        print("  ⚠ pull failed - fix conflicts or re-clone")
+        return 1
+    print("  reinstalling the package...")
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-e", str(ROOT)],
+                   cwd=ROOT, capture_output=True, text=True, timeout=300)
+    print("  ✅ updated - run 'councilkey version' to confirm")
+    return 0
+
+
 def cmd_llm(action: str, model: str | None) -> int:
     """Manage the local LLM backend (Ollama): status / install / pull."""
     from council.llm.agents import DEFAULT_MODEL, installed_models, ollama_available
@@ -379,6 +400,7 @@ def main(argv: list[str] | None = None) -> None:
     p_serve.add_argument("--port", type=int, default=int(os.environ.get("COUNCIL_PORT", "8443")))
 
     sub.add_parser("doctor", help="environment health check")
+    sub.add_parser("update", help="pull the latest code + reinstall (git pull)")
 
     p_storage = sub.add_parser("storage", help="storage audit/optimize")
     p_storage.add_argument("--dry-run", action="store_true", help="only report, don't delete")
@@ -433,6 +455,8 @@ def main(argv: list[str] | None = None) -> None:
         ))
     elif args.command == "doctor":
         sys.exit(cmd_doctor())
+    elif args.command == "update":
+        sys.exit(cmd_update())
     elif args.command == "storage":
         sys.exit(cmd_storage(args.dry_run))
     elif args.command == "agents":

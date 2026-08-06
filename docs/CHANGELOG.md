@@ -354,3 +354,27 @@ Full test-and-debug pass across every code path:
 
 Also: wizard ensures COUNCIL_HOME exists up front.
 91 tests passing (5 new regression tests), ruff clean.
+
+## v1.9.2 (2026-08-05) - bulletproof installer + wizard retry + councilkey update
+
+Real-world report from a Windows machine showed the user was still seeing
+the old failures - they were running a pre-fix clone. This release makes
+that impossible to hit again:
+
+1. **npm install hardened for Windows**: uses the RESOLVED npm.cmd path
+   explicitly (proc.which_resolved) and the error now prints the npm path
+   + the exact manual command to run in a new terminal if it still fails.
+2. **OpenClaw config retried after agent install**: the wizard now tracks
+   whether the step-2 "configure OpenClaw" succeeded, and if it failed
+   (usually because openclaw wasn't installed yet), it retries
+   automatically once the agents are installed.
+3. **Hermes pip fallback**: if the official installer domain is
+   unreachable, `pip install hermes-agent` (official Nous Research PyPI
+   package) is used as a fallback - verified working in this sandbox
+   where the domain is blocked.
+4. **`councilkey update`** command: pulls the latest code + reinstalls,
+   so users on old clones can get fixes with one command. The wizard
+   banner now hints: "running an old clone? run 'councilkey update'".
+5. Wizard banner tip + agent-zero hint already in place.
+
+2 new regression tests (93 total), ruff clean.

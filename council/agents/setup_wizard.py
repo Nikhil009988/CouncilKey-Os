@@ -99,6 +99,7 @@ def _banner() -> None:
     print(f"  CouncilKey-Os {__version__} - interactive setup")
     print("  model provider + API keys · 3 agents · real answers")
     print("=" * 58)
+    print("  tip: running an old clone?  run 'councilkey update' to get the latest fixes")
 
 
 def _save_summary(summary: dict[str, Any]) -> None:
@@ -155,6 +156,7 @@ def run_wizard(
         print("     set a writable location:  COUNCIL_HOME=/path/to/writable  councilkey setup")
         return 1
 
+    openclaw_configured_ok = False
     summary: dict[str, Any] = {
         "version": __version__,
         "time": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -209,14 +211,16 @@ def run_wizard(
             _store_key(env, key)
             summary["keys_stored"].append(env)
             summary["provider"] = provider
+            summary["_provider_key"] = key
             note("API key stored", True, f"{env} -> encrypted vault")
             # configure OpenClaw with the provider (non-interactive)
             print("  configuring OpenClaw with your provider (can take a minute, please wait)...")
             cfg = _configure_openclaw(provider, key)
-            if cfg.get("ok"):
+            openclaw_configured_ok = bool(cfg.get("ok"))
+            if openclaw_configured_ok:
                 note("configure OpenClaw", True, cfg.get("detail", "")[:80])
             else:
-                note("configure OpenClaw", False, cfg.get("error", ""))
+                note("configure OpenClaw", False, cfg.get("error", "") or "will retry after agent install")
         if info["choice"] != "skip":
             note("council role agents", True, f"will answer via {info['name']}")
 
@@ -241,6 +245,24 @@ def run_wizard(
                     note(f"install {name}", False, res.get("error", ""))
                     if res.get("hint"):
                         print(f"       hint: {res['hint']}")
+
+            # if a provider + key were stored but the earlier OpenClaw config
+            # failed (usually because openclaw wasn't installed yet), retry
+            # now that it exists
+            if (
+                not openclaw_configured_ok
+                and provider not in (None, "none")
+                and summary.get("keys_stored")
+            ):
+                try:
+                    import shutil as _sh
+
+                    if _sh.which("openclaw"):
+                        print("  configuring OpenClaw now that it's installed (can take a minute, please wait)...")
+                        cfg = _configure_openclaw(summary["provider"], summary.get("_provider_key", ""))
+                        note("configure OpenClaw", cfg.get("ok", False), (cfg.get("detail") or "")[:80])
+                except Exception:
+                    pass
         else:
             note("external agents", True, "skipped")
 

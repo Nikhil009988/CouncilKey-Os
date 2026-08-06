@@ -329,3 +329,45 @@ def test_vault_set_secret_no_crash_on_bad_path(monkeypatch, tmp_path):
     r = vault.set_secret("K", "v")
     assert r.get("ok") is False
     assert "error" in r
+
+
+def test_npm_installer_resolves_windows_path(monkeypatch):
+    """_install_npm uses the RESOLVED npm path (fixes WinError 2)."""
+    from council.agents import installer as inst
+
+    captured = {"cmds": []}
+    def fake_run(cmd, cwd=None, timeout=900):
+        captured["cmds"].append(cmd)
+        return (True, "OpenClaw 2026.7.1-2")
+    monkeypatch.setattr(inst, "_run", fake_run)
+    # patch the module the function imports from (proc.which_resolved)
+    monkeypatch.setattr("council.agents.proc.which_resolved", lambda c: "C:\\Program Files\\nodejs\\npm.cmd" if c == "npm" else None)
+    monkeypatch.setattr("council.agents.proc.resolve_cmd", lambda c: c)
+    monkeypatch.setattr("shutil.which", lambda c: True)
+    r = inst._install_npm({"package": "openclaw@latest", "bin": "openclaw"})
+    assert r["ok"] is True
+    # first call is the npm install with the RESOLVED npm.cmd path
+    assert captured["cmds"][0][0] == "C:\\Program Files\\nodejs\\npm.cmd"
+    assert "install" in captured["cmds"][0]
+
+
+def test_hermes_pip_fallback(monkeypatch):
+    """hermes install falls back to pip when the official domain is down."""
+    from council.agents import installer as inst
+
+    class FakeHttpx:
+        @staticmethod
+        def get(*a, **k):
+            raise RuntimeError("network blocked")
+
+    monkeypatch.setattr(inst, "httpx", FakeHttpx())
+    calls = {}
+    def fake_run_cmd(cmd, cwd=None, timeout=900):
+        calls["cmd"] = cmd
+        return (True, "installed")
+    monkeypatch.setattr(inst, "run_cmd", fake_run_cmd)
+    info = {"installer_url": "https://fake", "installer_url_win": "https://fake-ps1",
+            "bin": "hermes", "start_hint": "hermes"}
+    r = inst._install_official(info)
+    assert r["ok"] is True
+    assert "pip" in calls["cmd"] and "hermes-agent" in calls["cmd"]

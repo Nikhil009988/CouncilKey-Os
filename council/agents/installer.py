@@ -153,15 +153,23 @@ def install(name: str) -> dict[str, Any]:
 
 
 def _install_npm(info: dict[str, Any]) -> dict[str, Any]:
-    if shutil.which("npm") is None:
+    """Install openclaw via npm with Windows-proof command resolution."""
+    from council.agents.proc import resolve_cmd, which_resolved
+
+    npm_exe = which_resolved("npm")
+    if npm_exe is None:
         return {"ok": False, "name": "openclaw",
                 "error": "npm not found - install Node.js 18+ first (https://nodejs.org)",
-                "hint": "Windows: winget install OpenJS.NodeJS.LTS"}
-    print(f"  installing {info['package']} globally (npm)...")
-    ok, tail = _run(["npm", "install", "-g", info["package"]], Path.home(), timeout=1800)
+                "hint": "Windows: winget install OpenJS.NodeJS.LTS   then open a NEW terminal"}
+    # Windows: use the resolved npm.cmd path explicitly (avoids WinError 2)
+    cmd = [npm_exe, "install", "-g", info["package"]]
+    print(f"  installing {info['package']} globally (npm via {npm_exe})...")
+    ok, tail = _run(cmd, Path.home(), timeout=1800)
     if not ok:
-        return {"ok": False, "name": "openclaw", "error": f"npm install failed: {tail[:300]}"}
-    ver = _run([info["bin"], "--version"], Path.home(), timeout=30)
+        return {"ok": False, "name": "openclaw",
+                "error": f"npm install failed: {tail[:300]}",
+                "hint": f"npm path: {npm_exe}\nrun it manually in a NEW terminal:\n  npm install -g {info['package']}"}
+    ver = _run([resolve_cmd(info["bin"]), "--version"], Path.home(), timeout=30)
     return {"ok": True, "name": "openclaw",
             "steps": [{"step": "npm install -g", "ok": True, "detail": ver[1][:80] or "installed"}],
             "next": "openclaw onboard --install-daemon   # first-run onboarding"}
@@ -195,8 +203,17 @@ def _install_official(info: dict[str, Any]) -> dict[str, Any]:
         if "bash" not in script[:500] and "#!/bin/sh" not in script[:500] and "#!/bin/bash" not in script[:500]:
             raise RuntimeError("downloaded file does not look like a shell installer")
     except Exception as exc:
+        # official installer unreachable -> fall back to the official PyPI
+        # package (hermes-agent is published by Nous Research)
+        print(f"  ⚠ official installer unreachable ({exc}) - falling back to pip install hermes-agent")
+        ok, tail = run_cmd([sys.executable, "-m", "pip", "install", "-q", "hermes-agent"],
+                           cwd=REPO_ROOT, timeout=1200)
+        if ok:
+            return {"ok": True, "name": "hermes",
+                    "steps": [{"step": "pip install hermes-agent", "ok": True, "detail": "installed (fallback)"}],
+                    "next": "hermes setup   # guided configuration"}
         return {"ok": False, "name": "hermes",
-                "error": f"could not fetch the official installer from this machine ({exc})",
+                "error": f"could not install hermes ({exc}); pip fallback also failed: {tail[:200]}",
                 "hint": "run it manually:\n  Linux/macOS: curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash\n  Windows:      iex (irm https://hermes-agent.nousresearch.com/install.ps1)"}
     if sys.platform == "win32":
         return {"ok": False, "name": "hermes",
