@@ -371,3 +371,24 @@ def test_hermes_pip_fallback(monkeypatch):
     r = inst._install_official(info)
     assert r["ok"] is True
     assert "pip" in calls["cmd"] and "hermes-agent" in calls["cmd"]
+
+
+def test_run_with_progress_shows_elapsed(capsys):
+    """The progress helper prints a live elapsed-time line during a long op
+    and clears it after - so the wizard never looks frozen."""
+    import time
+
+    from council.agents.proc import human_duration, run_with_progress
+
+    def slow():
+        time.sleep(0.6)
+        return "done"
+
+    result = run_with_progress(slow, "testing", interval=0.2)
+    assert result == "done"
+    out = capsys.readouterr().out
+    assert "⏳ testing" in out
+    assert "elapsed" in out
+
+    assert human_duration(45) == "45s"
+    assert human_duration(130) == "2m 10s"

@@ -378,3 +378,26 @@ that impossible to hit again:
 5. Wizard banner tip + agent-zero hint already in place.
 
 2 new regression tests (93 total), ruff clean.
+
+## v1.9.3 (2026-08-05) - wizard: progress display, per-agent selection, combined pip
+
+Reported: after aider installed, the wizard "took much time" with no
+indication of what was next.
+
+Fixes / improvements:
+- **Live progress display**: every long operation now shows
+  `⏳ installing openclaw... 42s elapsed (please wait)` updating in place
+  (via a background ticker) and clears when done - the wizard never looks
+  frozen.
+- **Numbered steps [1/5]..[5/5]** with a "NEXT: ..." hint after each step
+  (choose provider -> install agents -> finish, etc).
+- **Per-agent selection**: instead of all-or-nothing, the wizard lists the
+  5 agents with time estimates (Hermes 5-15 min, OpenClaw 1-3 min,
+  Agent Zero needs 3.12+, CrewAI 2-5 min, Aider 1-2 min) and you pick
+  which to install (comma-separated, e.g. 2,4 or 'all').
+- **Combined pip install**: CrewAI + Aider install in ONE pip command
+  instead of two sequential ones (pip resolves shared deps once).
+- **Per-agent elapsed time** and a **total time** at the end
+  ("Setup finished in 6m 12s").
+- New run_with_progress / human_duration helpers in council/agents/proc.py.
+- 1 new test (94 total), ruff clean. Guide updated with the new flow.

@@ -145,8 +145,11 @@ def run_wizard(
     skip_tests: bool = False,
 ) -> int:
     """Run the interactive (or flag-driven) setup wizard. Returns exit code."""
+    from council.agents.proc import human_duration, run_with_progress
+
     interactive = provider is None and api_key is None
     _banner()
+    t_start = time.monotonic()
 
     # ensure the council home exists up front with a clear error
     try:
@@ -175,7 +178,8 @@ def run_wizard(
         if not ok:
             ok_all = False
 
-    # 1. prereqs
+    # ============================================================== 1. prereqs
+    print("\n  [1/5] Prerequisites")
     prereqs = check_prereqs()
     missing = [k for k, v in prereqs.items() if not v and k in ("git", "python")]
     if missing:
@@ -183,13 +187,15 @@ def run_wizard(
         print("  required: python 3.11+ and git")
         return 1
     note("prerequisites", True)
+    print("        NEXT: choose a model provider and enter your API key")
 
-    # 2. provider + API key
+    # ======================================================= 2. provider + key
+    print("\n  [2/5] Model provider + API key")
     if interactive:
-        print("\n  Model provider (used by the 3 council agents AND the external agents):")
+        print("        (used by the 3 council agents AND the external agents)")
         for i, (pid, p) in enumerate(PROVIDERS.items(), 1):
-            print(f"    {i}) {p['name']}")
-        choice = _ask("Choose provider", default="1")
+            print(f"          {i}) {p['name']}")
+        choice = _ask("        Choose provider", default="1")
         try:
             provider = list(PROVIDERS)[int(choice) - 1]
         except (ValueError, IndexError):
@@ -198,12 +204,13 @@ def run_wizard(
     if provider in (None, "none"):
         note("model provider", True, "skipped - configure later (councilkey setup)")
         summary["provider"] = "none"
+        print("        NEXT: start with the external agents (optional) or finish")
     else:
         info = PROVIDERS[provider]
         env = info["env"]
         key = api_key
         if interactive and not key:
-            key = _secret(f"  {info['name']} API key")
+            key = _secret(f"        {info['name']} API key")
         if not key:
             note("API key", False, f"{env} not provided - the agents won't answer until set")
             summary["provider"] = provider
@@ -214,41 +221,98 @@ def run_wizard(
             summary["_provider_key"] = key
             note("API key stored", True, f"{env} -> encrypted vault")
             # configure OpenClaw with the provider (non-interactive)
-            print("  configuring OpenClaw with your provider (can take a minute, please wait)...")
-            cfg = _configure_openclaw(provider, key)
+            def _cfg():
+                return _configure_openclaw(provider, key)
+            try:
+                cfg = run_with_progress(_cfg, "configuring OpenClaw with your provider", interval=10)
+            except Exception as exc:
+                cfg = {"ok": False, "error": str(exc)}
             openclaw_configured_ok = bool(cfg.get("ok"))
             if openclaw_configured_ok:
-                note("configure OpenClaw", True, cfg.get("detail", "")[:80])
+                note("configure OpenClaw", True, cfg.get("detail", "")[:60])
             else:
                 note("configure OpenClaw", False, cfg.get("error", "") or "will retry after agent install")
         if info["choice"] != "skip":
             note("council role agents", True, f"will answer via {info['name']}")
+        print("        NEXT: install the external agents (optional, pick what you need)")
 
-    # 3. external agents
+    # ====================================================== 3. external agents
+    print("\n  [3/5] External agents (optional, each is an interactive tool with its own UI)")
     if no_agents:
         note("external agents", True, "skipped (--no-agents)")
+        print("        NEXT: finish setup")
     else:
-        install_all = False
-        if interactive:
-            install_all = _confirm("Install the external agents (Hermes/OpenClaw/Agent Zero)?", default=False)
-        if install_all:
-            from council.agents.installer import AGENTS
-            from council.agents.installer import install as agent_install
+        from council.agents.installer import AGENTS
 
-            for name in AGENTS:
-                print(f"\n  == {name} ==")
-                res = agent_install(name)
+        # ---- choose which agents to install ----
+        choices: list[str] = []
+        if interactive:
+            print("        Pick any combination (comma-separated, e.g. '2,4'):")
+            for i, name in enumerate(AGENTS, 1):
+                est = {
+                    "hermes": "5-15 min (official installer)",
+                    "openclaw": "1-3 min (npm)",
+                    "agent-zero": "several GB deps, needs Python 3.12+",
+                    "crewai": "2-5 min (pip)",
+                    "aider": "1-2 min (pip)",
+                }.get(name, "?")
+                print(f"          {i}) {name:<11} - {est}")
+            print("          0) none - skip")
+            ans = _ask("        Which agents", default="0").strip()
+            if ans.lower() in ("all", "*"):
+                choices = list(AGENTS)
+            else:
+                for part in ans.replace(" ", "").split(","):
+                    if part.isdigit():
+                        idx = int(part)
+                        if 1 <= idx <= len(AGENTS):
+                            choices.append(list(AGENTS)[idx - 1])
+        else:
+            choices = list(AGENTS)
+
+        if not choices:
+            note("external agents", True, "skipped (nothing selected)")
+            print("        NEXT: finish setup")
+        else:
+            # pip agents install together in one command
+            pip_names = [n for n in choices if AGENTS[n]["install"] == "pip"]
+            other_names = [n for n in choices if n not in pip_names]
+
+            # batch pip install first (one command instead of N)
+            if pip_names:
+                from council.agents.installer import _install_pip_batch
+
+                pkgs = [AGENTS[n]["package"] for n in pip_names]
+                print(f"  installing {', '.join(pip_names)} in one command (pip)...")
+                try:
+                    res = run_with_progress(lambda: _install_pip_batch(pkgs), f"installing {', '.join(pip_names)} (pip)", interval=10)
+                    if res.get("ok"):
+                        note(f"install {', '.join(pip_names)}", True, res.get("detail", "installed")[:60])
+                    else:
+                        note(f"install {', '.join(pip_names)}", False, res.get("detail", "pip install failed")[:80])
+                except Exception as exc:
+                    note(f"install {', '.join(pip_names)}", False, str(exc)[:80])
+
+            # individual installs (hermes, openclaw, agent-zero)
+            for name in other_names:
+                from council.agents.installer import install as agent_install
+
+                print(f"\n  == installing {name} ==")
+                t0 = time.monotonic()
+                try:
+                    res = run_with_progress(lambda n=name: agent_install(n), f"installing {name}", interval=10)
+                except Exception as exc:
+                    res = {"ok": False, "error": str(exc)}
+                elapsed = human_duration(time.monotonic() - t0)
                 summary["agents"][name] = {"ok": res.get("ok"), "detail": res.get("error") or res.get("next", "")}
                 if res.get("ok"):
-                    note(f"install {name}", True, res.get("next", "installed"))
+                    note(f"install {name}", True, f"({elapsed}) {res.get('next', 'installed')[:60]}")
                 else:
-                    note(f"install {name}", False, res.get("error", ""))
+                    note(f"install {name}", False, f"({elapsed}) {res.get('error', 'failed')[:80]}")
                     if res.get("hint"):
                         print(f"       hint: {res['hint']}")
 
-            # if a provider + key were stored but the earlier OpenClaw config
-            # failed (usually because openclaw wasn't installed yet), retry
-            # now that it exists
+            # retry OpenClaw config now that it might be installed
             if (
                 not openclaw_configured_ok
                 and provider not in (None, "none")
@@ -258,46 +322,59 @@ def run_wizard(
                     import shutil as _sh
 
                     if _sh.which("openclaw"):
-                        print("  configuring OpenClaw now that it's installed (can take a minute, please wait)...")
+                        print("  configuring OpenClaw now that it's installed...")
                         cfg = _configure_openclaw(summary["provider"], summary.get("_provider_key", ""))
-                        note("configure OpenClaw", cfg.get("ok", False), (cfg.get("detail") or "")[:80])
+                        note("configure OpenClaw", cfg.get("ok", False), (cfg.get("detail") or "")[:60])
                 except Exception:
                     pass
-        else:
-            note("external agents", True, "skipped")
 
-    # 4. tests
+            print("        NEXT: finish setup (tests + verification)")
+
+    # =============================================================== 4. tests
+    print("\n  [4/5] Tests")
     if skip_tests:
         note("test suite", True, "skipped (--skip-tests)")
     else:
         run_tests = True
         if interactive:
-            run_tests = _confirm("Run the test suite now? (~1 min; you can run 'make test' later)", default=False)
+            run_tests = _confirm("        Run the test suite now? (~1 min; you can run 'make test' later)", default=False)
         if not run_tests:
             note("test suite", True, "skipped (run 'make test' anytime)")
         else:
-            t0 = time.monotonic()
-            print("  running the test suite - this can take a minute or two, please wait...")
-            ok, out = run_cmd([sys.executable, "-m", "pytest", "tests", "-q"], cwd=ROOT, timeout=900)
+            def _tests():
+                return run_cmd([sys.executable, "-m", "pytest", "tests", "-q"], cwd=ROOT, timeout=900)
+            try:
+                ok, out = run_with_progress(_tests, "running the test suite", interval=10)
+            except Exception as exc:
+                ok, out = False, str(exc)
             tail = out.strip().splitlines()[-1] if out.strip() else "?"
-            note("test suite", ok, f"{tail[:60]} ({int(time.monotonic() - t0)}s)")
+            note("test suite", ok, f"{tail[:60]}")
+    print("        NEXT: verify the council answers")
 
-    # 5. verify
+    # ============================================================== 5. verify
+    print("\n  [5/5] Verify the council")
     from council.cli import cmd_agents
 
-    t0 = time.monotonic()
-    print("\n  Verifying the council - asking each agent (real API calls, can take up to a minute)...")
-    cmd_agents("verify", [])
-    print(f"  verify finished in {int(time.monotonic() - t0)}s")
+    def _verify():
+        return cmd_agents("verify", [])
+
+    try:
+        run_with_progress(_verify, "verifying the council (real API calls)", interval=10)
+    except Exception:
+        pass
 
     _save_summary(summary)
+    total = human_duration(time.monotonic() - t_start)
     print("\n" + "=" * 58)
-    print("  Setup finished.")
+    print(f"  ✅ Setup finished in {total}")
+    print("")
     print("  Start the dashboard:   councilkey serve   ->  http://localhost:8443")
     print("  Status:                councilkey agents status")
     print("  Keys:                  councilkey agents env")
     print("=" * 58)
     return 0 if ok_all else 1
+
+
 
 
 def summary() -> dict[str, Any]:

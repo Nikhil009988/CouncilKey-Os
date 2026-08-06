@@ -83,15 +83,20 @@ curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/main/ins
 
 ### What setup does (step by step)
 
-`setup.sh` runs the **interactive wizard** (`councilkey setup`) which asks you
-exactly what you need:
+`setup.sh` runs the **interactive wizard** (`councilkey setup`) in 5 numbered
+steps. Every step shows what's NEXT, and every long operation shows a live
+progress line (`⏳ installing openclaw... 42s elapsed (please wait)`) so you
+always know it's working:
 
-| Prompt | What it does | Default |
-|---|---|---|
-| "Choose model provider" | OpenAI · Anthropic · Gemini · OpenRouter · Skip | OpenAI |
-| "API key" | Asks for the key (hidden input) and stores it **encrypted** in the secrets vault — used by the 3 council roles AND the external agents (OpenClaw configured automatically) | — |
-| "Install the external agents?" | Installs Hermes / OpenClaw / Agent Zero via each project's official installer | No |
-| Tests + verify | Runs the test suite, then asks each council role a real question | Yes |
+| Step | What it asks / does |
+|---|---|
+| **[1/5]** Prerequisites | checks python + git |
+| **[2/5]** Provider + API key | choose OpenAI · Anthropic · Gemini · OpenRouter · Skip, enter the key (hidden, stored **encrypted**); OpenClaw configured automatically (retried later if not installed yet) |
+| **[3/5]** External agents | **pick which agents** (comma-separated, e.g. `2,4`): 1 Hermes (5-15 min) · 2 OpenClaw (1-3 min) · 3 Agent Zero (needs Python 3.12+) · 4 CrewAI (2-5 min) · 5 Aider (1-2 min) · 0 none. CrewAI + Aider install together in one pip command |
+| **[4/5]** Tests | optional, default skip (`make test` later) |
+| **[5/5]** Verify | asks each council role a real question, shows the backend |
+
+Ends with the **total time**: `✅ Setup finished in 6m 12s`.
 
 Flags for automation: `councilkey setup --provider openai --api-key sk-... --no-agents --skip-tests`
 

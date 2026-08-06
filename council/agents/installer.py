@@ -192,6 +192,15 @@ def _install_pip(info: dict[str, Any]) -> dict[str, Any]:
             "next": info["start_hint"].splitlines()[0]}
 
 
+def _install_pip_batch(packages: list[str]) -> dict[str, Any]:
+    """Install several pip packages in ONE command (much faster than
+    installing them one by one - pip resolves shared deps once)."""
+    venv_pip = REPO_ROOT / ".venv" / ("Scripts/pip.exe" if os.name == "nt" else "bin/pip")
+    cmd = [str(venv_pip), "install", "-q"] + packages if venv_pip.exists() else           [sys.executable, "-m", "pip", "install", "-q"] + packages
+    ok, tail = _run(cmd, REPO_ROOT, timeout=2400)
+    return {"ok": ok, "detail": tail[:200] or f"installed: {', '.join(packages)}"}
+
+
 def _install_official(info: dict[str, Any]) -> dict[str, Any]:
     url = info["installer_url_win"] if sys.platform == "win32" else info["installer_url"]
     print(f"  downloading the official installer: {url}")

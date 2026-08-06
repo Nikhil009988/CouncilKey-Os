@@ -12,6 +12,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 
 def which_resolved(cmd: str) -> str | None:
@@ -65,3 +66,52 @@ def run_cmd(
         return proc.returncode == 0, out
     except Exception as exc:
         return False, str(exc)
+
+
+def run_with_progress(
+    fn: Any,
+    label: str,
+    interval: float = 5.0,
+) -> Any:
+    """Run fn() while showing a live elapsed-time progress line.
+
+    The line updates every `interval` seconds (e.g. "⏳ installing
+    openclaw... 12s elapsed (please wait)") and is cleared when fn returns,
+    so the user always knows the wizard is alive and what it is doing.
+
+    fn is expected to block (e.g. a subprocess call).
+    """
+    import threading
+    import time as _time
+
+    done = threading.Event()
+    start = _time.monotonic()
+    result: dict[str, Any] = {"value": None, "error": None}
+
+    def _tick() -> None:
+        while not done.is_set():
+            elapsed = int(_time.monotonic() - start)
+            print(f"\r  ⏳ {label}... {elapsed}s elapsed (please wait)", end="", flush=True)
+            done.wait(interval)
+        print("\r" + " " * 70 + "\r", end="", flush=True)
+
+    ticker = threading.Thread(target=_tick, daemon=True)
+    ticker.start()
+    try:
+        result["value"] = fn()
+    except Exception as exc:  # pragma: no cover - surfaced to the caller
+        result["error"] = exc
+    finally:
+        done.set()
+        ticker.join(timeout=2)
+    if result["error"] is not None:
+        raise result["error"]
+    return result["value"]
+
+
+def human_duration(seconds: float) -> str:
+    """Format seconds as '45s' or '2m 10s'."""
+    seconds = int(seconds)
+    if seconds < 60:
+        return f"{seconds}s"
+    return f"{seconds // 60}m {seconds % 60:02d}s"
