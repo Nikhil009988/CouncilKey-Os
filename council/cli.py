@@ -282,11 +282,14 @@ def cmd_agents(action: str, names: list[str]) -> int:
         return 0
 
     if action == "verify":
-        """Real smoke test: ask every council role and show what backend answered."""
+        """Real smoke test: ask the 3 COUNCIL ROLE agents (hermes/openclaw/
+        agent-zero) and show which backend answers. crewai/aider are external
+        CLIs, not council roles - they are checked by 'agents status'."""
         import asyncio
 
         from council.orchestrator.agents import build_default_clients, client_modes
 
+        roles = ["hermes", "openclaw", "agent-zero"]
         print("== verifying the council (real ask - each agent up to 30s, please wait) ==")
         modes = client_modes()
         clients = build_default_clients()
@@ -300,10 +303,11 @@ def cmd_agents(action: str, names: list[str]) -> int:
                 print(f"  {name:<11} ERROR: {exc}")
 
         async def _run_all() -> None:
-            await asyncio.gather(*[_check(n) for n in selected])
+            await asyncio.gather(*[_check(n) for n in roles])
 
         asyncio.run(_run_all())
         print("\nlegend: gateway = external agent server | provider = model API (councilkey setup) | mock = nothing configured")
+        print("note: crewai/aider are external CLIs - check them with: councilkey agents status")
         return 0
 
     return 2

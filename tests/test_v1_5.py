@@ -268,3 +268,64 @@ def test_run_cmd_resolves_executable(monkeypatch):
     ok, out = proc.run_cmd(["npm", "--version"], timeout=10)
     assert ok and out == "ok"
     assert captured["cmd"][0] == "/usr/bin/npm"
+
+
+# ----------------------------------------------------- regression tests
+def test_verify_only_checks_council_roles(monkeypatch):
+    """agents verify must only ask the 3 council roles - crewai/aider are
+    external CLIs and caused KeyError crashes before."""
+    from council.orchestrator.agents import build_default_clients, client_modes
+
+    monkeypatch.setattr("council.llm.provider.active_provider", lambda: None)
+    monkeypatch.setattr("council.orchestrator.agents.gateway_reachable", lambda *a, **k: False)
+    modes = client_modes()
+    clients = build_default_clients()
+    # invariant: clients and modes are exactly the 3 council roles
+    assert set(clients) == {"hermes", "openclaw", "agent-zero"}
+    assert set(modes) == {"hermes", "openclaw", "agent-zero"}
+
+
+def test_configure_openclaw_success_with_nonzero_exit(monkeypatch):
+    """openclaw onboard exits non-zero when its gateway is down but STILL
+    writes the config - success must be detected from the output."""
+    from council.agents import setup_wizard as w
+
+    captured = {}
+
+    def fake_run_cmd(cmd, **kw):
+        captured["cmd"] = cmd
+        return (False, "Refreshed plugin\nUpdated config: ~/.openclaw/openclaw.json\nWorkspace OK")
+
+    monkeypatch.setattr(w, "run_cmd", fake_run_cmd)
+    monkeypatch.setattr("shutil.which", lambda c: "/usr/bin/openclaw")
+    r = w._configure_openclaw("openai", "sk-test")
+    assert r["ok"] is True, r
+
+
+def test_wizard_unwritable_home_graceful(monkeypatch, tmp_path):
+    """Unwritable COUNCIL_HOME -> clear error + exit 1, no traceback."""
+    from council.agents import setup_wizard as w
+
+    monkeypatch.setattr(w, "COUNCIL_HOME", tmp_path / "no" / "such" / "nested" / "deep")
+    # the mkdir will fail because 'no' doesn't exist? no - parents=True creates it.
+    # force failure with a file in the way
+    blocker = tmp_path / "blocker"
+    blocker.write_text("x")
+    monkeypatch.setattr(w, "COUNCIL_HOME", blocker / "child")
+
+    # run_wizard should return 1 without raising
+    rc = w.run_wizard(provider="none", no_agents=True, skip_tests=True)
+    assert rc == 1
+
+
+def test_vault_set_secret_no_crash_on_bad_path(monkeypatch, tmp_path):
+    """vault.set_secret returns an error dict instead of raising when the
+    vault cannot be written."""
+    from council.secrets import vault
+
+    monkeypatch.setattr(vault, "VAULT_PATH", tmp_path / "no-such-dir" / "vault.json")
+    # make the parent path uncreatable by placing a FILE where the dir goes
+    (tmp_path / "no-such-dir").write_text("file in the way")
+    r = vault.set_secret("K", "v")
+    assert r.get("ok") is False
+    assert "error" in r

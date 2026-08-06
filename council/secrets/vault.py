@@ -113,12 +113,15 @@ def _load() -> dict:
 
 
 def _save(data: dict) -> None:
-    VAULT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    VAULT_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     try:
-        os.chmod(VAULT_PATH, 0o600)
-    except OSError:
-        pass
+        VAULT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        VAULT_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        try:
+            os.chmod(VAULT_PATH, 0o600)
+        except OSError:
+            pass
+    except Exception as exc:
+        raise RuntimeError(f"cannot write the secrets vault at {VAULT_PATH}: {exc}") from exc
 
 
 def set_secret(key: str, value: str) -> dict:
@@ -130,7 +133,10 @@ def set_secret(key: str, value: str) -> dict:
     with _lock:
         data = _load()
         data[key] = {"enc": _encrypt(str(value)), "updated": time.time()}
-        _save(data)
+        try:
+            _save(data)
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
     return {"ok": True, "key": key}
 
 

@@ -195,8 +195,10 @@ def test_retrieve_context_finds_journal():
     from council.memory.retrieval import retrieve_context
 
     (HOME / "journal").mkdir(parents=True, exist_ok=True)
-    (HOME / "journal" / "2026-08-05-100000-storage.md").write_text(
-        "# Council Journal 2026-08-05-100000\n\n## Prompt\nstorage optimization tips\n\n## Final\n"
+    # filename sorts LAST so it stays in the retrieval window even after
+    # other tests add many journal entries (history() takes the newest 30)
+    (HOME / "journal" / "9999-12-31-235959-storage.md").write_text(
+        "# Council Journal 9999-12-31-235959\n\n## Prompt\nstorage optimization tips\n\n## Final\n"
         "Use keep/cache split and delete raw sessions.\n",
         encoding="utf-8",
     )

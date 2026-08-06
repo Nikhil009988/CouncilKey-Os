@@ -61,7 +61,7 @@ def run_cmd(
             input=input_text,
             env=full_env,
         )
-        tail = ((proc.stdout or "") + (proc.stderr or ""))[-600:]
-        return proc.returncode == 0, tail.strip()
+        out = ((proc.stdout or "") + (proc.stderr or "")).strip()
+        return proc.returncode == 0, out
     except Exception as exc:
         return False, str(exc)

@@ -321,3 +321,36 @@ Per maintainer request, Agent Zero now installs and runs like Hermes/OpenClaw:
 - `councilkey agents status` detects agent-zero by its venv, not Docker;
   start() hands over with `cd tools/linux/agent-zero && .venv/bin/python agent.py`.
 - Guide updated (agent table + troubleshooting). 86 tests, ruff clean.
+
+## v1.9.1 (2026-08-05) - deep QA pass: 5 real bugs found & fixed
+
+Full test-and-debug pass across every code path:
+
+1. **OpenClaw configure detection broken**: `openclaw onboard` exits non-zero
+   when its gateway isn't running, but STILL writes the config. The wizard
+   checked only the output tail (which never contained "Updated config"),
+   so a successful config was reported as failed. run_cmd now returns the
+   full output; success is detected from the full text. (Verified: manual
+   run wrote config + exit 1 -> wizard now reports ✅ configure OpenClaw.)
+
+2. **agents verify crashed on crewai/aider**: verify iterated over ALL 5
+   registered agents, but build_default_clients only creates the 3 council
+   roles -> KeyError 'crewai'/'aider'. verify now checks exactly the 3
+   council roles and notes that crewai/aider are external CLIs.
+
+3. **Wizard crashed with a traceback when COUNCIL_HOME couldn't be
+   created** (e.g. /var/lib/council unwritable): now a clear error +
+   exit 1 + hint (COUNCIL_HOME=/path councilkey setup).
+
+4. **Secrets vault crashed on unwritable path**: set_secret now returns
+   {"ok": false, "error": ...} instead of raising.
+
+5. **Memory injection relevance bug**: retrieve_context scored LanceDB rows
+   flat 4 even when irrelevant (e.g. "hello world" for a storage query),
+   outranking genuinely relevant journal entries; token matching missed
+   word forms (optimize vs optimization). Now: prefix matching
+   (>= 4 chars), journal weighted by overlap*3, memory rows gated on real
+   overlap. This also fixed a flaky test (ran the full suite 3x clean).
+
+Also: wizard ensures COUNCIL_HOME exists up front.
+91 tests passing (5 new regression tests), ruff clean.

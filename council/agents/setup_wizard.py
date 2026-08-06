@@ -131,8 +131,10 @@ def _configure_openclaw(provider: str, key: str) -> dict[str, Any]:
         flag = "--" + info["choice"].replace("_", "-")
         cmd += [flag, key]
     ok, out = run_cmd(cmd, cwd=Path.home(), timeout=600)
-    success = ok or ("Updated config" in out or "Auth" in out and "ok" in out.lower())
-    return {"ok": success, "detail": out[-250:]}
+    # openclaw exits non-zero when its gateway isn't running, but the config
+    # is still written - treat a written config as success
+    success = ok or "Updated config" in out or ("Auth" in out and "ok" in out.lower())
+    return {"ok": success, "detail": (out[-250:] if out else "")}
 
 
 def run_wizard(
@@ -144,6 +146,14 @@ def run_wizard(
     """Run the interactive (or flag-driven) setup wizard. Returns exit code."""
     interactive = provider is None and api_key is None
     _banner()
+
+    # ensure the council home exists up front with a clear error
+    try:
+        COUNCIL_HOME.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        print(f"  ❌ cannot create the council home at {COUNCIL_HOME}: {exc}")
+        print("     set a writable location:  COUNCIL_HOME=/path/to/writable  councilkey setup")
+        return 1
 
     summary: dict[str, Any] = {
         "version": __version__,

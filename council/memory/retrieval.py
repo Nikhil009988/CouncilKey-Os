@@ -14,7 +14,19 @@ def _tokens(text: str) -> set[str]:
 
 
 def _overlap(a: str, b: str) -> int:
-    return len(_tokens(a) & _tokens(b))
+    """Token overlap with prefix matching (optimize ~ optimization).
+
+    Each pair of tokens (one from each side) counts once when they are
+    equal or share a prefix of >= 4 chars - this catches word forms
+    without needing a stemmer.
+    """
+    ta, tb = _tokens(a), _tokens(b)
+    score = 0
+    for x in ta:
+        for y in tb:
+            if x == y or (len(x) >= 4 and len(y) >= 4 and (x.startswith(y) or y.startswith(x))):
+                score += 1
+    return score
 
 
 def retrieve_context(prompt: str, top_k: int = 3) -> str:
@@ -28,7 +40,7 @@ def retrieve_context(prompt: str, top_k: int = 3) -> str:
             score = _overlap(prompt, entry.get("prompt", ""))
             if score:
                 final = (entry.get("final") or "")[:400].replace("\n", " ")
-                pieces.append((score, f"[journal {entry.get('file', '')}] {final}"))
+                pieces.append((score * 3, f"[journal {entry.get('file', '')}] {final}"))
     except Exception:
         pass
 
@@ -46,7 +58,9 @@ def retrieve_context(prompt: str, top_k: int = 3) -> str:
         if result.get("ok"):
             for row in result.get("results", []):
                 text = (row.get("text") or "")[:400].replace("\n", " ")
-                pieces.append((4, f"[memory] {text}"))
+                ov = _overlap(prompt, text)
+                if ov:  # only include memory rows that share real terms
+                    pieces.append((1 + ov, f"[memory] {text}"))
     except Exception:
         pass
 
