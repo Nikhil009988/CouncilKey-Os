@@ -436,3 +436,27 @@ Error-hunt across the whole repo found and fixed:
   Docker". All updated.
 - Full re-verification: 94 tests, ruff clean, compile OK, shell syntax
   OK, 35/35 live endpoints, no stale branch/flag references anywhere.
+
+## v1.10.0 (2026-08-05) - complete Windows coverage (user has Windows only)
+
+Per user report (Windows-only machine), every user-facing task now has a
+native Windows path:
+
+1. **Windows pendrive builder**: new `scripts/pendrive-setup.ps1`
+   (copy project + portable venv + START.bat + autorun.inf on the stick).
+2. **Windows one-liner installer**: new `install.ps1`
+   (`iex (irm .../main/install.ps1)`).
+3. **`councilkey pendrive` is platform-aware**: runs the .ps1 on Windows,
+   the .sh on Linux/macOS.
+4. **Fixed broken START.bat env parsing**: it previously read a
+   bash-style `.pendrive.env` (`export X=...`) with `for /f ... set "%%L"`
+   which creates a garbage variable in cmd. Both launchers now DERIVE
+   `COUNCIL_HOME` from their own location (`%~dp0council-data` in cmd,
+   `$STICK/council-data` in bash) - no config file, works everywhere.
+   Verified: built a stick, booted it, server used the stick's data dir.
+5. **Hermes on Windows**: official installer is PowerShell-based; the
+   installer now tries the pip fallback (`pip install hermes-agent`)
+   first, and only then prints the PowerShell one-liner hint.
+6. README: "What's Windows vs Linux/macOS" table + Windows-only note;
+   guide: Windows pendrive command + Windows-only guidance.
+7. 3 new tests (97 total), ruff clean.

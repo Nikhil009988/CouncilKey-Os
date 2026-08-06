@@ -225,8 +225,17 @@ def _install_official(info: dict[str, Any]) -> dict[str, Any]:
                 "error": f"could not install hermes ({exc}); pip fallback also failed: {tail[:200]}",
                 "hint": "run it manually:\n  Linux/macOS: curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash\n  Windows:      iex (irm https://hermes-agent.nousresearch.com/install.ps1)"}
     if sys.platform == "win32":
+        # Windows: the official installer is a PowerShell script; prefer the
+        # pip fallback (same official package) since it works non-interactively
+        print("  ⚠ the official installer is PowerShell-based - falling back to pip install hermes-agent")
+        ok, tail = run_cmd([sys.executable, "-m", "pip", "install", "-q", "hermes-agent"],
+                           cwd=REPO_ROOT, timeout=1200)
+        if ok:
+            return {"ok": True, "name": "hermes",
+                    "steps": [{"step": "pip install hermes-agent", "ok": True, "detail": "installed (fallback)"}],
+                    "next": "hermes setup   # guided configuration"}
         return {"ok": False, "name": "hermes",
-                "error": "run the official PowerShell installer on Windows",
+                "error": f"pip fallback failed: {tail[:200]}",
                 "hint": "iex (irm https://hermes-agent.nousresearch.com/install.ps1)"}
     print("  running the official installer (this can take several minutes)...")
     ok, tail = run_cmd(["bash"], cwd=Path.home(), timeout=1800, input_text=script)

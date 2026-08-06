@@ -30,8 +30,9 @@ Build the whole thing onto a USB stick with ONE command:
 ./scripts/pendrive-setup.sh /media/USB            # Linux/macOS
 # or from anywhere:
 councilkey pendrive /media/USB
-# Windows:
-#   councilkey pendrive E:\   (PowerShell)
+# Windows (PowerShell):
+powershell -ExecutionPolicy Bypass -File scripts\pendrive-setup.ps1 -Path E:\
+# or:  .\councilkey.bat pendrive E:\
 ```
 
 What it puts on the stick:
@@ -66,6 +67,16 @@ git clone https://github.com/Nikhil009988/CouncilKey-Os.git
 cd CouncilKey-Os
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 ```
+
+> **Windows-only user?** Everything you need is native PowerShell +
+> `councilkey.bat` (use `.\councilkey.bat` with the `.\` prefix). The
+> `Makefile`, `deploy/` (systemd service) and `scripts/build-*.sh` are
+> Linux/server extras — you can ignore them entirely. The pendrive build
+> on Windows uses `scripts\pendrive-setup.ps1`:
+> ```powershell
+> powershell -ExecutionPolicy Bypass -File scripts\pendrive-setup.ps1 -Path E:\ -Wizard
+> # or:  .\councilkey.bat pendrive E:\ --wizard
+> ```
 
 ### Option B — Linux / macOS (one command)
 

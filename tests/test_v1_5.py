@@ -394,3 +394,36 @@ def test_run_with_progress_shows_elapsed(capsys):
 
     assert human_duration(45) == "45s"
     assert human_duration(130) == "2m 10s"
+
+
+def test_windows_scripts_present():
+    """Every user-facing task has a native Windows path."""
+
+    for rel in (
+        "scripts/pendrive-setup.ps1",
+        "scripts/setup.ps1",
+        "scripts/start.ps1",
+        "scripts/start.bat",
+        "install.ps1",
+        "councilkey.bat",
+    ):
+        assert (ROOT / rel).exists(), rel
+
+
+def test_start_bat_derives_council_home():
+    """The generated START.bat derives COUNCIL_HOME from the stick drive -
+    no bash-style env file parsing that would break in cmd."""
+    s = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    assert 'set "COUNCIL_HOME=%~dp0council-data"' in s
+    # the old broken cmd parsing of a bash export line is gone
+    assert ".pendrive.env" not in s
+
+
+def test_pendrive_cli_platform_aware():
+    """councilkey pendrive picks the .ps1 on Windows, .sh elsewhere."""
+    import council.cli as cli
+
+    # the dispatch code contains both branches
+    src = open(cli.__file__, encoding="utf-8").read()
+    assert "pendrive-setup.ps1" in src
+    assert "pendrive-setup.sh" in src

@@ -118,10 +118,26 @@ You ask ──► 3 agents answer ──► council votes ──► journal + me
 
 ## CLI reference
 
-> **Windows note (PowerShell):** run it with the `.\` prefix —
+> **Windows note (PowerShell):** run the CLI with the `.\` prefix —
 > `.\councilkey.bat setup` — because PowerShell won't execute files in the
 > current folder without it (a security default). Or use the full path:
 > `.\venv\Scripts\councilkey.exe`. Linux/macOS: `./councilkey`.
+
+### What's Windows vs Linux/macOS
+
+| Task | Windows | Linux / macOS |
+|---|---|---|
+| Install | `powershell -ExecutionPolicy Bypass -File scripts\setup.ps1` | `./scripts/setup.sh` |
+| One-liner | `iex (irm https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/main/install.ps1)` | `curl -fsSL …/install.sh \| bash` |
+| CLI | `.\councilkey.bat` (or `.\venv\Scripts\councilkey.exe`) | `./councilkey` |
+| Start | `scripts\start.bat` or `scripts\start.ps1` | `./scripts/start.sh` |
+| Pendrive build | `powershell -ExecutionPolicy Bypass -File scripts\pendrive-setup.ps1 -Path E:\` (or `councilkey.bat pendrive E:\`) | `./scripts/pendrive-setup.sh /media/USB` |
+| Service install | run `councilkey.bat serve` (or Task Scheduler) | `sudo ./deploy/install.sh` (systemd) |
+| Build scripts | n/a (use pip directly) | `make deps && make test` |
+
+> **Only have Windows?** Everything you need is native PowerShell + the
+> `.bat` launchers above. The `Makefile`, `deploy/` (systemd) and
+> `scripts/build-*.sh` are Linux/server extras — you can ignore them.
 >
 > **Cloning fresh?** `git clone` puts you on `main` automatically, so
 > `git pull` always gets the latest. If you're on a leftover branch, do:

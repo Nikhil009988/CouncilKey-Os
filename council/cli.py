@@ -508,10 +508,17 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "pendrive":
         import subprocess
 
-        script = ROOT / "scripts" / "pendrive-setup.sh"
-        cmd = [str(script), args.path]
-        if args.wizard:
-            cmd.append("--wizard")
+        # Windows users get the PowerShell builder; unix gets bash
+        if os.name == "nt":
+            script = ROOT / "scripts" / "pendrive-setup.ps1"
+            cmd = ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Path", args.path]
+            if args.wizard:
+                cmd.append("-Wizard")
+        else:
+            script = ROOT / "scripts" / "pendrive-setup.sh"
+            cmd = [str(script), args.path]
+            if args.wizard:
+                cmd.append("--wizard")
         sys.exit(subprocess.call(cmd))
     elif args.command == "setup":
         from council.agents.setup_wizard import run_wizard
