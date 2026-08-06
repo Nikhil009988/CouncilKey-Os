@@ -233,6 +233,7 @@ is kept.
 | `provider error: TLS/SSL` | No internet to the provider, or a custom `*_BASE_URL` is unreachable |
 | Hermes installer won't download | Run it manually: `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash` |
 | Agent Zero won't install | It needs Docker — install Docker Desktop, then use the A0 Launcher (agent-zero.ai) |
+| Does Agent Zero work like Hermes/OpenClaw? | No — Hermes/OpenClaw run standalone (Python/npm), Agent Zero is a Dockerized Linux desktop by design. Docker is required for it; the council itself works without any of them |
 | `llm pull` fails | Check internet; try a smaller model: `councilkey llm pull qwen2.5:1.5b` |
 | Ollama installed but "not running" | Start it: `ollama serve` (Linux/macOS) or the Ollama app (Windows) |
 | Port 8443 busy | `COUNCIL_PORT=9000 ./scripts/start.sh` |

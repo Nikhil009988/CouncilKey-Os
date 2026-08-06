@@ -198,19 +198,19 @@ def cmd_agents(action: str, names: list[str]) -> int:
 
     if action == "status":
         data = status(names)
-        print(f"{'agent':<12}{'state':<16}{'install':<22}{'binary'}")
-        print("-" * 60)
+        print(f"{'agent':<12}{'state':<16}{'install':<24}{'runtime'}")
+        print("-" * 66)
         for name, info in data.items():
             mark = "🟡" if info["state"] == "installed" else "⚪"
-            print(f"{mark} {name:<11}{info['state']:<16}{info['install']:<22}{info['binary']}")
-        print("-" * 60)
+            print(f"{mark} {name:<11}{info['state']:<16}{info['install']:<24}{info['runtime']}")
+        print("-" * 66)
         missing = [n for n, i in data.items() if i["state"] == "not installed"]
         if missing:
             print("not installed:", ", ".join(missing))
             print("install with: councilkey agents install")
-        print("\nnote: these are interactive agents (CLI / messaging / Docker).")
-        print("the council itself always answers via the local LLM:")
-        print("      councilkey llm status   /   councilkey llm pull")
+        print("\nnote: hermes + openclaw run standalone; agent-zero needs Docker.")
+        print("the council itself always answers via your model provider:")
+        print("      councilkey setup   /   councilkey agents env")
         return 0
 
     if action == "install":

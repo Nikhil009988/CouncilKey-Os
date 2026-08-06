@@ -52,7 +52,7 @@ AGENTS: dict[str, dict[str, Any]] = {
         "install": "docker-launcher",
         "bin": "a0",
         "role": "builder & review (external, optional)",
-        "runtime": "docker",
+        "runtime": "docker (required - unlike hermes/openclaw)",
         "start_hint": "Agent Zero runs where Docker runs. Use the A0 Launcher (see agent-zero.ai)\nor: docker compose up in the agent-zero source tree.",
     },
 }
