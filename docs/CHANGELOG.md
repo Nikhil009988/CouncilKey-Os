@@ -114,3 +114,35 @@ answers + vote + journal.
 - 67 tests passing · ruff clean · all 53 modules import · shell syntax OK
 - Endpoint sweep 65/65 → 200 · integration 14/14 (roles, decompose, debate,
   SSE, WS chat, terminal guard, cache, tasks, audit)
+
+## v1.5.0 (2026-08-05) - Official installer setup, researched from the agents' own code
+
+### What changed
+Studied the actual Hermes / OpenClaw / Agent Zero repositories (their
+READMEs, entrypoints and install docs) and rebuilt setup around their
+official methods:
+
+- **Hermes**: official one-liner (`curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash` / PowerShell variant) instead of git clone
+- **OpenClaw**: `npm install -g openclaw@latest` (their docs: the repo is a
+  pnpm workspace — plain `npm install` of a clone is unsupported, which is
+  exactly what caused the old "missing dist/entry.mjs" error)
+- **Agent Zero**: Docker-based; installer now detects Docker and points to
+  the A0 Launcher / `docker compose up` (clones source only for Docker)
+- `councilkey agents status` now reports the real detection: binary on PATH
+  (`hermes`, `openclaw`), Docker for agent-zero
+- `councilkey agents install` runs the official installers; `start` hands
+  interactive agents over to their own UIs with the right command
+- `setup.sh` / `setup.ps1` simplified: local LLM first (that's what makes
+  the council answer), external agents second (optional, official
+  installers); flags renamed `--no-agents` / `--no-llm`
+- Docs: EASY_SETUP_GUIDE explains the two layers (council on local LLM vs
+  optional external interactive agents) and why official installers are used
+
+### Verified in this workspace
+- OpenClaw installed for real via `councilkey agents install openclaw`
+  (npm registry reachable) -> `OpenClaw 2026.7.1-2` on PATH, status shows
+  installed
+- Hermes installer path fails gracefully here (sandbox blocks the domain)
+  with the exact manual command printed - works on real machines
+- Agent Zero path prints the Docker requirement clearly
+- 67 tests passing, ruff clean

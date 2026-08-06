@@ -51,13 +51,13 @@ curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/01
 | Step | What happens | Time (first run) |
 |---|---|---|
 | 1 | Creates a Python venv and installs CouncilKey-Os (`councilkey` CLI) | ~1 min |
-| 2 | **Downloads the 3 agents** (Hermes, OpenClaw, Agent Zero) from their official GitHub repos into `tools/linux/` and installs their dependencies (OpenClaw also gets the prebuilt `openclaw` CLI) | 5–15 min |
-| 3 | **Installs Ollama** (the local AI server; `winget` on Windows) and **pulls `qwen2.5:3b`** (~1.9 GB) — this is what makes the 3 agents genuinely answer | 5–15 min |
+| 2 | **Installs Ollama** (the local AI server; `winget` on Windows) and **pulls `qwen2.5:3b`** (~1.9 GB) — this is what makes the 3 agents genuinely answer (real local inference, offline, no API keys) | 5–15 min |
+| 3 | **Optional:** installs the 3 external agents (Hermes, OpenClaw, Agent Zero) using **each project's official installer** (`curl install.sh` for Hermes, `npm install -g openclaw@latest` for OpenClaw, Docker/A0 Launcher for Agent Zero) | 5–10 min |
 | 4 | Runs the test suite | ~1 min |
-| 5 | **Verifies the council** by asking each agent a real question | ~30 s |
+| 5 | **Verifies the council** by asking each role a real question | ~30 s |
 
-Flags if you ever need them: `--skip-agents` (no agent downloads),
-`--no-llm` (no Ollama/model), `--skip-tests`.
+Flags if you ever need them: `--no-agents` (skip external agents),
+`--no-llm` (skip Ollama/model), `--skip-tests`.
 
 > If a step fails because of a temporary network problem, just re-run
 > `./scripts/setup.sh` — completed steps are skipped.
@@ -120,41 +120,43 @@ curl http://localhost:8443/api/status        # agents + modes + models
 
 ## 4. How the agents really work
 
-The council has **two ways** for an agent to answer, in priority order:
+Two layers, and both are real:
 
-1. **External agent gateway** (optional, expert mode) — if you run the real
-   Hermes / OpenClaw / Agent Zero servers, point the council at them:
-   ```bash
-   export COUNCIL_HERMES_URL=http://127.0.0.1:18790
-   export COUNCIL_OPENCLAW_URL=http://127.0.0.1:18789
-   export COUNCIL_AGENTZERO_URL=http://127.0.0.1:50001
-   ./scripts/start.sh
-   ```
-   Each agent's official README documents its own start command; e.g.
-   OpenClaw: `openclaw` (prebuilt CLI installed by setup), Hermes:
-   `cd tools/linux/hermes && uv run hermes`, Agent Zero:
-   `cd tools/linux/agent-zero && python agent.py`.
+### Layer 1 — the council (always works, this is the product)
+The three council roles run on a **local LLM (Ollama)** with distinct system
+prompts — no API keys, offline:
 
-2. **Local LLM (the default)** — when no gateway answers, Ollama answers with
-   a distinct system prompt per role:
-   - **Hermes** (memory & analysis) — `qwen2.5:3b`
-   - **OpenClaw** (action & execution) — `qwen2.5:3b`
-   - **Agent Zero** (builder & review) — `deepseek-coder:1.3b` (falls back to `qwen2.5:3b`)
+| Role | Agent | Default model |
+|---|---|---|
+| memory & analysis | Hermes | qwen2.5:3b |
+| action & execution | OpenClaw | qwen2.5:3b |
+| builder & review | Agent Zero | deepseek-coder:1.3b (falls back to qwen2.5:3b) |
 
-   This works offline and needs no API keys. `councilkey agents verify` shows
-   you exactly which backend each agent is using.
+This is what answers in the dashboard/API. `councilkey agents verify` asks
+each role a real question and shows the backend (gateway / local-llm / mock).
 
-3. **Mock** — only if neither exists. The dashboard and CLI label it honestly
-   (`⚪ mock`); it never pretends to be real.
+### Layer 2 — the external agents (optional, interactive tools)
+Hermes, OpenClaw and Agent Zero are interactive chat agents with their own
+UIs (CLI, messaging platforms, Docker desktop). The council uses them by
+name as roles, but you interact with them directly through their own
+interfaces. Each is installed with its **official installer**:
 
-**Verify everything is live:**
+| Agent | Official install | Run it |
+|---|---|---|
+| Hermes | `curl -fsSL https://hermes-agent.nousresearch.com/install.sh \| bash` (Linux/macOS) · `iex (irm https://hermes-agent.nousresearch.com/install.ps1)` (Windows) | `hermes` → interactive chat · `hermes gateway` → messaging |
+| OpenClaw | `npm install -g openclaw@latest` | `openclaw onboard --install-daemon` → guided onboarding |
+| Agent Zero | Docker + the A0 Launcher (agent-zero.ai) | runs a full Linux desktop in Docker |
 
-```bash
-councilkey llm status     # 🟢 running + at least one model listed
-councilkey agents verify  # each agent replies with a real answer
-```
+`councilkey agents install` runs these official installers for you.
+If an external agent exposes an HTTP endpoint, point the council at it with
+`COUNCIL_HERMES_URL` / `COUNCIL_OPENCLAW_URL` / `COUNCIL_AGENTZERO_URL` and
+it becomes the 🟢 gateway backend for that role.
 
----
+> Why not clone the repos instead? Their own docs say so: OpenClaw is a
+> pnpm workspace (plain `npm install` of the clone is unsupported — that's
+> what caused the "missing dist/entry.mjs" error), Hermes ships its own
+> installer, and Agent Zero needs Docker. Official installers are the
+> supported path for all three.
 
 ## 5. Where your data lives
 
@@ -174,8 +176,10 @@ is kept.
 
 | Symptom | Fix |
 |---|---|
-| `openclaw` fails with "missing dist/entry.mjs" | The source clone is unbuilt — `npm install -g openclaw@latest` (setup does this automatically) |
+| `openclaw` fails with "missing dist/entry.mjs" | That error only happens with a source clone (unbuilt pnpm tree). The official package fixes it: `npm install -g openclaw@latest` (setup does this automatically) |
 | Dashboard shows all agents ⚪ mock | No LLM running: `councilkey llm status` → `councilkey llm install` → `councilkey llm pull` |
+| Hermes installer won't download | Run it manually: `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash` |
+| Agent Zero won't install | It needs Docker — install Docker Desktop, then use the A0 Launcher (agent-zero.ai) |
 | `llm pull` fails | Check internet; try a smaller model: `councilkey llm pull qwen2.5:1.5b` |
 | Ollama installed but "not running" | Start it: `ollama serve` (Linux/macOS) or the Ollama app (Windows) |
 | Port 8443 busy | `COUNCIL_PORT=9000 ./scripts/start.sh` |

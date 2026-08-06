@@ -12,9 +12,13 @@ def test_agents_installer_known_agents():
     from council.agents.installer import AGENTS
 
     assert set(AGENTS) == {"hermes", "openclaw", "agent-zero"}
-    assert AGENTS["hermes"]["port"] == 18790
-    assert AGENTS["openclaw"]["port"] == 18789
-    assert AGENTS["agent-zero"]["port"] == 50001
+    # each agent documents its official install method
+    assert AGENTS["hermes"]["install"] == "official-installer"
+    assert AGENTS["openclaw"]["install"] == "npm"
+    assert AGENTS["agent-zero"]["install"] == "docker-launcher"
+    # official URLs/commands are present
+    assert AGENTS["hermes"]["installer_url"].startswith("https://")
+    assert AGENTS["openclaw"]["package"] == "openclaw@latest"
 
 
 def test_agents_status_shape():
@@ -24,9 +28,9 @@ def test_agents_status_shape():
     assert set(data) == {"hermes", "openclaw", "agent-zero"}
     for name, info in data.items():
         assert "installed" in info
-        assert "running" in info
-        assert "port" in info
-        assert info["state"] in ("running", "installed", "not installed")
+        assert "binary" in info
+        assert "install" in info
+        assert info["state"] in ("installed", "not installed")
 
 
 def test_agents_install_unknown_name():
@@ -45,6 +49,8 @@ def test_agents_prereqs_shape():
     assert "git" in prereqs
     assert "node" in prereqs
     assert "npm" in prereqs
+    assert "docker" in prereqs
+    assert "curl" in prereqs
 
 
 def test_api_agents_prereqs():
@@ -55,6 +61,7 @@ def test_api_agents_prereqs():
     client = TestClient(app)
     data = client.get("/api/agents/prereqs").json()
     assert "git" in data
+    assert "docker" in data
 
 
 def test_api_task_install_agent_unknown():

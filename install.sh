@@ -3,9 +3,10 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
 #
-# Clones the repo (into ~/councilkey-os by default) and runs the full setup,
-# which includes downloading the 3 agents (Hermes, OpenClaw, Agent Zero)
-# automatically. Use --skip-agents to skip the agent download.
+# Clones the repo (into ~/councilkey-os by default) and runs the full setup:
+# Python env + local LLM (Ollama, makes the council answer) + optional
+# external agents via their official installers.
+# Flags: --no-agents, --no-llm, --skip-tests
 set -euo pipefail
 
 DEST="${1:-$HOME/councilkey-os}"

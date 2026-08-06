@@ -182,7 +182,12 @@ def cmd_llm(action: str, model: str | None) -> int:
 
 
 def cmd_agents(action: str, names: list[str]) -> int:
-    """Manage the 3 agents: status / install / start."""
+    """Manage the 3 external agents: status / install / start / verify.
+
+    The external agents (Hermes, OpenClaw, Agent Zero) are optional add-ons
+    installed with their own official installers. The council itself always
+    works via the local-LLM role agents (councilkey llm status/pull).
+    """
     from council.agents.installer import AGENTS, install, start, status
 
     selected = names or list(AGENTS)
@@ -193,38 +198,39 @@ def cmd_agents(action: str, names: list[str]) -> int:
 
     if action == "status":
         data = status(names)
-        print(f"{'agent':<11}{'role':<8}{'port':<7}{'state'}")
-        print("-" * 40)
+        print(f"{'agent':<12}{'state':<16}{'install':<22}{'binary'}")
+        print("-" * 60)
         for name, info in data.items():
-            mark = {"running": "🟢", "installed": "🟡", "not installed": "⚪"}.get(info["state"], "?")
-            print(f"{mark} {name:<10}{info['role']:<8}{info['port']:<7}{info['state']}")
-        print("-" * 40)
+            mark = "🟡" if info["state"] == "installed" else "⚪"
+            print(f"{mark} {name:<11}{info['state']:<16}{info['install']:<22}{info['binary']}")
+        print("-" * 60)
         missing = [n for n, i in data.items() if i["state"] == "not installed"]
         if missing:
             print("not installed:", ", ".join(missing))
-            print("download them with: councilkey agents install")
+            print("install with: councilkey agents install")
+        print("\nnote: these are interactive agents (CLI / messaging / Docker).")
+        print("the council itself always answers via the local LLM:")
+        print("      councilkey llm status   /   councilkey llm pull")
         return 0
 
     if action == "install":
-        prereqs = __import__("council.agents.installer", fromlist=["check_prereqs"]).check_prereqs()
-        if not prereqs["git"]:
-            print("❌ git not found - install git first")
-            return 1
-        if any(n in selected for n in ("openclaw",)) and not prereqs["npm"]:
-            print("⚠ npm not found - OpenClaw needs Node.js/npm (its deps step will fail)")
         failed = False
         for name in selected:
-            print(f"\n== Installing {name} ({AGENTS[name]['role']}) ==")
+            print(f"\n== Installing {name} ==")
             result = install(name)
-            for step in result.get("steps", []):
-                mark = "✅" if step.get("ok") else "❌"
-                print(f"  {mark} {step.get('step')}: {(step.get('detail') or '')[:120]}")
             if result.get("ok"):
-                print(f"  -> {name} ready at {result['dir']}")
+                for step in result.get("steps", []):
+                    mark = "✅" if step.get("ok") else "❌"
+                    print(f"  {mark} {step.get('step')}: {(step.get('detail') or '')[:120]}")
+                if result.get("already_installed"):
+                    print(f"  -> {name} is already installed")
+                if result.get("next"):
+                    print(f"  next: {result['next']}")
             else:
                 failed = True
                 print(f"  ❌ {result.get('error', 'install failed')}")
-                print(f"     hint: {result.get('hint', '')}")
+                if result.get("hint"):
+                    print(f"     hint: {result['hint']}")
         print("\nAgents status:")
         cmd_agents("status", [])
         return 1 if failed else 0
@@ -235,20 +241,25 @@ def cmd_agents(action: str, names: list[str]) -> int:
             print(f"== starting {name} ==")
             result = start(name)
             if result.get("ok"):
-                print(f"  ✅ {name} up on port {result.get('port')} (log: {result.get('log', '-')})")
+                if result.get("interactive"):
+                    print(f"  ✅ {name} is an interactive agent - run it yourself:")
+                    print(f"     {result.get('hint', '')}")
+                else:
+                    print(f"  ✅ {name}: {result.get('detail', 'ok')}")
             else:
                 failed = True
                 print(f"  ❌ {result.get('error')}")
-                print(f"     hint: {result.get('hint', '')}")
+                if result.get("hint"):
+                    print(f"     hint: {result['hint']}")
         return 1 if failed else 0
 
     if action == "verify":
-        """Real smoke test: ask every agent and show what backend answered."""
+        """Real smoke test: ask every council role and show what backend answered."""
         import asyncio
 
         from council.orchestrator.agents import build_default_clients, client_modes
 
-        print("== verifying the 3 agents (real ask) ==")
+        print("== verifying the council (real ask) ==")
         modes = client_modes()
         clients = build_default_clients()
 

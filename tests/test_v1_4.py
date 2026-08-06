@@ -129,10 +129,15 @@ def test_api_status_has_modes():
     assert "models" in data["ollama"]
 
 
-def test_openclaw_prebuilt_cli_step():
-    from council.agents.installer import _install_openclaw_cli
+def test_openclaw_official_npm_installer():
+    from council.agents.installer import _install_npm
 
-    assert callable(_install_openclaw_cli)
+    # openclaw is installed via its official npm package
+    assert callable(_install_npm)
+    # the helper for the official hermes installer exists too
+    from council.agents.installer import _install_official
+
+    assert callable(_install_official)
 
 
 def test_windows_scripts_exist():

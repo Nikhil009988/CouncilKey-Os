@@ -73,10 +73,10 @@ Listed in the order the project was built:
 - **Memory injection (RAG-lite)** — relevant past decisions auto-injected into new prompts
 - **Terminal command guard** — `rm -rf /`, `mkfs`, `dd`, fork bombs blocked before reaching the shell
 
-### v1.3 — One-command setup with automatic agent download (latest)
-- `./scripts/setup.sh` — installs CouncilKey-Os **and downloads the 3 agents** (Hermes, OpenClaw, Agent Zero) from their official repos into `tools/linux/`, installs their dependencies, runs the tests, and shows the final status
+### v1.3 — One-command setup
+- `./scripts/setup.sh` — installs CouncilKey-Os, the local LLM (Ollama + model) and the external agents via their **official installers**
 - `install.sh` — one-liner installer (`curl | bash`)
-- `councilkey agents` CLI — `status` (installed? running? which port), `install` (download + deps), `start` (best-effort launcher with hints)
+- `councilkey agents` CLI — `status` (installed? which method?), `install` (official installers), `start` (interactive agents hand over to their own UI), `verify`
 - Agents can also be installed from the API as background tasks: `POST /api/tasks {"kind": "install_agent", "name": "hermes"}`
 
 ### v1.4 — Agents that actually work (latest)
@@ -134,7 +134,7 @@ Or as a one-liner (clones to `~/councilkey-os`, runs the full setup):
 curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/019fd1ec-councilkey-os/install.sh | bash
 ```
 
-**The setup downloads the 3 agents AND installs a local LLM (Ollama + qwen2.5:3b) — so the agents genuinely answer, no API keys, no cloud.** If you only want the orchestrator: `./scripts/setup.sh --skip-agents --no-llm`. Manage things anytime:
+**The setup installs a local LLM (Ollama + qwen2.5:3b) — so the 3 council roles genuinely answer, no API keys, no cloud.** The external agents (Hermes, OpenClaw, Agent Zero) are optional interactive tools, installed via each project's official installer (`setup.sh` does it for you; use `--no-agents` to skip). Manage things anytime:
 
 ```
 councilkey agents status | install | start | verify
