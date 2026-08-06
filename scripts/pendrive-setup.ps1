@@ -139,6 +139,9 @@ setlocal
 set "STICK=%~dp0"
 set "OPENCLAW_STATE_DIR=%STICK%council-data\openclaw"
 set "OPENCLAW_CONFIG_PATH=%STICK%council-data\openclaw\openclaw.json"
+set "OPENCLAW_WORKSPACE_DIR=%STICK%council-data\openclaw\workspace"
+set "OPENCLAW_HOME=%STICK%council-data\openclaw\home"
+if not exist "%STICK%council-data\openclaw\workspace" mkdir "%STICK%council-data\openclaw\workspace"
 if exist "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" (
   "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" %*
 ) else (

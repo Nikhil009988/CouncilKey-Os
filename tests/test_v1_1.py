@@ -309,7 +309,7 @@ def test_browser_fetch_rejects_bad_urls():
 def test_cli_version():
     from council.cli import cmd_version
 
-    assert cmd_version() == "1.13.0"
+    assert cmd_version() == "1.13.1"
 
 
 def test_cli_console_script_installed():
@@ -317,7 +317,7 @@ def test_cli_console_script_installed():
     if not exe.exists():
         pytest.skip("console script not installed")
     out = subprocess.run([str(exe), "version"], capture_output=True, text=True, check=True)
-    assert out.stdout.strip() == "1.13.0"
+    assert out.stdout.strip() == "1.13.1"
 
 
 # ---------------------------------------------------------------- scripts

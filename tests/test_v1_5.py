@@ -504,3 +504,17 @@ def test_verify_checks_external_binaries():
     assert "external agent binaries" in src
     assert "2/2" in src
     assert "--version" in src
+
+
+def test_openclaw_launcher_redirects_workspace():
+    """RUN-OPENCLAW.bat / run-openclaw.sh must redirect OpenClaw's WORKSPACE
+    + HOME to the stick (not just state) - verified from OpenClaw's source:
+    workspace resolves from OPENCLAW_WORKSPACE_DIR."""
+    sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    assert "OPENCLAW_WORKSPACE_DIR" in sh
+    assert "OPENCLAW_HOME" in sh
+    assert "council-data/openclaw/workspace" in sh
+
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    assert "OPENCLAW_WORKSPACE_DIR" in ps
+    assert "OPENCLAW_HOME" in ps

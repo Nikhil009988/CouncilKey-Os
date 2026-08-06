@@ -549,3 +549,23 @@ necessary things so the agents run.
 - Verified live: hermes ✅ v0.19.0, openclaw ✅ 2026.7.1-2, crewai ✅ 1.15.12,
   aider ✅ 0.86.2; --auto with and without a key both work.
 - 2 new tests (103 total), ruff clean.
+
+## v1.13.1 (2026-08-05) - OpenClaw workspace fully on the stick
+
+User report: OpenClaw said "I'm running locally on your PC... C:\Users\nikhil\.openclaw\workspace" even after the pendrive setup.
+
+Root cause (from OpenClaw's source): the workspace resolves from
+OPENCLAW_WORKSPACE_DIR, NOT just OPENCLAW_STATE_DIR - our launchers only
+set the latter, so the workspace stayed on the PC.
+
+Fixes:
+- run-openclaw.sh + RUN-OPENCLAW.bat now set OPENCLAW_STATE_DIR,
+  OPENCLAW_CONFIG_PATH, OPENCLAW_WORKSPACE_DIR and OPENCLAW_HOME, all
+  pointing at council-data/openclaw on the stick, and create the
+  workspace/home dirs.
+- Fixed a mangled backslash bug in the sh-builder's RUN-OPENCLAW.bat
+  template (heredoc ate the \ in tools\openclaw - the generated bat was
+  broken).
+- Verified: built a stick, launcher runs OpenClaw 2026.7.1-2 from the
+  stick, workspace + home dirs created on the stick, stick boots.
+- 1 new test (104 total), ruff clean.

@@ -182,17 +182,18 @@ fi
 cat > "$USB/RUN-OPENCLAW.bat" <<'EOF'
 @echo off
 rem RUN-OPENCLAW.bat - OpenClaw from the pendrive (Windows)
-rem Everything OpenClaw knows (workspace, config, memory) stays on the stick.
+rem Every path OpenClaw uses (state, config, workspace, home) is on the stick.
 setlocal
 set "STICK=%~dp0"
 set "OPENCLAW_STATE_DIR=%STICK%council-data\openclaw"
 set "OPENCLAW_CONFIG_PATH=%STICK%council-data\openclaw\openclaw.json"
-if exist "%STICK%CouncilKey-Os	ools\openclaw
-ode_modules\.bin\openclaw.cmd" (
-"%STICK%CouncilKey-Os	ools\openclaw
-ode_modules\.bin\openclaw.cmd" %*
+set "OPENCLAW_WORKSPACE_DIR=%STICK%council-data\openclaw\workspace"
+set "OPENCLAW_HOME=%STICK%council-data\openclaw\home"
+if not exist "%STICK%council-data\openclaw\workspace" mkdir "%STICK%council-data\openclaw\workspace"
+if exist "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" (
+  "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" %*
 ) else (
-openclaw %*
+  openclaw %*
 )
 endlocal
 EOF
@@ -204,6 +205,9 @@ set -euo pipefail
 STICK="$(cd "$(dirname "$0")" && pwd)"
 export OPENCLAW_STATE_DIR="$STICK/council-data/openclaw"
 export OPENCLAW_CONFIG_PATH="$STICK/council-data/openclaw/openclaw.json"
+export OPENCLAW_WORKSPACE_DIR="$STICK/council-data/openclaw/workspace"
+export OPENCLAW_HOME="$STICK/council-data/openclaw/home"
+mkdir -p "$OPENCLAW_WORKSPACE_DIR" "$OPENCLAW_HOME"
 if [ -x "$STICK/CouncilKey-Os/tools/openclaw/node_modules/.bin/openclaw" ]; then
 exec "$STICK/CouncilKey-Os/tools/openclaw/node_modules/.bin/openclaw" "$@"
 else
