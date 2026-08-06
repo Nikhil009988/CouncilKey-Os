@@ -86,7 +86,7 @@
         <span id="uptime-badge" class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">Uptime: --</span>
         <span id="mode-badge" class="px-3 py-1 rounded-full bg-council-600/10 border border-council-600/30 text-council-300">Mode: debate</span>
         <span id="storage-badge" class="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300">Storage: --</span>
-        <span id="llm-badge" class="px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300">LLM: --</span>
+        <span id="llm-badge" class="px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300">AI: --</span>
         <button id="key-btn" title="Set API key" class="px-3 py-1 rounded-full bg-council-700/40 border border-council-600/40 text-council-300">🔑</button>
       </div>
     </div>
@@ -103,6 +103,7 @@
       <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="vision">Vision+Voice</button>
       <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="tasks">Tasks</button>
       <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="intel">Intelligence</button>
+      <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="setup">Setup</button>
     </div>
 
     <!-- Council Tab -->
@@ -299,6 +300,25 @@
       <div>
         <div class="text-sm text-slate-400 mb-2">Audit Analytics</div>
         <pre id="audit-result" class="bg-council-800/60 border border-council-700/50 rounded-xl p-3 text-xs whitespace-pre-wrap"></pre>
+      </div>
+    </div>
+    <!-- Setup Tab -->
+    <div id="tab-setup" class="tab-panel hidden glass rounded-2xl p-6 space-y-4">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="text-sm text-slate-400">Setup status</div>
+        <button id="setup-refresh" class="px-3 py-1 rounded-lg bg-council-700 hover:bg-council-600 text-xs">Refresh</button>
+      </div>
+      <div id="setup-status" class="text-xs space-y-2"></div>
+      <div class="text-xs text-slate-500 space-y-1 border-t border-council-700/50 pt-3">
+        <div class="text-slate-400 font-semibold">Not configured? Run the setup wizard:</div>
+        <div class="font-mono">councilkey setup</div>
+        <div class="text-slate-500">It asks for the model provider (OpenAI / Anthropic / Gemini / OpenRouter),
+          stores the API key encrypted, and optionally installs the external agents.</div>
+        <div class="mt-2 text-slate-400 font-semibold">Useful commands</div>
+        <div class="font-mono">councilkey agents status      # external agents installed?</div>
+        <div class="font-mono">councilkey agents env         # export stored API keys</div>
+        <div class="font-mono">eval "$(councilkey agents env)"</div>
+        <div class="font-mono">councilkey agents verify      # real ask, shows the backend</div>
       </div>
     </div>
   </div>
@@ -578,7 +598,7 @@
 
     const MODE_META = {
       gateway:   { label: 'gateway',   cls: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300', dot: '🟢' },
-      'local-llm': { label: 'local-llm', cls: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300', dot: '🟡' },
+      provider:  { label: 'provider', cls: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300', dot: '🟡' },
       mock:      { label: 'mock',      cls: 'bg-slate-500/10 border-slate-500/30 text-slate-400', dot: '⚪' },
     };
 
@@ -603,16 +623,14 @@
         const agents = data.agents || {};
         document.getElementById('uptime-badge').textContent = 'Uptime: live';
         document.getElementById('mode-badge').textContent = 'Mode: ' + (data.council && data.council.mode ? data.council.mode : 'debate');
-        const ollama = data.ollama || {};
+        const provider = data.provider || {};
         const llmBadge = document.getElementById('llm-badge');
-        if (ollama.running && (ollama.models || []).length) {
-          llmBadge.textContent = 'LLM: ✓ ' + ollama.models[0];
+        if (provider.active) {
+          const pname = (provider.providers[provider.active] || {}).name || provider.active;
+          llmBadge.textContent = 'AI: ' + pname + ' · ' + (provider.active_model || '');
           llmBadge.className = 'px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300';
-        } else if (ollama.running) {
-          llmBadge.textContent = 'LLM: running, no model';
-          llmBadge.className = 'px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-300';
         } else {
-          llmBadge.textContent = 'LLM: none';
+          llmBadge.textContent = 'AI: no API key';
           llmBadge.className = 'px-3 py-1 rounded-full bg-slate-500/10 border border-slate-500/30 text-slate-400';
         }
         document.getElementById('agents-cards').innerHTML =
@@ -625,6 +643,31 @@
     }
     document.getElementById('agents-refresh').addEventListener('click', refreshStatus);
     refreshStatus(); setInterval(refreshStatus, 5000);
+
+    // ---- Setup tab ----
+    async function loadSetupStatus() {
+      const box = document.getElementById('setup-status');
+      try {
+        const r = await apiFetch('/api/setup/status');
+        const d = await r.json();
+        const prov = d.provider || {};
+        const rows = [];
+        rows.push('<div class="flex justify-between"><span class="text-slate-400">Model provider</span><span>' + (prov.active ? (prov.providers[prov.active] || {}).name + ' · ' + prov.active_model : '<span class="text-yellow-300">not configured</span>') + '</span></div>');
+        for (const [id, p] of Object.entries(prov.providers || {})) {
+          rows.push('<div class="flex justify-between pl-4"><span class="text-slate-500">' + p.name + '</span><span>' + (p.configured ? '✅ key stored' : '—') + '</span></div>');
+        }
+        const agents = d.agents || {};
+        rows.push('<div class="flex justify-between border-t border-council-700/50 pt-2"><span class="text-slate-400">External agents</span><span>' + Object.values(agents).filter(a => a.installed).length + '/3 installed</span></div>');
+        for (const [name, a] of Object.entries(agents)) {
+          rows.push('<div class="flex justify-between pl-4"><span class="text-slate-500">' + name + '</span><span>' + (a.installed ? '✅ installed (' + a.install + ')' : '—') + '</span></div>');
+        }
+        const s = d.setup_summary || {};
+        if (s.time) rows.push('<div class="flex justify-between border-t border-council-700/50 pt-2"><span class="text-slate-400">Last setup</span><span>' + s.time + '</span></div>');
+        box.innerHTML = rows.join('');
+      } catch (e) { box.innerHTML = '<div class="text-red-300">Failed to load: ' + e.message + '</div>'; }
+    }
+    document.getElementById('setup-refresh').addEventListener('click', loadSetupStatus);
+    loadSetupStatus();
 
     // ---- Tasks ----
     async function loadTasks() {

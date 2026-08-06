@@ -166,5 +166,5 @@ class MockAgentClient:
             role=self.role,
             response=f"[mock fallback] {prompt}",
             latency=0.0,
-            status="offline (mock) - install ollama + a model, or start the agent gateway",
+            status="offline (mock) - run 'councilkey setup' to add an API key, or start the agent gateway",
         )

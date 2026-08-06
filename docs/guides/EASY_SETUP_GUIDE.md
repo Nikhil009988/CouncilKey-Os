@@ -53,13 +53,12 @@ exactly what you need:
 
 | Prompt | What it does | Default |
 |---|---|---|
-| "Install Ollama + pull qwen2.5:3b?" | Installs the local AI server (winget on Windows) and downloads the model — this is what makes the council answer with real local inference | Yes |
-| "Choose model provider" | Local Ollama (free) · OpenAI · Anthropic · Gemini · OpenRouter · Skip | Local Ollama |
-| "API key" | If you picked a cloud provider, it asks for the key and stores it **encrypted** in the secrets vault (`councilkey agents env` exports them for the external agents) | — |
+| "Choose model provider" | OpenAI · Anthropic · Gemini · OpenRouter · Skip | OpenAI |
+| "API key" | Asks for the key (hidden input) and stores it **encrypted** in the secrets vault — used by the 3 council roles AND the external agents (OpenClaw configured automatically) | — |
 | "Install the external agents?" | Installs Hermes / OpenClaw / Agent Zero via each project's official installer | No |
 | Tests + verify | Runs the test suite, then asks each council role a real question | Yes |
 
-Flags for automation: `councilkey setup --provider openai --api-key sk-... --no-agents --no-llm --skip-tests`
+Flags for automation: `councilkey setup --provider openai --api-key sk-... --no-agents --skip-tests`
 (or the same flags via `setup.sh`, which detects non-interactive shells).
 
 > If a step fails because of a temporary network problem, just re-run
@@ -125,18 +124,23 @@ curl http://localhost:8443/api/status        # agents + modes + models
 
 Two layers, and both are real:
 
-### Layer 1 — the council (always works, this is the product)
-The three council roles run on a **local LLM (Ollama)** with distinct system
-prompts — no API keys, offline:
+### Layer 1 — the council (this is the product)
+The three council roles answer via your **model provider** (the API key from
+setup) with distinct system prompts:
 
-| Role | Agent | Default model |
+| Role | Agent | Provider model (default) |
 |---|---|---|
-| memory & analysis | Hermes | qwen2.5:3b |
-| action & execution | OpenClaw | qwen2.5:3b |
-| builder & review | Agent Zero | deepseek-coder:1.3b (falls back to qwen2.5:3b) |
+| memory & analysis | Hermes | gpt-4o-mini · claude-3-5-haiku · gemini-2.0-flash |
+| action & execution | OpenClaw | same provider |
+| builder & review | Agent Zero | same provider |
 
-This is what answers in the dashboard/API. `councilkey agents verify` asks
-each role a real question and shows the backend (gateway / local-llm / mock).
+One API key powers all three roles (and the external agents). The key is
+stored **encrypted** in the secrets vault. This is what answers in the
+dashboard/API. `councilkey agents verify` asks each role a real question and
+shows the backend (gateway / provider / mock).
+
+> Local LLM (Ollama) support remains available via `councilkey llm` for
+> offline use — it is not part of the default flow.
 
 ### Layer 2 — the external agents (optional, interactive tools)
 Hermes, OpenClaw and Agent Zero are interactive chat agents with their own
@@ -223,7 +227,10 @@ is kept.
 | `openclaw` fails with "missing dist/entry.mjs" | That error only happens with a source clone (unbuilt pnpm tree). The official package fixes it: `npm install -g openclaw@latest` (setup does this automatically) |
 | `openclaw` says "Onboarding needs an interactive TTY" | Normal on first run - it wants the interactive wizard. Run `openclaw onboard` once (in a real terminal), or test with the one-shot: `openclaw agent -m "hi" --local --agent main` |
 | `openclaw agent` says "No API key found for provider openai" | It defaults to cloud models. Point it at your local Ollama: `export OLLAMA_API_KEY=council` (any value) + `--model ollama/qwen2.5:3b`, or run `openclaw onboard` to pick a provider |
-| Dashboard shows all agents ⚪ mock | No LLM running: `councilkey llm status` → `councilkey llm install` → `councilkey llm pull` |
+| Dashboard shows all agents ⚪ mock | No API key configured: run `councilkey setup` and choose a provider |
+| Agents answer with `[no API key...]` | The key wasn't stored - run `councilkey setup` again, or `councilkey agents env` to check |
+| `provider error: 401/403` | The API key is wrong/expired - re-run `councilkey setup` with a valid key |
+| `provider error: TLS/SSL` | No internet to the provider, or a custom `*_BASE_URL` is unreachable |
 | Hermes installer won't download | Run it manually: `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash` |
 | Agent Zero won't install | It needs Docker — install Docker Desktop, then use the A0 Launcher (agent-zero.ai) |
 | `llm pull` fails | Check internet; try a smaller model: `councilkey llm pull qwen2.5:1.5b` |

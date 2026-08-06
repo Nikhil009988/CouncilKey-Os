@@ -95,23 +95,31 @@ def test_client_modes_without_backends_is_mock(monkeypatch):
     assert all(m["mode"] == "mock" for m in modes.values())
 
 
-def test_client_modes_with_ollama_is_local_llm(monkeypatch):
+def test_client_modes_with_provider(monkeypatch):
+    from council.llm import provider as lp
     from council.orchestrator import agents as oa
 
-    monkeypatch.setattr("council.llm.agents.ollama_available", lambda: True)
+    monkeypatch.setattr(lp, "active_provider", lambda: "openai")
+    monkeypatch.setattr(oa, "gateway_reachable", lambda *a, **k: False)
     modes = oa.client_modes()
-    assert all(m["mode"] == "local-llm" for m in modes.values())
+    assert all(m["mode"] == "provider" for m in modes.values())
 
 
 def test_build_default_clients_fallback(monkeypatch):
     from council.llm import agents as la
+    from council.llm import provider as lp
     from council.orchestrator import agents as oa
 
-    monkeypatch.setattr("council.llm.agents.ollama_available", lambda: True)
+    # provider key present -> provider clients
+    monkeypatch.setattr(lp, "active_provider", lambda: "openai")
+    monkeypatch.setattr(lp, "_key_for", lambda n: "sk-x" if n == "openai" else None)
+    monkeypatch.setattr(oa, "gateway_reachable", lambda *a, **k: False)
     clients = oa.build_default_clients()
-    assert all(isinstance(c, la.OllamaAgentClient) for c in clients.values())
+    assert all(isinstance(c, lp.ProviderAgentClient) for c in clients.values())
 
-    monkeypatch.setattr("council.llm.agents.ollama_available", lambda: False)
+    # no key, no gateway -> mock clients
+    monkeypatch.setattr(lp, "active_provider", lambda: None)
+    monkeypatch.setattr(lp, "_key_for", lambda n: None)
     clients = oa.build_default_clients()
     assert all(isinstance(c, la.MockAgentClient) for c in clients.values())
 

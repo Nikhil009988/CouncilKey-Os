@@ -181,35 +181,38 @@ def gateway_reachable(name: str, timeout: float = 0.8) -> bool:
 
 
 def client_modes(timeout: float = 0.8) -> dict[str, dict[str, str]]:
-    """Per-agent backend resolution: gateway | local-llm | mock.
+    """Per-agent backend resolution: gateway | provider | mock.
 
     Gateway wins when an external agent server actually answers on its URL.
-    Otherwise a local Ollama model takes the role. If neither exists, the
-    agent is explicitly marked mock (degraded mode).
+    Otherwise a model provider (configured during setup with an API key)
+    answers the role. If neither exists, the agent is explicitly marked mock
+    (degraded mode).
     """
-    from council.llm.agents import ollama_available
+    from council.llm.provider import active_provider
 
-    llm_up = ollama_available()
+    provider = active_provider()
     modes: dict[str, dict[str, str]] = {}
     for name in ("hermes", "openclaw", "agent-zero"):
         if gateway_reachable(name, timeout):
             modes[name] = {"mode": "gateway", "detail": GATEWAY_URLS[name]}
-        elif llm_up:
-            modes[name] = {"mode": "local-llm", "detail": "ollama role agent"}
+        elif provider:
+            modes[name] = {"mode": "provider", "detail": provider}
         else:
-            modes[name] = {"mode": "mock", "detail": "no gateway, no local LLM"}
+            modes[name] = {"mode": "mock", "detail": "no gateway, no API key (run: councilkey setup)"}
     return modes
 
 
 def build_default_clients() -> dict[str, AgentClient]:
     """Build the three agent clients.
 
-    Resolution order per agent: external gateway (if it answers) -> local
-    Ollama role agent (if Ollama is up) -> explicit mock client.
+    Resolution order per agent: external gateway (if it answers) -> model
+    provider (API key from setup) -> explicit mock client.
     """
-    from council.llm.agents import MockAgentClient, OllamaAgentClient
+    from council.llm.agents import MockAgentClient
+    from council.llm.provider import ProviderAgentClient, active_provider
 
     modes = client_modes()
+    provider = active_provider()
     clients: dict[str, AgentClient] = {}
     for name in ("hermes", "openclaw", "agent-zero"):
         mode = modes[name]["mode"]
@@ -220,8 +223,8 @@ def build_default_clients() -> dict[str, AgentClient]:
                 clients[name] = OpenClawClient(base_url=GATEWAY_URLS[name])
             else:
                 clients[name] = AgentZeroClient(base_url=GATEWAY_URLS[name])
-        elif mode == "local-llm":
-            clients[name] = OllamaAgentClient(name)
+        elif mode == "provider":
+            clients[name] = ProviderAgentClient(name, provider=provider)
         else:
             clients[name] = MockAgentClient(name)
     return clients

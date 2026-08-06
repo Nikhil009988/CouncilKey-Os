@@ -135,15 +135,16 @@ curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/arena/01
 ```
 
 **`setup.sh` runs an interactive wizard** — it asks what you need and stores answers securely:
-1. install the local LLM (Ollama + qwen2.5:3b) so the council answers with real local AI
-2. choose a model provider for the external agents: **local Ollama (free)** or OpenAI / Anthropic / Gemini / OpenRouter — if you pick a cloud provider it asks for the API key and stores it **encrypted** in the secrets vault
+1. choose a **model provider**: OpenAI / Anthropic / Gemini / OpenRouter (or skip and configure later)
+2. it asks for the **API key** and stores it **encrypted** in the secrets vault — the same key powers the three council roles AND the external agents (OpenClaw gets configured automatically)
 3. optionally install the external agents (Hermes / OpenClaw / Agent Zero) via each project's official installer
 
 Manage things anytime:
 
 ```
-councilkey agents status | install | start | verify
-councilkey llm status | install | pull
+councilkey agents status | install | start | env | verify
+councilkey setup                    # re-run the wizard (change provider/key)
+eval "$(councilkey agents env)"     # export stored API keys for external agents
 ```
 
 Windows: run `scripts\setup.ps1` in PowerShell (installs Ollama via winget automatically), then `scripts\start.bat` or `scripts\start.ps1` to open the dashboard.

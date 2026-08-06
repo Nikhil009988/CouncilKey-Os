@@ -522,6 +522,9 @@ async def status() -> JSONResponse:
         else []
     )
     ollama = ollama_running()
+    from council.llm.provider import provider_status
+
+    provider = provider_status()
     return JSONResponse(
         {
             "version": __version__,
@@ -531,6 +534,7 @@ async def status() -> JSONResponse:
                 "running": bool(ollama.get("running")),
                 "models": ollama.get("models", []) if ollama.get("running") else [],
             },
+            "provider": provider,
             "queue": _queue.stats(),
             "cache": dict(_cache_stats),
             "journal": journal,
@@ -541,6 +545,38 @@ async def status() -> JSONResponse:
 @app.get("/api/agents/status")
 async def agents_status() -> JSONResponse:
     return JSONResponse(await _probe_agents())
+
+
+@app.get("/api/setup/status")
+def setup_status_route() -> JSONResponse:
+    """Status of the setup: provider configured, keys stored, agents installed."""
+    from council.agents.setup_wizard import summary as wizard_summary
+    from council.llm.provider import provider_status
+
+    provider = provider_status()
+    setup = wizard_summary()
+    installed_agents = {}
+    try:
+        from council.agents.installer import status as agent_status
+
+        for name, info in agent_status().items():
+            installed_agents[name] = {
+                "installed": info["installed"],
+                "install": info["install"],
+                "binary": info["binary"],
+            }
+    except Exception:
+        pass
+    return JSONResponse(
+        {
+            "provider": provider,
+            "setup_summary": setup,
+            "agents": installed_agents,
+            "setup_done": bool(setup.get("provider")) or any(
+                a.get("installed") for a in installed_agents.values()
+            ),
+        }
+    )
 
 
 @app.get("/api/agents/prereqs")

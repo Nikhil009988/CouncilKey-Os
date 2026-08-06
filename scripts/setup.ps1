@@ -1,18 +1,15 @@
 # setup.ps1 - One-command setup for CouncilKey-Os on Windows (PowerShell).
 #   [1] Python venv + CouncilKey-Os
 #   [2] INTERACTIVE WIZARD (councilkey setup):
-#       - local LLM (Ollama via winget + qwen2.5:3b)
-#       - model provider + API keys (stored encrypted)
+#       - model provider + API key (stored encrypted in the secrets vault)
 #       - optional external agents (official installers)
 #       - tests + verify
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 #   ./scripts/setup.ps1 -NoAgents      # wizard, skip external agents
-#   ./scripts/setup.ps1 -NoLlm         # wizard, skip the local LLM
 param(
   [switch]$NoAgents,
-  [switch]$NoLlm,
   [switch]$SkipTests
 )
 $ErrorActionPreference = "Stop"
@@ -34,14 +31,8 @@ Write-Host "      ok - 'councilkey' CLI ready"
 # 2. Interactive wizard
 $WizardArgs = @()
 if ($NoAgents) { $WizardArgs += "--no-agents" }
-if ($NoLlm) { $WizardArgs += "--no-llm" }
 if ($SkipTests) { $WizardArgs += "--skip-tests" }
-if ($NoLlm) {
-  & "$ROOT\.venv\Scripts\councilkey.exe" setup @WizardArgs
-} else {
-  # interactive prompts need a real console; run the wizard directly
-  & "$ROOT\.venv\Scripts\councilkey.exe" setup @WizardArgs
-}
+& "$ROOT\.venv\Scripts\councilkey.exe" setup @WizardArgs
 
 Write-Host ""
 Write-Host "=============================================="

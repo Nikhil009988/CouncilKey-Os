@@ -301,7 +301,7 @@ def cmd_agents(action: str, names: list[str]) -> int:
             await asyncio.gather(*[_check(n) for n in selected])
 
         asyncio.run(_run_all())
-        print("\nlegend: gateway = external agent server | local-llm = ollama model | mock = nothing available")
+        print("\nlegend: gateway = external agent server | provider = model API (councilkey setup) | mock = nothing configured")
         return 0
 
     return 2
@@ -332,12 +332,11 @@ def main(argv: list[str] | None = None) -> None:
     p_llm.add_argument("action", nargs="?", default="status", choices=["status", "install", "pull"])
     p_llm.add_argument("model", nargs="?", help="model to pull (default: qwen2.5:3b)")
 
-    p_setup = sub.add_parser("setup", help="interactive setup wizard (prereqs, LLM, agents, API keys)")
-    p_setup.add_argument("--provider", choices=["ollama", "openai", "anthropic", "gemini", "openrouter", "none"],
-                         help="model provider for the external agents")
+    p_setup = sub.add_parser("setup", help="interactive setup wizard (provider, API keys, agents)")
+    p_setup.add_argument("--provider", choices=["openai", "anthropic", "gemini", "openrouter", "none"],
+                         help="model provider for the council + external agents")
     p_setup.add_argument("--api-key", help="API key for the provider (stored encrypted)")
     p_setup.add_argument("--no-agents", action="store_true", help="skip external agent installs")
-    p_setup.add_argument("--no-llm", action="store_true", help="skip Ollama + model")
     p_setup.add_argument("--skip-tests", action="store_true", help="don't run pytest at the end")
 
     args = parser.parse_args(argv)
@@ -363,7 +362,6 @@ def main(argv: list[str] | None = None) -> None:
             provider=args.provider,
             api_key=args.api_key,
             no_agents=args.no_agents,
-            no_llm=args.no_llm,
             skip_tests=args.skip_tests,
         ))
     elif args.command == "version":

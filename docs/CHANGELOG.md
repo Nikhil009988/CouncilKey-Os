@@ -195,3 +195,31 @@ same kind of guided flow for CouncilKey-Os:
   get prompts, non-interactive shells run defaults (`--provider ollama`)
 - Non-interactive mode for automation: `councilkey setup --provider openai --api-key ... --no-agents --no-llm --skip-tests`
 - 5 new tests (72 total), ruff clean
+
+## v1.7.0 (2026-08-05) - API-key-first: one key powers the council + all 3 agents
+
+Per maintainer direction, the local LLM (Ollama) is no longer the default
+path (kept available via `councilkey llm` for later/offline use). The setup
+now centers on model providers:
+
+- **New provider client** (`council/llm/provider.py`): the three council
+  roles answer via OpenAI / OpenRouter / Gemini (OpenAI-compatible) or
+  Anthropic, using the API key from setup - stored encrypted in the vault,
+  read at request time. Per-provider base URLs overridable via
+  `OPENAI_BASE_URL` etc. (used by tests + self-hosted gateways).
+- **Backend resolution** per agent: gateway -> provider (API key) -> mock.
+  `/api/status` reports `provider` + active provider/model.
+- **Setup wizard** updated: provider menu (OpenAI/Anthropic/Gemini/
+  OpenRouter/skip), hidden API key input, encrypted storage, automatic
+  OpenClaw configuration. Ollama removed from the menu.
+- **Dashboard**: new Setup tab (`/api/setup/status` - provider, keys,
+  agents installed, last setup time), header badge shows the active AI
+  provider + model, Agents tab shows provider mode, mock guidance points
+  at `councilkey setup`.
+- Dev fixture now serves both Ollama and OpenAI-compatible protocols for
+  CI/sandbox testing of the real provider code path.
+- 8 new/updated tests (79 total), ruff clean.
+
+Verified live: provider mode with a local OpenAI-compatible endpoint ->
+all 3 roles answer with distinct voices, council ask returns vote +
+journal, endpoint sweep 59/59, setup status endpoint reports correctly.

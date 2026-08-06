@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Ollama-compatible DEMO LLM server for sandbox/demo environments only.
+"""Ollama-compatible + OpenAI-compatible DEMO server for sandbox testing only.
 
-This server speaks the same HTTP protocol as Ollama (/api/tags, /api/generate)
-so CouncilKey-Os's real OllamaAgentClient code path can be exercised end to
-end in environments where real model weights cannot be downloaded.
+Speaks both:
+- Ollama protocol: /api/tags, /api/generate
+- OpenAI-compatible: /v1/chat/completions, /v1/models
+
+So CouncilKey-Os's real provider client code paths can be exercised end to
+end in environments where real model weights / APIs cannot be reached.
 
 It does NOT contain a neural network - it returns deterministic, role-aware
-replies so the 3 council agents visibly answer with distinct voices.
+replies so the three council agents visibly answer with distinct voices.
 
-For real inference run genuine Ollama instead:
-    councilkey llm install && councilkey llm pull
+For real inference use a real provider instead:
+    councilkey setup   (OpenAI / Anthropic / Gemini / OpenRouter)
 """
 from __future__ import annotations
 
@@ -20,9 +23,10 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-app = FastAPI(title="CouncilKey-Os demo LLM (Ollama-compatible)")
+app = FastAPI(title="CouncilKey-Os demo AI server (Ollama + OpenAI compatible)")
 
 
+# ------------------------------------------------------------ ollama protocol
 @app.get("/api/tags")
 def tags() -> JSONResponse:
     return JSONResponse({"models": [{"name": "demo-llm", "size": 1}]})
@@ -33,26 +37,60 @@ async def generate(request: Request) -> JSONResponse:
     body = json.loads(await request.body())
     system = body.get("system", "")
     prompt = (body.get("prompt") or "").strip()
-    prompt_snippet = " ".join(prompt.split())[:80]
+    return JSONResponse(
+        {
+            "model": body.get("model", "demo-llm"),
+            "response": _role_reply(system, prompt, "ollama"),
+            "done": True,
+        }
+    )
 
+
+# ------------------------------------------------------- openai-compatible api
+@app.get("/v1/models")
+def models() -> JSONResponse:
+    return JSONResponse({"object": "list", "data": [{"id": "demo-model", "object": "model"}]})
+
+
+@app.post("/v1/chat/completions")
+async def chat_completions(request: Request) -> JSONResponse:
+    body = json.loads(await request.body())
+    messages = body.get("messages", [])
+    system = next((m.get("content", "") for m in messages if m.get("role") == "system"), "")
+    user = next((m.get("content", "") for m in messages if m.get("role") == "user"), "")
+    return JSONResponse(
+        {
+            "id": "demo-chat",
+            "object": "chat.completion",
+            "model": body.get("model", "demo-model"),
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": _role_reply(system, user, "provider")},
+                    "finish_reason": "stop",
+                }
+            ],
+        }
+    )
+
+
+def _role_reply(system: str, prompt: str, via: str) -> str:
+    prompt_snippet = " ".join(prompt.split())[:80]
     if "memory and analysis" in system:
         voice = ("Hermes (analysis): I have reviewed this request. Key points, constraints and risks are "
                  "clear, and I recommend proceeding with the plan below. ")
     elif "action and execution" in system:
         voice = ("OpenClaw (execution): Concrete plan - step 1: prepare, step 2: execute, step 3: verify. "
                  "Each step has a clear deliverable and a rollback path. ")
-    else:
+    elif "builder and review" in system or "builder & review" in system:
         voice = ("Agent Zero (review): I checked the plan for safety and correctness. It is sound; "
                  "final answer follows. ")
-
-    return JSONResponse(
-        {
-            "model": body.get("model", "demo-llm"),
-            "response": f"{voice}\n\n[You asked: {prompt_snippet}]\n\n"
-                        f"(demo LLM response at {time.strftime('%H:%M:%S')} - "
-                        "install real Ollama + a model for genuine inference)",
-            "done": True,
-        }
+    else:
+        voice = "Demo assistant: "
+    return (
+        f"{voice}\n\n[You asked: {prompt_snippet}]\n\n"
+        f"(demo server reply via {via} at {time.strftime('%H:%M:%S')} - "
+        "configure a real provider with 'councilkey setup' for genuine answers)"
     )
 
 
