@@ -518,3 +518,29 @@ def test_openclaw_launcher_redirects_workspace():
     ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
     assert "OPENCLAW_WORKSPACE_DIR" in ps
     assert "OPENCLAW_HOME" in ps
+
+
+def test_cli_which_shows_install_path():
+    """councilkey which must print where the CLI is installed - so users can
+    verify PC vs pendrive copy."""
+    import subprocess
+
+    r = subprocess.run([str(cli_path()), "which"], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0
+    assert "CouncilKey-Os" in r.stdout
+
+
+def test_version_shows_install_location():
+    import subprocess
+
+    r = subprocess.run([str(cli_path()), "version"], capture_output=True, text=True, timeout=60)
+    assert "installed at:" in r.stdout
+
+
+def test_pendrive_launchers_print_running_from():
+    """Stick launchers must announce where they run from, so the user can
+    tell PC copy from pendrive copy."""
+    sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    assert "Running from:" in sh
+    assert "Running from: %~dp0" in sh          # START.bat + RUN-OPENCLAW.bat
+    assert "Running from: $STICK" in sh         # run-openclaw.sh

@@ -25,6 +25,11 @@ def cmd_version() -> str:
     return __version__
 
 
+def cmd_which() -> str:
+    """Show WHERE this CLI is installed (PC vs pendrive)."""
+    return str(ROOT)
+
+
 _stale_check_cache: tuple[float, str] | None = None
 
 
@@ -475,6 +480,7 @@ def main(argv: list[str] | None = None) -> None:
     p_storage.add_argument("--dry-run", action="store_true", help="only report, don't delete")
 
     sub.add_parser("version", help="print version")
+    sub.add_parser("which", help="show where this CLI is installed (PC vs pendrive)")
 
     p_agents = sub.add_parser("agents", help="manage the 3 agents (status/install/start/env/verify)")
     p_agents.add_argument("action", nargs="?", default="status",
@@ -560,6 +566,9 @@ def main(argv: list[str] | None = None) -> None:
         ))
     elif args.command == "version":
         print(cmd_version())
+        print(f"  installed at: {cmd_which()}")
+    elif args.command == "which":
+        print(cmd_which())
     else:
         parser.print_help()
 

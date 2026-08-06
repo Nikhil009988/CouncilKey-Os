@@ -85,6 +85,7 @@ set "COUNCIL_HOME=%~dp0council-data"
 set "COUNCIL_PENDRIVE=1"
 
 echo == CouncilKey-Os portable start ==
+echo   Running from: %~dp0  (all data on the stick)
 
 rem 1. make sure the python environment exists on the stick
 if not exist "%ROOT%\.venv\Scripts\python.exe" (
@@ -183,6 +184,8 @@ cat > "$USB/RUN-OPENCLAW.bat" <<'EOF'
 @echo off
 rem RUN-OPENCLAW.bat - OpenClaw from the pendrive (Windows)
 rem Every path OpenClaw uses (state, config, workspace, home) is on the stick.
+echo == OpenClaw from the pendrive ==
+echo   Running from: %~dp0
 setlocal
 set "STICK=%~dp0"
 set "OPENCLAW_STATE_DIR=%STICK%council-data\openclaw"
@@ -208,6 +211,8 @@ export OPENCLAW_CONFIG_PATH="$STICK/council-data/openclaw/openclaw.json"
 export OPENCLAW_WORKSPACE_DIR="$STICK/council-data/openclaw/workspace"
 export OPENCLAW_HOME="$STICK/council-data/openclaw/home"
 mkdir -p "$OPENCLAW_WORKSPACE_DIR" "$OPENCLAW_HOME"
+echo "== OpenClaw from the pendrive =="
+echo "  Running from: $STICK"
 if [ -x "$STICK/CouncilKey-Os/tools/openclaw/node_modules/.bin/openclaw" ]; then
 exec "$STICK/CouncilKey-Os/tools/openclaw/node_modules/.bin/openclaw" "$@"
 else

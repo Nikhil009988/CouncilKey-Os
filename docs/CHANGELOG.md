@@ -569,3 +569,23 @@ Fixes:
 - Verified: built a stick, launcher runs OpenClaw 2026.7.1-2 from the
   stick, workspace + home dirs created on the stick, stick boots.
 - 1 new test (104 total), ruff clean.
+
+## v1.13.2 (2026-08-05) - "which copy am I running?" + stick-launcher banners
+
+User report: "Found it on this PC... F:\CouncilKey-Os did not respond
+quickly" - the user had BOTH a PC copy and a pendrive copy, and a tool
+found the PC one; the stick didn't respond (not mounted / slow USB /
+stale build).
+
+Fixes to make it impossible to confuse:
+- NEW `councilkey which` command - prints the install path, so the user
+  can instantly verify PC vs pendrive copy.
+- `councilkey version` now also prints `installed at: <path>`.
+- `councilkey doctor` shows the install location.
+- Every stick launcher (START.bat, RUN-OPENCLAW.bat, run-openclaw.sh,
+  and the PowerShell equivalents) now prints `Running from: <stick>`
+  at startup.
+- Guide troubleshooting: the exact "Found it on this PC / F:\ did not
+  respond" case with the 5-step fix (mount, `councilkey which`, use
+  stick launchers, rebuild stick, slow-USB first-run is normal).
+- 3 new tests (107 total), ruff clean.

@@ -72,6 +72,7 @@ set "COUNCIL_HOME=%~dp0council-data"
 set "COUNCIL_PENDRIVE=1"
 
 echo == CouncilKey-Os portable start ==
+echo   Running from: %~dp0  (all data on the stick)
 
 rem 1. make sure the python environment exists on the stick
 if not exist "%ROOT%\.venv\Scripts\python.exe" (
