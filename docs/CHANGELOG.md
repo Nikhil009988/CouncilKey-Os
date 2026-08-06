@@ -423,3 +423,16 @@ Real-world report from a Windows machine (still on an old clone) exposed:
    'councilkey update'".
 4. Troubleshooting guide: new rows for all three symptoms.
 5. 94 tests passing (platform-aware), ruff clean.
+
+## v1.9.5 (2026-08-05) - final cleanup: stale UI legend + stale guide refs
+
+Error-hunt across the whole repo found and fixed:
+- Dashboard Agents-tab legend still said "local-llm = Ollama model
+  answering" - the mode is "provider" (API key) since v1.7. Updated in
+  both dashboard copies.
+- Setup guide: agent-zero row still said "requires Docker" (v1.9 made
+  Docker optional); troubleshooting still referenced the removed
+  --skip-agents/--no-llm flags; a note still said "Agent Zero needs
+  Docker". All updated.
+- Full re-verification: 94 tests, ruff clean, compile OK, shell syntax
+  OK, 35/35 live endpoints, no stale branch/flag references anywhere.

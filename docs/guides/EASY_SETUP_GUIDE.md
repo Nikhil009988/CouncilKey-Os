@@ -111,7 +111,7 @@ Flags for automation: `councilkey setup --provider openai --api-key sk-... --no-
 | OpenClaw (`npm install -g openclaw@latest`) | 1–3 min |
 | CrewAI (`pip install crewai`) | 2–5 min |
 | Aider (`pip install aider-chat`) | 1–2 min |
-| Agent Zero | requires Docker (skip until Docker Desktop is installed) |
+| Agent Zero | source + Python venv (no Docker; needs Python 3.12+) |
 | Test suite | ~1 min (skippable - press **n** when asked) |
 | Verify (real API calls) | 10–60 s |
 | **Total** | **~10–25 min** on a normal connection |
@@ -232,7 +232,7 @@ it becomes the 🟢 gateway backend for that role.
 > Why not clone the repos instead? Their own docs say so: OpenClaw is a
 > pnpm workspace (plain `npm install` of the clone is unsupported — that's
 > what caused the "missing dist/entry.mjs" error), Hermes ships its own
-> installer, and Agent Zero needs Docker. Official installers are the
+> installer, and Agent Zero is a heavy Python stack. Official installers are the
 > supported path for all three.
 
 ### Testing an external agent after setup (e.g. OpenClaw)
@@ -357,6 +357,6 @@ is kept.
 | `llm pull` fails | Check internet; try a smaller model: `councilkey llm pull qwen2.5:1.5b` |
 | Ollama installed but "not running" | Start it: `ollama serve` (Linux/macOS) or the Ollama app (Windows) |
 | Port 8443 busy | `COUNCIL_PORT=9000 ./scripts/start.sh` |
-| Setup fails mid-download (no internet) | Re-run setup — finished steps are skipped; or `./scripts/setup.sh --skip-agents --no-llm` and install later |
+| Setup fails mid-download (no internet) | Re-run setup — finished steps are skipped; or `./scripts/setup.sh --no-agents` and install later |
 | Agent gateway shows but answers nothing | The gateway URL is wrong — check `COUNCIL_*_URL` and the agent's own README |
 | `councilkey` not found | You're not in the project venv — run from the repo: `./scripts/start.sh` or `.venv/bin/councilkey` |
