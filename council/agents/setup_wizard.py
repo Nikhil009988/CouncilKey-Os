@@ -61,7 +61,9 @@ def _confirm(question: str, default: bool = True) -> bool:
             ans = input(f"{question}{suffix}: ").strip().lower()
         except EOFError:
             return default
-        if ans in ("", "y", "yes"):
+        if ans == "":
+            return default
+        if ans in ("y", "yes"):
             return True
         if ans in ("n", "no"):
             return False
@@ -69,6 +71,7 @@ def _confirm(question: str, default: bool = True) -> bool:
             return True
         if ans.startswith("n"):
             return False
+        print("  (type y or n)")
 
 
 def _secret(question: str) -> str:
@@ -198,6 +201,7 @@ def run_wizard(
             summary["provider"] = provider
             note("API key stored", True, f"{env} -> encrypted vault")
             # configure OpenClaw with the provider (non-interactive)
+            print("  configuring OpenClaw with your provider (can take a minute, please wait)...")
             cfg = _configure_openclaw(provider, key)
             if cfg.get("ok"):
                 note("configure OpenClaw", True, cfg.get("detail", "")[:80])
@@ -234,15 +238,25 @@ def run_wizard(
     if skip_tests:
         note("test suite", True, "skipped (--skip-tests)")
     else:
-        ok, out = run_cmd([sys.executable, "-m", "pytest", "tests", "-q"], cwd=ROOT, timeout=600)
-        tail = out.strip().splitlines()[-1] if out.strip() else "?"
-        note("test suite", ok, tail[:80])
+        run_tests = True
+        if interactive:
+            run_tests = _confirm("Run the test suite now? (~1 min; you can run 'make test' later)", default=False)
+        if not run_tests:
+            note("test suite", True, "skipped (run 'make test' anytime)")
+        else:
+            t0 = time.monotonic()
+            print("  running the test suite - this can take a minute or two, please wait...")
+            ok, out = run_cmd([sys.executable, "-m", "pytest", "tests", "-q"], cwd=ROOT, timeout=900)
+            tail = out.strip().splitlines()[-1] if out.strip() else "?"
+            note("test suite", ok, f"{tail[:60]} ({int(time.monotonic() - t0)}s)")
 
     # 5. verify
     from council.cli import cmd_agents
 
-    print("\n  Verifying the council (real ask)...")
+    t0 = time.monotonic()
+    print("\n  Verifying the council - asking each agent (real API calls, can take up to a minute)...")
     cmd_agents("verify", [])
+    print(f"  verify finished in {int(time.monotonic() - t0)}s")
 
     _save_summary(summary)
     print("\n" + "=" * 58)

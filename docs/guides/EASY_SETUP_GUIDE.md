@@ -94,6 +94,29 @@ exactly what you need:
 | Tests + verify | Runs the test suite, then asks each council role a real question | Yes |
 
 Flags for automation: `councilkey setup --provider openai --api-key sk-... --no-agents --skip-tests`
+
+### How long does the full setup take?
+
+| Step | Typical time |
+|---|---|
+| Python env + CouncilKey-Os | ~1 min |
+| API key entry | seconds |
+| Configure OpenClaw (if installed) | up to 1 min |
+| Hermes (official installer: uv, Python, deps) | 5–15 min |
+| OpenClaw (`npm install -g openclaw@latest`) | 1–3 min |
+| CrewAI (`pip install crewai`) | 2–5 min |
+| Aider (`pip install aider-chat`) | 1–2 min |
+| Agent Zero | requires Docker (skip until Docker Desktop is installed) |
+| Test suite | ~1 min (skippable - press **n** when asked) |
+| Verify (real API calls) | 10–60 s |
+| **Total** | **~10–25 min** on a normal connection |
+
+> **"The terminal is just blinking after an install — is it stuck?"** No.
+> The wizard prints a message, then runs the real install/command silently
+> (npm/pip/uv downloads, tests, API calls) — that's the blinking part.
+> Every step now prints what it is doing and how long it took. If a step
+> truly hangs forever (more than ~10 min with no message), press Ctrl+C
+> and re-run — finished steps are skipped next time.
 (or the same flags via `setup.sh`, which detects non-interactive shells).
 
 > If a step fails because of a temporary network problem, just re-run
@@ -322,6 +345,7 @@ is kept.
 | Agents answer with `[no API key...]` | The key wasn't stored - run `councilkey setup` again, or `councilkey agents env` to check |
 | `provider error: 401/403` | The API key is wrong/expired - re-run `councilkey setup` with a valid key |
 | `provider error: TLS/SSL` | No internet to the provider, or a custom `*_BASE_URL` is unreachable |
+| Wizard looks stuck (blinking cursor after an install) | It's working - installs/tests/API calls print a message first and run silently after. Watch for the next ✅ line; long steps show timing. Tests are skippable (answer **n**) |
 | Hermes installer won't download | Run it manually: `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash` |
 | Agent Zero won't install | It needs Docker — install Docker Desktop, then use the A0 Launcher (agent-zero.ai) |
 | Does Agent Zero work like Hermes/OpenClaw? | No — Hermes/OpenClaw run standalone (Python/npm), Agent Zero is a Dockerized Linux desktop by design. Docker is required for it; the council itself works without any of them |

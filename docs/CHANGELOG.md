@@ -281,3 +281,26 @@ Fix:
   hard requirement by design; message now says so and gives the Windows
   install command (winget install Docker.DockerDesktop).
 - 2 new tests for Windows command resolution (85 total), ruff clean.
+
+## v1.8.2 (2026-08-05) - Setup wizard: no more silent "stuck" phases
+
+Real-world report: after aider installed, the wizard appeared stuck with a
+blinking cursor.
+
+Root cause: two silent steps ran with zero output - the full pytest suite
+(30s+) and the council verification (real API calls, up to 30s per agent),
+plus the OpenClaw configuration step.
+
+Fixes:
+- Every long step now prints what it is doing first and how long it took:
+  "running the test suite - this can take a minute or two...",
+  "configuring OpenClaw with your provider (can take a minute)...",
+  "Verifying the council - asking each agent (real API calls...)", with
+  per-step elapsed seconds on completion.
+- The test suite is now OPTIONAL in interactive mode: "Run the test suite
+  now? (~1 min; you can run 'make test' later) [y/N]" - default No.
+- Fixed _confirm() bug: pressing Enter ignored the default and always
+  answered Yes - empty input now respects the shown default.
+- Guide: total setup time table (~10-25 min, per-step) + troubleshooting
+  row for the "blinking cursor" case.
+- 85 tests passing, ruff clean.

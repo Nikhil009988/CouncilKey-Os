@@ -286,7 +286,7 @@ def cmd_agents(action: str, names: list[str]) -> int:
 
         from council.orchestrator.agents import build_default_clients, client_modes
 
-        print("== verifying the council (real ask) ==")
+        print("== verifying the council (real ask - each agent up to 30s, please wait) ==")
         modes = client_modes()
         clients = build_default_clients()
 
