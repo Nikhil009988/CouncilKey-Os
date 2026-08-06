@@ -62,8 +62,15 @@ Add `--wizard` to bake in your API key + agents during the build:
 | Agent | On the stick |
 |---|---|
 | Council (Hermes/OpenClaw/Agent Zero roles) | answers via your API key - no install at all |
-| **OpenClaw** | the CLI is installed **on the stick** (`tools/openclaw`), and `RUN-OPENCLAW.bat` (Windows) / `run-openclaw.sh` (Linux) launch it with `OPENCLAW_STATE_DIR` + `OPENCLAW_CONFIG_PATH` pointing at `council-data/openclaw` - **its workspace, config and memory live on the stick, not on the host PC** |
-| Hermes / Agent Zero / CrewAI / Aider | installed on the PC (official installers) - the council doesn't depend on them |
+| **Hermes** | installed **into the stick venv** (`pip install hermes-agent`) - `RUN-HERMES.bat` runs it from the stick with `HERMES_HOME` on the stick |
+| **OpenClaw** | CLI installed **on the stick** (`tools/openclaw` via npm) - `RUN-OPENCLAW.bat` sets `OPENCLAW_STATE_DIR` + `OPENCLAW_CONFIG_PATH` to `council-data/openclaw` |
+| **CrewAI** | installed **into the stick venv** - `RUN-CREWAI.bat` |
+| **Aider** | installed **into the stick venv** - `RUN-AIDER.bat` |
+| **Agent Zero** | `RUN-AGENT-ZERO.bat` (needs its repo + venv set up on the stick once, Python 3.12+) |
+
+**Everything - the app, the venv, the agents and all their data - lives on
+the stick.** Rebuild with `./scripts/pendrive-setup.sh /media/USB --wizard`
+(or the PowerShell builder on Windows) and the stick is fully self-contained.
 
 > **"OpenClaw said it lives on my PC"** — that's the *global* install
 > (`npm install -g openclaw@latest`); OpenClaw's default workspace is

@@ -506,3 +506,27 @@ Verified: 97 tests, ruff clean, real ask returns 3 provider responses.
 - Built a stick: portable openclaw CLI on the stick, launcher runs it
   (OpenClaw 2026.7.1-2), state env honored, stick state dir created.
 - 2 new tests (99 total), ruff clean. compile OK.
+
+## v1.12.0 (2026-08-05) - EVERYTHING on the pendrive + dashboard Overview tab
+
+User request: "I want EVERYTHING on the pendrive."
+
+### Pendrive now self-contained (all agents on the stick)
+- `pendrive-setup.sh` / `pendrive-setup.ps1` install **all agents onto the
+  stick**, not the host PC:
+  - hermes-agent, crewai, aider-chat → pip-installed **into the stick venv**
+  - openclaw → npm-installed **into the stick** (`tools/openclaw`)
+  - agent-zero → launcher provided (repo+venv setup documented, needs 3.12+)
+- Launchers for every agent (always written): `RUN-OPENCLAW.bat`,
+  `RUN-HERMES.bat` (HERMES_HOME → stick), `RUN-CREWAI.bat`, `RUN-AIDER.bat`,
+  `RUN-AGENT-ZERO.bat` + `run-*.sh` on Linux - each runs from the stick and
+  keeps its state in `council-data/` on the stick.
+- `--no-agents` flag skips only the installs (launchers still written).
+- Verified: built a stick, all 10 launchers present, stick boots.
+
+### Dashboard redesign
+- New **Overview** (home) tab: live provider status, council roles ready
+  count, decisions saved, storage keep/cache bar, quick-action buttons and
+  the last 3 decisions - refreshes every 10s.
+
+2 new tests (101 total), ruff clean, compile + shell OK.

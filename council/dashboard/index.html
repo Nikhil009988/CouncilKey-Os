@@ -117,7 +117,8 @@
 
     <!-- Tabs -->
     <div class="flex flex-wrap gap-2">
-      <button class="tab-btn active px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="council">Council</button>
+      <button class="tab-btn active px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="overview">Overview</button>
+      <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="council">Council</button>
       <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="agents">Agents</button>
       <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="storage">Storage</button>
       <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="journal">Journal</button>
@@ -128,6 +129,49 @@
       <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="tasks">Tasks</button>
       <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="intel">Intelligence</button>
       <button class="tab-btn px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="setup">Setup</button>
+    </div>
+
+    <!-- Overview Tab -->
+    <div id="tab-overview" class="tab-panel glass rounded-2xl p-6 space-y-5">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="glass rounded-xl p-4 space-y-1">
+          <div class="text-xs text-slate-400">AI provider</div>
+          <div id="ov-provider" class="text-lg font-bold text-council-300">checking…</div>
+          <div id="ov-provider-model" class="text-xs text-slate-500"></div>
+        </div>
+        <div class="glass rounded-xl p-4 space-y-1">
+          <div class="text-xs text-slate-400">Council roles</div>
+          <div id="ov-roles" class="text-lg font-bold text-emerald-300">—</div>
+          <div class="text-xs text-slate-500">hermes · openclaw · agent-zero</div>
+        </div>
+        <div class="glass rounded-xl p-4 space-y-1">
+          <div class="text-xs text-slate-400">Decisions saved</div>
+          <div id="ov-decisions" class="text-lg font-bold text-blue-300">—</div>
+          <div class="text-xs text-slate-500">every answer is journaled + searchable</div>
+        </div>
+      </div>
+      <div class="glass rounded-xl p-4">
+        <div class="text-xs text-slate-400 mb-2">Storage (keep vs cache)</div>
+        <div class="h-3 rounded-full bg-council-800 overflow-hidden">
+          <div id="ov-storage-bar" class="h-full vote-bar bg-gradient-to-r from-council-600 to-council-400 w-0"></div>
+        </div>
+        <div id="ov-storage-detail" class="mt-2 text-xs text-slate-500"></div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="glass rounded-xl p-4 space-y-2">
+          <div class="text-xs text-slate-400">Quick actions</div>
+          <div class="flex flex-wrap gap-2">
+            <button class="ov-go px-4 py-2 rounded-lg bg-council-600 hover:bg-council-500 text-white text-xs font-semibold" data-tab="council">💬 Ask the council</button>
+            <button class="ov-go px-4 py-2 rounded-lg bg-council-700 hover:bg-council-600 text-xs" data-tab="storage">💾 Storage</button>
+            <button class="ov-go px-4 py-2 rounded-lg bg-council-700 hover:bg-council-600 text-xs" data-tab="journal">📓 Journal</button>
+            <button class="ov-go px-4 py-2 rounded-lg bg-council-700 hover:bg-council-600 text-xs" data-tab="setup">⚙ Setup</button>
+          </div>
+        </div>
+        <div class="glass rounded-xl p-4 space-y-2">
+          <div class="text-xs text-slate-400">Last decisions</div>
+          <div id="ov-last" class="text-xs space-y-1"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Council Tab -->
@@ -471,6 +515,61 @@
       } catch (e) { live.innerHTML = 'Stream error: ' + escapeHtml(e.message); typing.classList.add('hidden'); }
     }
 
+    // --- Overview tab ----
+    async function loadOverview() {
+      try {
+        const r = await apiFetch('/api/status');
+        const d = await r.json();
+        const prov = d.provider || {};
+        const el = document.getElementById('ov-provider');
+        if (prov.active) {
+          el.textContent = (prov.providers[prov.active] || {}).name || prov.active;
+          el.className = 'text-lg font-bold text-emerald-300';
+          document.getElementById('ov-provider-model').textContent = 'model: ' + (prov.active_model || '');
+        } else {
+          el.textContent = 'not configured';
+          el.className = 'text-lg font-bold text-yellow-300';
+          document.getElementById('ov-provider-model').textContent = 'run councilkey setup';
+        }
+        const agents = d.agents || {};
+        const modes = Object.values(agents).map(a => a.mode);
+        const okCount = modes.filter(m => m === 'provider' || m === 'gateway').length;
+        document.getElementById('ov-roles').textContent = okCount + '/3 ready';
+        document.getElementById('ov-roles').className = 'text-lg font-bold ' + (okCount === 3 ? 'text-emerald-300' : okCount > 0 ? 'text-yellow-300' : 'text-slate-400');
+        document.getElementById('ov-decisions').textContent = (d.journal || []).length;
+      } catch (e) { /* server may be starting */ }
+
+      try {
+        const r = await apiFetch('/api/storage/audit');
+        const d = await r.json();
+        if (d.total_keep !== undefined && d.total_cache_ram !== undefined) {
+          const total = d.total_keep + d.total_cache_ram;
+          const pct = total ? (d.total_keep / total) * 100 : 0;
+          document.getElementById('ov-storage-bar').style.width = pct + '%';
+          document.getElementById('ov-storage-detail').textContent =
+            'keep: ' + d.total_keep_human + ' · cache (auto-deleted): ' + d.total_cache_ram_human;
+        }
+      } catch (e) {}
+
+      try {
+        const r = await apiFetch('/api/chat/history?limit=3');
+        const d = await r.json();
+        const entries = d.entries || [];
+        document.getElementById('ov-last').innerHTML = entries.length
+          ? entries.slice().reverse().map(e =>
+              '<div class="glass rounded-lg px-3 py-1.5"><span class="text-slate-400">' +
+              (e.prompt || '').slice(0, 50) + '</span></div>').join('')
+          : '<div class="text-slate-600">nothing yet - ask something!</div>';
+      } catch (e) {}
+    }
+    document.querySelectorAll('.ov-go').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(x => x.classList.add('hidden'));
+      document.getElementById('tab-' + b.dataset.tab).classList.remove('hidden');
+      document.querySelector('.tab-btn[data-tab="' + b.dataset.tab + '"]').classList.add('active');
+    }));
+    loadOverview();
+
     // --- setup banner ---
     document.getElementById('banner-hide').addEventListener('click', () => document.getElementById('setup-banner').classList.add('hidden'));
     document.getElementById('banner-setup').addEventListener('click', () => {
@@ -743,6 +842,7 @@
     }
     document.getElementById('agents-refresh').addEventListener('click', refreshStatus);
     refreshStatus(); setInterval(refreshStatus, 5000);
+    setInterval(loadOverview, 10000);
 
     // ---- Setup tab ----
     async function loadSetupStatus() {

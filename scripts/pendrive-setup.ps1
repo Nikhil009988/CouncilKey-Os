@@ -7,7 +7,8 @@
 # START.bat (double-click to start on any Windows PC) and autorun.inf.
 param(
   [Parameter(Mandatory = $true)][string]$Path,
-  [switch]$Wizard
+  [switch]$Wizard,
+  [switch]$NoAgents
 )
 $ErrorActionPreference = "Stop"
 $ROOT = Split-Path -Parent $PSScriptRoot
@@ -90,21 +91,42 @@ endlocal
 "@ | Set-Content -Encoding ASCII (Join-Path $Path "START.bat")
 Write-Host "      ok"
 
-# 5. portable agents on the stick (OpenClaw runs FROM the stick)
-Write-Host "[5/6] Installing portable OpenClaw on the stick (optional)..."
-New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\openclaw") | Out-Null
-if (Get-Command npm -ErrorAction SilentlyContinue) {
-  & npm install --prefix (Join-Path $Dest "tools\openclaw") --no-audit --no-fund openclaw@latest | Out-Null
-  Write-Host "      ok (openclaw CLI on the stick)"
+# 5. ALL agents on the stick
+Write-Host "[5/6] Installing the agents ONTO the stick (everything stays on the stick)..."
+if ($NoAgents) {
+  Write-Host "      skipped agent installs (-NoAgents) - launchers are still written"
 } else {
-  Write-Host "      ⚠ npm not found - openclaw will use the host install; state still goes to the stick"
+  New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\agents") | Out-Null
+
+  # Python agents into the stick venv (hermes, crewai, aider)
+  $StickPip = Join-Path $Dest ".venv\Scripts\pip.exe"
+  if (Test-Path $StickPip) {
+    Write-Host "      installing hermes-agent, crewai, aider-chat into the stick venv (one command, can take a few minutes)..."
+    & $StickPip install -q hermes-agent crewai aider-chat | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "      ok (hermes + crewai + aider on the stick)"
+    } else {
+      Write-Host "      ⚠ pip install of agents failed - re-run on a machine with internet"
+    }
+  } else {
+    Write-Host "      ⚠ stick venv not found - agents skipped"
+  }
+
+  # OpenClaw via npm into the stick
+  Write-Host "      installing openclaw onto the stick (npm)..."
+  New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\openclaw") | Out-Null
+  if (Get-Command npm -ErrorAction SilentlyContinue) {
+    & npm install --prefix (Join-Path $Dest "tools\openclaw") --no-audit --no-fund openclaw@latest | Out-Null
+    Write-Host "      ok (openclaw CLI on the stick)"
+  } else {
+    Write-Host "      ⚠ npm not found - openclaw will use the host install"
+  }
 }
 
-# RUN-OPENCLAW.bat - OpenClaw with ALL state on the stick
-@"
+# launchers - always written
+$OPENCLAW_BAT = @"
 @echo off
 rem RUN-OPENCLAW.bat - OpenClaw from the pendrive (Windows)
-rem Everything OpenClaw knows (workspace, config, memory) stays on the stick.
 setlocal
 set "STICK=%~dp0"
 set "OPENCLAW_STATE_DIR=%STICK%council-data\openclaw"
@@ -115,8 +137,76 @@ if exist "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" (
   openclaw %*
 )
 endlocal
-"@ | Set-Content -Encoding ASCII (Join-Path $Path "RUN-OPENCLAW.bat")
-Write-Host "      ok (RUN-OPENCLAW.bat - agents' data stays on the stick)"
+"@
+Set-Content -Encoding ASCII (Join-Path $Path "RUN-OPENCLAW.bat") $OPENCLAW_BAT
+
+$HERMES_BAT = @"
+@echo off
+rem RUN-HERMES.bat - Hermes from the pendrive (Windows)
+setlocal
+set "STICK=%~dp0"
+set "HERMES_HOME=%STICK%council-data\agents\hermes"
+if exist "%STICK%CouncilKey-Os\.venv\Scripts\hermes.exe" (
+  "%STICK%CouncilKey-Os\.venv\Scripts\hermes.exe" %*
+) else (
+  echo [error] hermes not on the stick - rebuild the stick with internet
+  pause
+)
+endlocal
+"@
+Set-Content -Encoding ASCII (Join-Path $Path "RUN-HERMES.bat") $HERMES_BAT
+
+$CREWAI_BAT = @"
+@echo off
+rem RUN-CREWAI.bat - CrewAI from the pendrive (Windows)
+setlocal
+set "STICK=%~dp0"
+if exist "%STICK%CouncilKey-Os\.venv\Scripts\crewai.exe" (
+  "%STICK%CouncilKey-Os\.venv\Scripts\crewai.exe" %*
+) else (
+  echo [error] crewai not on the stick - rebuild the stick with internet
+  pause
+)
+endlocal
+"@
+Set-Content -Encoding ASCII (Join-Path $Path "RUN-CREWAI.bat") $CREWAI_BAT
+
+$AIDER_BAT = @"
+@echo off
+rem RUN-AIDER.bat - Aider from the pendrive (Windows)
+setlocal
+set "STICK=%~dp0"
+if exist "%STICK%CouncilKey-Os\.venv\Scripts\aider.exe" (
+  "%STICK%CouncilKey-Os\.venv\Scripts\aider.exe" %*
+) else (
+  echo [error] aider not on the stick - rebuild the stick with internet
+  pause
+)
+endlocal
+"@
+Set-Content -Encoding ASCII (Join-Path $Path "RUN-AIDER.bat") $AIDER_BAT
+
+$AZ_BAT = @"
+@echo off
+rem RUN-AGENT-ZERO.bat - Agent Zero from the pendrive (Windows)
+rem Needs Python 3.12+. State stays on the stick.
+setlocal
+set "STICK=%~dp0"
+if exist "%STICK%CouncilKey-Os\tools\agent-zero\.venv\Scripts\python.exe" (
+  pushd "%STICK%CouncilKey-Os\tools\agent-zero"
+  "%STICK%CouncilKey-Os\tools\agent-zero\.venv\Scripts\python.exe" agent.py %*
+  popd
+) else (
+  echo [error] agent-zero not set up on the stick.
+  echo   On a PC with Python 3.12+:  cd tools\agent-zero ^&^& python -m venv .venv
+  echo   then: .venv\Scripts\pip install -r requirements.txt
+  pause
+)
+endlocal
+"@
+Set-Content -Encoding ASCII (Join-Path $Path "RUN-AGENT-ZERO.bat") $AZ_BAT
+
+Write-Host "      ok (launchers: RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-AGENT-ZERO)"
 
 # 6. autorun.inf + optional wizard
 
@@ -144,6 +234,6 @@ Write-Host " ✅ Pendrive ready!"
 Write-Host ""
 Write-Host "   On any Windows PC: plug in -> double-click START.bat"
 Write-Host "   Dashboard:         http://localhost:8443"
-Write-Host "   Agents:            RUN-OPENCLAW.bat (data on the stick)"
+Write-Host "   Agents:            RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-AGENT-ZERO (.bat)"
 Write-Host "   Data stays on the stick: $Path\council-data"
 Write-Host "=============================================="

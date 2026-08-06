@@ -451,3 +451,32 @@ def test_dashboard_chat_ui():
         assert token in html, token
     # the old plain result box is gone
     assert "council-final" not in html
+
+
+def test_pendrive_installs_all_agents_onto_stick():
+    """The pendrive build puts EVERY agent on the stick (no host installs)."""
+    sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    # pip agents into the stick venv + openclaw npm --prefix
+    assert "hermes-agent crewai aider-chat" in sh
+    assert "npm install --prefix" in sh
+    # launchers for every agent
+    for name in ("RUN-OPENCLAW", "RUN-HERMES", "RUN-CREWAI", "RUN-AIDER", "RUN-AGENT-ZERO"):
+        assert name in sh
+    # launchers are outside the --no-agents branch (always written)
+    launcher_pos = sh.find("# --- launchers")
+    no_agents_pos = sh.find("--no-agents")
+    assert launcher_pos > no_agents_pos
+    # state on the stick
+    assert "council-data/openclaw" in sh
+    assert "council-data/agents" in sh
+
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    for name in ("RUN-OPENCLAW", "RUN-HERMES", "RUN-CREWAI", "RUN-AIDER", "RUN-AGENT-ZERO"):
+        assert name in ps
+
+
+def test_dashboard_overview_tab():
+    """The dashboard has an Overview/home tab with live status cards."""
+    html = (ROOT / "council" / "orchestrator" / "index.html").read_text(encoding="utf-8")
+    for token in ("tab-overview", "ov-provider", "ov-roles", "loadOverview", "ov-last"):
+        assert token in html, token
