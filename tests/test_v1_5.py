@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+from conftest import cli_path  # noqa: E402
+
 sys.path.insert(0, str(ROOT))
 
 
@@ -23,7 +25,7 @@ def test_wizard_noninteractive_runs():
     import subprocess
 
     r = subprocess.run(
-        [str(ROOT / ".venv/bin/councilkey"), "setup",
+        [str(cli_path()), "setup",
          "--provider", "none", "--no-agents", "--skip-tests"],
         capture_output=True, text=True, timeout=120,
     )
@@ -51,7 +53,7 @@ def test_agents_env_prints_exports():
     import subprocess
 
     r = subprocess.run(
-        [str(ROOT / ".venv/bin/councilkey"), "agents", "env"],
+        [str(cli_path()), "agents", "env"],
         capture_output=True, text=True, timeout=60,
     )
     assert r.returncode == 0
@@ -189,7 +191,7 @@ def test_cli_ask_together():
     import subprocess
 
     r = subprocess.run(
-        [str(ROOT / ".venv/bin/councilkey"), "ask", "ping"],
+        [str(cli_path()), "ask", "ping"],
         capture_output=True, text=True, timeout=120,
     )
     assert r.returncode == 0, r.stdout[-300:]
@@ -201,7 +203,7 @@ def test_cli_ask_alone():
     import subprocess
 
     r = subprocess.run(
-        [str(ROOT / ".venv/bin/councilkey"), "ask", "ping", "--alone", "openclaw"],
+        [str(cli_path()), "ask", "ping", "--alone", "openclaw"],
         capture_output=True, text=True, timeout=120,
     )
     assert r.returncode == 0

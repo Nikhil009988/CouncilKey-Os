@@ -118,6 +118,11 @@ You ask ──► 3 agents answer ──► council votes ──► journal + me
 
 ## CLI reference
 
+> **Windows note:** after setup, use `councilkey.bat` from the repo root
+> (or `.\.venv\Scripts\councilkey.exe`) - the venv's Scripts folder isn't
+> on PATH automatically. Linux/macOS: `./councilkey` or `councilkey` when
+> the venv is on PATH.
+
 ```
 councilkey serve [--host 0.0.0.0] [--port 8443]   start the dashboard + API
 councilkey ask "..." [--strategy X] [--debate] [--decompose] [--alone A]

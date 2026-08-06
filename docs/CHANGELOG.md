@@ -401,3 +401,25 @@ Fixes / improvements:
   ("Setup finished in 6m 12s").
 - New run_with_progress / human_duration helpers in council/agents/proc.py.
 - 1 new test (94 total), ruff clean. Guide updated with the new flow.
+
+## v1.9.4 (2026-08-05) - fix the real Windows report: hang + PATH + old code
+
+Real-world report from a Windows machine (still on an old clone) exposed:
+
+1. **pytest timed out after 600s** - the old wizard ran the test suite
+   unconditionally with a 600s timeout, and a test could block forever:
+   the terminal WS test used an UNBOUNDED ws.receive() loop. Fixed: the
+   terminal test is now deadline-bounded (15s) and tolerates slow
+   PowerShell echoes on Windows. The wizard also now asks before running
+   tests (default No) and limits them to 180s.
+2. **councilkey not recognized in PowerShell** - the venv's Scripts folder
+   isn't on PATH. Added `councilkey.bat` (Windows) and `councilkey`
+   (Linux/macOS) launchers at the repo root; setup.ps1 and README now tell
+   users to use them. Tests use a platform-aware cli_path().
+3. **Still seeing old failures (npm WinError 2, agent-zero Docker)** - the
+   user was running pre-fix code. Added a STALE-VERSION WARNING: doctor and
+   the setup wizard now compare the installed version with the latest
+   GitHub release and print "you are on vX - the latest is vY - run
+   'councilkey update'".
+4. Troubleshooting guide: new rows for all three symptoms.
+5. 94 tests passing (platform-aware), ruff clean.

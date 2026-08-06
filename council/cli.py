@@ -25,6 +25,45 @@ def cmd_version() -> str:
     return __version__
 
 
+_stale_check_cache: tuple[float, str] | None = None
+
+
+def check_stale(timeout: float = 4.0) -> str:
+    """Compare the installed version with the latest GitHub release.
+
+    Returns a warning string (or "" when up to date / offline). Cached so
+    it only hits the network once per process."""
+    global _stale_check_cache
+    import time as _t
+
+    now = _t.monotonic()
+    if _stale_check_cache and now - _stale_check_cache[0] < 300:
+        return _stale_check_cache[1]
+    try:
+        import httpx
+
+        r = httpx.get(
+            "https://api.github.com/repos/Nikhil009988/CouncilKey-Os/releases/latest",
+            timeout=timeout,
+            headers={"Accept": "application/vnd.github+json"},
+        )
+        if r.status_code != 200:
+            _stale_check_cache = (now, "")
+            return ""
+        latest = str(r.json().get("tag_name", "")).lstrip("v")
+        current = __version__.lstrip("v")
+        if latest and latest != current:
+            msg = (f"  ⚠ you are on v{current} - the latest is v{latest}. "
+                   "Run 'councilkey update' to get the fixes.")
+            _stale_check_cache = (now, msg)
+            return msg
+        _stale_check_cache = (now, "")
+        return ""
+    except Exception:
+        _stale_check_cache = (now, "")
+        return ""
+
+
 def cmd_doctor() -> int:
     """Check the runtime environment and print a health report."""
     checks: list[tuple[str, bool, str]] = []
@@ -87,6 +126,9 @@ def cmd_doctor() -> int:
     ollama = is_running()
     check("ollama", bool(ollama.get("running")), str(ollama.get("error", "")))
 
+    stale = check_stale()
+    if stale:
+        print(stale)
     print(f"CouncilKey-Os {__version__} doctor report")
     print("=" * 60)
     failed = 0

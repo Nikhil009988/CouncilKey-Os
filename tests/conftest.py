@@ -13,3 +13,14 @@ _TMP = tempfile.mkdtemp(prefix="council-test-")
 os.environ["COUNCIL_HOME"] = _TMP
 # Point Ollama at a dead port so network probes fail fast instead of hanging.
 os.environ.setdefault("OLLAMA_BASE_URL", "http://127.0.0.1:9")
+
+
+def cli_path():
+    """Path to the councilkey console script (venv Scripts on Windows)."""
+    import os
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    if os.name == "nt":
+        return root / ".venv" / "Scripts" / "councilkey.exe"
+    return root / ".venv" / "bin" / "councilkey"

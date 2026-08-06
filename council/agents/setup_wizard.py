@@ -100,6 +100,14 @@ def _banner() -> None:
     print("  model provider + API keys · 3 agents · real answers")
     print("=" * 58)
     print("  tip: running an old clone?  run 'councilkey update' to get the latest fixes")
+    try:
+        from council.cli import check_stale
+
+        stale = check_stale()
+        if stale:
+            print(stale)
+    except Exception:
+        pass
 
 
 def _save_summary(summary: dict[str, Any]) -> None:
@@ -342,7 +350,7 @@ def run_wizard(
             note("test suite", True, "skipped (run 'make test' anytime)")
         else:
             def _tests():
-                return run_cmd([sys.executable, "-m", "pytest", "tests", "-q"], cwd=ROOT, timeout=900)
+                return run_cmd([sys.executable, "-m", "pytest", "tests", "-q"], cwd=ROOT, timeout=180)
             try:
                 ok, out = run_with_progress(_tests, "running the test suite", interval=10)
             except Exception as exc:

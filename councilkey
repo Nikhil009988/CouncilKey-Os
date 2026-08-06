@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# councilkey - run the councilkey CLI from the project venv (Linux/macOS).
+#   Usage:  ./councilkey setup
+#           ./councilkey serve
+#           ./councilkey ask "plan a trip"
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+if [ ! -x "$ROOT/.venv/bin/councilkey" ]; then
+  echo "[error] project not set up yet - run:  ./scripts/setup.sh" >&2
+  exit 1
+fi
+exec "$ROOT/.venv/bin/councilkey" "$@"
