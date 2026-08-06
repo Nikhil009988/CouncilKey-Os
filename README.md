@@ -31,7 +31,23 @@ cd CouncilKey-Os
 curl -fsSL https://raw.githubusercontent.com/Nikhil009988/CouncilKey-Os/main/install.sh | bash
 ```
 
-### 2. Run the setup wizard
+### 2. Install everything automatically (one command)
+
+```bash
+# Windows
+powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 -Full
+# Linux/macOS
+./scripts/setup.sh --auto
+```
+
+This installs **all 5 agents** (Hermes, OpenClaw, CrewAI, Aider via their
+official installers; Agent Zero launcher for Python 3.12+) and stores your
+API key from the environment (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY` /
+`GEMINI_API_KEY` / `OPENROUTER_API_KEY`) or `--api-key` / `-ApiKey`.
+No key? It prints the one command to add it. `councilkey agents verify`
+then checks everything actually runs.
+
+### 2b. Or run the interactive wizard
 
 ```
 councilkey setup

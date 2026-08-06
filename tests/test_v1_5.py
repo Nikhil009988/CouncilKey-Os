@@ -480,3 +480,27 @@ def test_dashboard_overview_tab():
     html = (ROOT / "council" / "orchestrator" / "index.html").read_text(encoding="utf-8")
     for token in ("tab-overview", "ov-provider", "ov-roles", "loadOverview", "ov-last"):
         assert token in html, token
+
+
+def test_setup_scripts_have_auto_full_mode():
+    """Clone -> one command must install everything (setup.sh --auto /
+    setup.ps1 -Full)."""
+    sh = (ROOT / "scripts" / "setup.sh").read_text(encoding="utf-8")
+    assert "--auto" in sh
+    assert "agents install" in sh
+    assert "OPENAI_API_KEY" in sh
+
+    ps = (ROOT / "scripts" / "setup.ps1").read_text(encoding="utf-8")
+    assert "-Full" in ps
+    assert "agents install" in ps
+    assert "OPENAI_API_KEY" in ps
+
+
+def test_verify_checks_external_binaries():
+    """agents verify must check that installed external agent binaries run."""
+    import council.cli as cli_mod
+
+    src = open(cli_mod.__file__, encoding="utf-8").read()
+    assert "external agent binaries" in src
+    assert "2/2" in src
+    assert "--version" in src

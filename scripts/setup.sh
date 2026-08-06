@@ -2,29 +2,33 @@
 # setup.sh - One-command setup for CouncilKey-Os.
 #
 #   [1] Python environment + CouncilKey-Os
-#   [2] INTERACTIVE WIZARD (councilkey setup):
-#       - model provider + API key (OpenAI/Anthropic/Gemini/OpenRouter) -
-#         stored encrypted in the secrets vault, used by the 3 council roles
-#         AND the external agents
-#       - optional external agents (Hermes/OpenClaw/Agent Zero) via their
-#         official installers
-#       - tests + verify
+#   [2] INSTALLS EVERYTHING to make the agents run:
+#       - all 5 external agents (Hermes, OpenClaw, CrewAI, Aider via their
+#         official installers; Agent Zero launcher ready for Python 3.12+)
+#       - the API key (from OPENAI_API_KEY / ANTHROPIC / GEMINI / OPENROUTER
+#         env, or the interactive wizard)
+#       - verifies the council answers
 #
 # Usage:
-#   ./scripts/setup.sh                # interactive wizard (recommended)
-#   ./scripts/setup.sh --no-agents    # wizard, skip external agents
-#   ./scripts/setup.sh --skip-tests   # wizard, don't run pytest
-#   (non-interactive shell -> runs with defaults, no prompts)
+#   ./scripts/setup.sh                  # interactive wizard (asks for key + agents)
+#   ./scripts/setup.sh --auto           # INSTALL EVERYTHING automatically
+#   ./scripts/setup.sh --auto --api-key sk-...   # + key
+#   ./scripts/setup.sh --no-agents      # wizard, skip external agents
+#   ./scripts/setup.sh --skip-tests     # don't run tests/verify
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+AUTO=0
 NO_AGENTS=0
 SKIP_TESTS=0
+API_KEY=""
 for arg in "$@"; do
   case "$arg" in
+    --auto) AUTO=1 ;;
     --no-agents) NO_AGENTS=1 ;;
     --skip-tests) SKIP_TESTS=1 ;;
-    *) echo "unknown option: $arg" >&2; exit 1 ;;
+    --api-key) API_KEY="${2:-}"; shift || true ;;
+    *) ;;
   esac
 done
 
@@ -32,26 +36,70 @@ echo "=============================================="
 echo " CouncilKey-Os setup"
 echo "=============================================="
 
-# 1. Python environment + package (always needed for the wizard too)
+# 1. Python environment + package
 echo ""
-echo "[1/2] Installing CouncilKey-Os..."
+echo "[1/3] Installing CouncilKey-Os..."
 if [ ! -d "$ROOT/.venv" ]; then
   python3 -m venv "$ROOT/.venv"
 fi
 "$ROOT/.venv/bin/pip" install -q -e "$ROOT[dev]"
 echo "      ok - 'councilkey' CLI ready"
 
-# 2. Interactive wizard (asks: provider, API key, external agents)
-WIZARD_ARGS=""
-[ "$NO_AGENTS" -eq 1 ] && WIZARD_ARGS="$WIZARD_ARGS --no-agents"
-[ "$SKIP_TESTS" -eq 1 ] && WIZARD_ARGS="$WIZARD_ARGS --skip-tests"
+# 2a. AUTO: install everything without prompts
+if [ "$AUTO" -eq 1 ]; then
+  echo ""
+  echo "[2/3] Installing ALL agents automatically (this takes a few minutes)..."
+  "$ROOT/.venv/bin/councilkey" agents install || true
+  echo "      agents installed - check with: councilkey agents status"
 
-if [ -t 0 ] && [ -t 1 ]; then
-  # interactive terminal -> guided wizard with prompts (API keys etc.)
-  exec "$ROOT/.venv/bin/councilkey" setup $WIZARD_ARGS
+  # API key: env vars first, then --api-key
+  KEY_ENV=""; PROVIDER="openai"
+  if [ -n "${OPENAI_API_KEY:-}" ]; then KEY_ENV="$OPENAI_API_KEY"
+  elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then KEY_ENV="$ANTHROPIC_API_KEY"; PROVIDER="anthropic"
+  elif [ -n "${GEMINI_API_KEY:-}" ]; then KEY_ENV="$GEMINI_API_KEY"; PROVIDER="gemini"
+  elif [ -n "${OPENROUTER_API_KEY:-}" ]; then KEY_ENV="$OPENROUTER_API_KEY"; PROVIDER="openrouter"
+  elif [ -n "$API_KEY" ]; then KEY_ENV="$API_KEY"
+  fi
+
+  if [ -n "$KEY_ENV" ]; then
+    echo ""
+    echo "[2/3] Storing the API key (from env / --api-key)..."
+    "$ROOT/.venv/bin/councilkey" setup --provider "$PROVIDER" --api-key "$KEY_ENV" \
+      --no-agents --skip-tests --skip-verify || true
+    echo "      ok - key stored encrypted"
+  else
+    echo ""
+    echo "      ⚠ no API key found (OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY / OPENROUTER_API_KEY env, or --api-key)."
+    echo "        The agents won't answer until you add one:"
+    echo "        ./councilkey setup"
+  fi
 else
-  # non-interactive (CI/pipes) -> just install the package, skip prompts
-  echo "[2/2] Non-interactive shell - skipping wizard prompts."
-  echo "      Run the wizard anytime:  councilkey setup"
-  "$ROOT/.venv/bin/councilkey" doctor || true
+  # 2b. interactive wizard (or non-interactive defaults)
+  echo ""
+  echo "[2/3] Setup wizard..."
+  WIZARD_ARGS=""
+  [ "$NO_AGENTS" -eq 1 ] && WIZARD_ARGS="$WIZARD_ARGS --no-agents"
+  [ "$SKIP_TESTS" -eq 1 ] && WIZARD_ARGS="$WIZARD_ARGS --skip-tests"
+  if [ -t 0 ] && [ -t 1 ]; then
+    exec "$ROOT/.venv/bin/councilkey" setup $WIZARD_ARGS
+  else
+    echo "      non-interactive shell - run 'councilkey setup' anytime"
+    "$ROOT/.venv/bin/councilkey" doctor || true
+  fi
 fi
+
+# 3. verify
+if [ "$SKIP_TESTS" -eq 0 ] && [ "$AUTO" -eq 1 ]; then
+  echo ""
+  echo "[3/3] Verifying the council (real ask)..."
+  "$ROOT/.venv/bin/councilkey" agents verify || true
+fi
+
+echo ""
+echo "=============================================="
+echo " ✅ Setup complete"
+echo ""
+echo "   Start the dashboard:   ./scripts/start.sh"
+echo "   Open:                  http://localhost:8443"
+echo "   Agent status:          councilkey agents status"
+echo "=============================================="

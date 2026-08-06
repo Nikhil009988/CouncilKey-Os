@@ -530,3 +530,22 @@ User request: "I want EVERYTHING on the pendrive."
   the last 3 decisions - refreshes every 10s.
 
 2 new tests (101 total), ruff clean, compile + shell OK.
+
+## v1.13.0 (2026-08-05) - clone → one command → everything installed
+
+User request: when someone copies from GitHub, make setup install ALL the
+necessary things so the agents run.
+
+- **setup.sh --auto** / **setup.ps1 -Full**: non-interactive full setup -
+  Python env + package, installs ALL 5 external agents (hermes, openclaw,
+  crewai, aider via official installers; agent-zero launcher), stores the
+  API key from env vars (OPENAI/ANTHROPIC/GEMINI/OPENROUTER_API_KEY) or
+  --api-key/-ApiKey, then verifies. Without a key it prints the one command
+  to add it.
+- **councilkey agents verify** now has 2 parts: (1) real ask to the 3
+  council roles, (2) checks every installed external agent binary actually
+  runs (--version) - so "are the remaining agents working?" is answered
+  with one command.
+- Verified live: hermes ✅ v0.19.0, openclaw ✅ 2026.7.1-2, crewai ✅ 1.15.12,
+  aider ✅ 0.86.2; --auto with and without a key both work.
+- 2 new tests (103 total), ruff clean.

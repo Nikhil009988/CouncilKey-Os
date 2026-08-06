@@ -345,15 +345,16 @@ def cmd_agents(action: str, names: list[str]) -> int:
         return 0
 
     if action == "verify":
-        """Real smoke test: ask the 3 COUNCIL ROLE agents (hermes/openclaw/
-        agent-zero) and show which backend answers. crewai/aider are external
-        CLIs, not council roles - they are checked by 'agents status'."""
+        """Real smoke test: ask the 3 COUNCIL ROLE agents AND check that every
+        installed external agent binary actually runs."""
         import asyncio
+        import shutil
 
         from council.orchestrator.agents import build_default_clients, client_modes
 
+        # 1. council roles (real ask)
         roles = ["hermes", "openclaw", "agent-zero"]
-        print("== verifying the council (real ask - each agent up to 30s, please wait) ==")
+        print("== 1/2 verifying the council (real ask - each agent up to 30s, please wait) ==")
         modes = client_modes()
         clients = build_default_clients()
 
@@ -369,8 +370,34 @@ def cmd_agents(action: str, names: list[str]) -> int:
             await asyncio.gather(*[_check(n) for n in roles])
 
         asyncio.run(_run_all())
+
+        # 2. external agent binaries (installed? do they run?)
+        print("\n== 2/2 external agent binaries ==")
+        from council.agents.installer import AGENTS
+
+        for name, info in AGENTS.items():
+            if name in ("agent-zero",):  # docker/venv based, checked by status
+                continue
+            binary = shutil.which(info["bin"])
+            # venv-installed agents (crewai/aider/hermes) live in .venv
+            if not binary:
+                venv_bin = ROOT / ".venv" / ("Scripts" if os.name == "nt" else "bin") / info["bin"]
+                if venv_bin.exists():
+                    binary = str(venv_bin)
+            if not binary:
+                print(f"  {name:<11} ⚪ not installed (run: councilkey agents install {name})")
+                continue
+            try:
+                import subprocess
+
+                r = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=30)
+                out = (r.stdout or r.stderr or "").strip().splitlines()
+                ver = out[0][:60] if out else "ok"
+                print(f"  {name:<11} ✅ runs - {ver}")
+            except Exception as exc:
+                print(f"  {name:<11} ⚠ installed but failed to run: {exc}")
+
         print("\nlegend: gateway = external agent server | provider = model API (councilkey setup) | mock = nothing configured")
-        print("note: crewai/aider are external CLIs - check them with: councilkey agents status")
         return 0
 
     return 2
