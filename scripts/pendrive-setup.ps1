@@ -90,8 +90,37 @@ endlocal
 "@ | Set-Content -Encoding ASCII (Join-Path $Path "START.bat")
 Write-Host "      ok"
 
-# 5. autorun.inf + optional wizard
-Write-Host "[5/5] Writing autorun.inf..."
+# 5. portable agents on the stick (OpenClaw runs FROM the stick)
+Write-Host "[5/6] Installing portable OpenClaw on the stick (optional)..."
+New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\openclaw") | Out-Null
+if (Get-Command npm -ErrorAction SilentlyContinue) {
+  & npm install --prefix (Join-Path $Dest "tools\openclaw") --no-audit --no-fund openclaw@latest | Out-Null
+  Write-Host "      ok (openclaw CLI on the stick)"
+} else {
+  Write-Host "      ⚠ npm not found - openclaw will use the host install; state still goes to the stick"
+}
+
+# RUN-OPENCLAW.bat - OpenClaw with ALL state on the stick
+@"
+@echo off
+rem RUN-OPENCLAW.bat - OpenClaw from the pendrive (Windows)
+rem Everything OpenClaw knows (workspace, config, memory) stays on the stick.
+setlocal
+set "STICK=%~dp0"
+set "OPENCLAW_STATE_DIR=%STICK%council-data\openclaw"
+set "OPENCLAW_CONFIG_PATH=%STICK%council-data\openclaw\openclaw.json"
+if exist "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" (
+  "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" %*
+) else (
+  openclaw %*
+)
+endlocal
+"@ | Set-Content -Encoding ASCII (Join-Path $Path "RUN-OPENCLAW.bat")
+Write-Host "      ok (RUN-OPENCLAW.bat - agents' data stays on the stick)"
+
+# 6. autorun.inf + optional wizard
+
+Write-Host "[6/6] Writing autorun.inf..."
 @"
 [autorun]
 open=START.bat
@@ -115,5 +144,6 @@ Write-Host " ✅ Pendrive ready!"
 Write-Host ""
 Write-Host "   On any Windows PC: plug in -> double-click START.bat"
 Write-Host "   Dashboard:         http://localhost:8443"
+Write-Host "   Agents:            RUN-OPENCLAW.bat (data on the stick)"
 Write-Host "   Data stays on the stick: $Path\council-data"
 Write-Host "=============================================="

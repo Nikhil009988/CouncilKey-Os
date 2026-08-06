@@ -69,6 +69,15 @@
     .vote-bar { transition: width 0.6s ease; }
     #three-container canvas { width: 100% !important; height: 100% !important; }
     .xterm-container { background: #0a0a0f; border: 1px solid #2a2d3d; }
+    #chat-messages::-webkit-scrollbar { width: 8px; }
+    #chat-messages::-webkit-scrollbar-thumb { background: #2a2d3d; border-radius: 4px; }
+    #chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .msg-user { max-width: 85%; background: rgba(99,102,241,0.25); border: 1px solid rgba(99,102,241,0.4); border-radius: 16px; border-bottom-right-radius: 4px; padding: 10px 14px; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+    .msg-council { max-width: 92%; background: rgba(26,29,41,0.75); border: 1px solid rgba(99,102,241,0.2); border-radius: 16px; border-bottom-left-radius: 4px; padding: 10px 14px; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+    .msg-system { max-width: 92%; background: rgba(26,29,41,0.4); border: 1px dashed rgba(148,163,184,0.3); border-radius: 10px; padding: 8px 12px; font-size: 12px; color: #94a3b8; white-space: pre-wrap; word-break: break-word; }
+    .msg-meta { font-size: 10px; color: #64748b; margin-top: 6px; }
+    .msg-council h1, .msg-council h2, .msg-council h3 { font-weight: 700; color: #c7d2fe; margin: 6px 0 2px; font-size: 13px; }
+    .msg-council strong { color: #e2e8f0; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -165,10 +174,15 @@
           </div>
         </div>
       </div>
-      <div id="council-result" class="hidden space-y-2">
-        <div class="text-xs text-slate-400">Final</div>
-        <pre id="council-final" class="bg-council-800/60 border border-council-700/50 rounded-xl p-4 text-sm whitespace-pre-wrap"></pre>
-        <div id="typing-indicator" class="hidden text-xs text-council-300 flex items-center gap-1"><span class="typing-dot">•</span><span class="typing-dot">•</span><span class="typing-dot">•</span> council is debating</div>
+      <div id="chat-wrap" class="hidden glass rounded-xl overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-2 border-b border-council-700/50">
+          <div class="text-xs text-slate-400">💬 Council chat <span class="text-slate-600">— every decision is saved to the journal</span></div>
+          <button id="chat-clear" class="px-2 py-0.5 rounded bg-council-700 hover:bg-council-600 text-[11px] text-slate-300">Clear</button>
+        </div>
+        <div id="chat-messages" class="h-96 overflow-y-auto p-4 space-y-3"></div>
+        <div id="typing-indicator" class="hidden px-4 py-2 text-xs text-council-300 flex items-center gap-1 border-t border-council-700/50">
+          <span class="typing-dot">•</span><span class="typing-dot">•</span><span class="typing-dot">•</span> council is debating
+        </div>
       </div>
     </div>
 
@@ -370,14 +384,39 @@
     }
     connectWS();
 
+    function escapeHtml(t) {
+      return String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function addMsg(role, html) {
+      const wrap = document.getElementById('chat-wrap');
+      const msgs = document.getElementById('chat-messages');
+      wrap.classList.remove('hidden');
+      const row = document.createElement('div');
+      row.className = role === 'user' ? 'flex justify-end' : 'flex justify-start';
+      const inner = document.createElement('div');
+      inner.className = role === 'user' ? 'msg-user' : (role === 'system' ? 'msg-system' : 'msg-council');
+      inner.innerHTML = html;
+      row.appendChild(inner);
+      msgs.appendChild(row);
+      msgs.scrollTop = msgs.scrollHeight;
+      return inner;
+    }
+
     function renderCouncilResult(data) {
-      const box = document.getElementById('council-result');
-      const finalEl = document.getElementById('council-final');
       const typing = document.getElementById('typing-indicator');
-      box.classList.remove('hidden');
       typing.classList.add('hidden');
-      finalEl.textContent = data.final || JSON.stringify(data, null, 2);
-      renderVotes(data.votes || {});
+      const final = data.final || JSON.stringify(data, null, 2);
+      const escaped = escapeHtml(final)
+        .replace(/^(#{1,3}) (.+)$/gm, (m, h, txt) => '<h' + h.length + '>' + txt + '</h' + h.length + '>');
+      const votes = data.votes || {};
+      const voteLine = Object.entries(votes).map(([a, v]) => a + ': ' + v).join(' · ');
+      const meta = data.consensus_reached !== undefined
+        ? '<div class="msg-meta">' + (data.consensus_reached ? '✅ consensus' : '❌ no consensus') +
+          (voteLine ? ' · votes: ' + voteLine : '') + ' · ' + (data.timestamp || '') + '</div>'
+        : '';
+      addMsg('council', escaped + meta);
+      renderVotes(votes);
     }
 
     function renderVotes(votes) {
@@ -390,18 +429,16 @@
     }
 
     async function askStream(body) {
-      const box = document.getElementById('council-result');
-      const finalEl = document.getElementById('council-final');
       const typing = document.getElementById('typing-indicator');
-      box.classList.remove('hidden');
       typing.classList.remove('hidden');
-      finalEl.textContent = '';
+      const live = addMsg('council', '<span class="text-slate-500">listening…</span>');
       try {
         const r = await apiFetch('/api/council/ask/stream', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
-        if (!r.ok || !r.body) { finalEl.textContent = 'Stream error: ' + r.status; typing.classList.add('hidden'); return; }
+        if (!r.ok || !r.body) { live.innerHTML = 'Stream error: ' + r.status; typing.classList.add('hidden'); return; }
         const reader = r.body.getReader();
         const dec = new TextDecoder();
         let buf = '';
+        let finalDone = false;
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -415,16 +452,23 @@
             }
             if (!data) continue;
             if (data.event === 'agent') {
-              finalEl.textContent += '[agent ' + data.agent + ' ' + data.status + ' ' + data.latency + 's]\n' + data.response + '\n';
+              live.innerHTML = escapeHtml('[agent ' + data.agent + ' · ' + data.status + ' · ' + data.latency + 's]\n' + data.response);
+              live.scrollIntoView({ block: 'nearest' });
             } else if (data.event === 'final') {
+              finalDone = true;
               typing.classList.add('hidden');
-              finalEl.textContent = data.final;
+              const escaped = escapeHtml(data.final)
+                .replace(/^(#{1,3}) (.+)$/gm, (m, h, txt) => '<h' + h.length + '>' + txt + '</h' + h.length + '>');
+              const voteLine = Object.entries(data.votes || {}).map(([a, v]) => a + ': ' + v).join(' · ');
+              live.innerHTML = escaped + '<div class="msg-meta">' + (data.consensus_reached ? '✅ consensus' : '❌ no consensus') +
+                (voteLine ? ' · votes: ' + voteLine : '') + '</div>';
               if (data.votes) renderVotes(data.votes);
             } else if (data.event === 'done') { typing.classList.add('hidden'); }
           }
         }
+        if (!finalDone) live.innerHTML = escapeHtml(live.textContent || '') + '<div class="msg-meta">(stream ended)</div>';
         typing.classList.add('hidden');
-      } catch (e) { finalEl.textContent = 'Stream error: ' + e.message; typing.classList.add('hidden'); }
+      } catch (e) { live.innerHTML = 'Stream error: ' + escapeHtml(e.message); typing.classList.add('hidden'); }
     }
 
     // --- setup banner ---
@@ -434,26 +478,33 @@
       document.getElementById('banner-setup').disabled = true;
     });
 
-    // --- load the last journal entry into the council view (persistent chat) ---
+    // --- load the last journal entry into the chat (persistent conversation) ---
     async function loadLastConversation() {
       try {
-        const r = await apiFetch('/api/chat/history?limit=1');
+        const r = await apiFetch('/api/chat/history?limit=3');
         const d = await r.json();
         const entries = d.entries || [];
-        if (!entries.length) return;
+        if (!entries.length) { addMsg('system', 'First run — ask anything and the council (3 agents + vote) will answer. Every decision is saved to the journal.'); return; }
+        for (const e of entries) {
+          addMsg('user', escapeHtml(e.prompt || ''));
+          addMsg('council', escapeHtml((e.final || '').slice(0, 800)));
+        }
         const last = entries[entries.length - 1];
-        const box = document.getElementById('council-result');
-        const finalEl = document.getElementById('council-final');
-        box.classList.remove('hidden');
-        finalEl.textContent = '# Last session\n\n' + (last.prompt || '') + '\n\n' + (last.final || '');
         document.getElementById('prompt').placeholder = 'Continue: ' + (last.prompt || 'ask council...').slice(0, 60);
-      } catch (e) { /* first run - no history yet */ }
+      } catch (e) { addMsg('system', 'Ask anything — the 3 agents will debate and vote.'); }
     }
     loadLastConversation();
+
+    document.getElementById('chat-clear').addEventListener('click', () => {
+      document.getElementById('chat-messages').innerHTML = '';
+      addMsg('system', 'Conversation cleared — the journal still has everything.');
+    });
 
     document.getElementById('ask-btn').addEventListener('click', async () => {
       const prompt = document.getElementById('prompt').value.trim();
       if (!prompt) return;
+      addMsg('user', escapeHtml(prompt));
+      document.getElementById('prompt').value = '';
       const body = { prompt, strategy: document.getElementById('strategy-select').value, min_agreement: 2 };
       if (document.getElementById('stream-toggle').checked) { await askStream(body); return; }
       document.getElementById('typing-indicator').classList.remove('hidden');
@@ -468,6 +519,8 @@
     document.getElementById('debate-btn').addEventListener('click', async () => {
       const prompt = document.getElementById('prompt').value.trim();
       if (!prompt) return;
+      addMsg('user', escapeHtml(prompt) + ' <span class="text-[10px] text-council-400">(debate)</span>');
+      document.getElementById('prompt').value = '';
       document.getElementById('typing-indicator').classList.remove('hidden');
       const body = { prompt, rounds: 3, strategy: document.getElementById('strategy-select').value, min_agreement: 2 };
       try {
@@ -480,6 +533,8 @@
     document.getElementById('decompose-btn').addEventListener('click', async () => {
       const prompt = document.getElementById('prompt').value.trim();
       if (!prompt) return;
+      addMsg('user', escapeHtml(prompt) + ' <span class="text-[10px] text-council-400">(decompose)</span>');
+      document.getElementById('prompt').value = '';
       document.getElementById('typing-indicator').classList.remove('hidden');
       const body = { prompt, strategy: document.getElementById('strategy-select').value, min_agreement: 2 };
       try {

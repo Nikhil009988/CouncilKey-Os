@@ -427,3 +427,27 @@ def test_pendrive_cli_platform_aware():
     src = open(cli.__file__, encoding="utf-8").read()
     assert "pendrive-setup.ps1" in src
     assert "pendrive-setup.sh" in src
+
+
+def test_pendrive_script_has_portable_openclaw():
+    """The pendrive build installs OpenClaw onto the stick and redirects its
+    state there (so agents don't live on the host PC)."""
+    s = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    assert "npm install --prefix" in s
+    assert "openclaw@latest" in s
+    assert "OPENCLAW_STATE_DIR" in s
+    assert "RUN-OPENCLAW.bat" in s
+    assert "council-data/openclaw" in s
+
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    assert "RUN-OPENCLAW.bat" in ps
+    assert "OPENCLAW_STATE_DIR" in ps
+
+
+def test_dashboard_chat_ui():
+    """The dashboard Council tab is a real chat UI (bubbles, stream, clear)."""
+    html = (ROOT / "council" / "orchestrator" / "index.html").read_text(encoding="utf-8")
+    for token in ("chat-messages", "addMsg(", "msg-council", "chat-clear", "askStream(body)"):
+        assert token in html, token
+    # the old plain result box is gone
+    assert "council-final" not in html

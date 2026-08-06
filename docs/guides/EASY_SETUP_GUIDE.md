@@ -57,6 +57,25 @@ Add `--wizard` to bake in your API key + agents during the build:
 > (that's a feature). The autoplay prompt / one double-click is the
 > supported equivalent, and it works on any PC without installing anything.
 
+**And the agents? They run from the stick too.**
+
+| Agent | On the stick |
+|---|---|
+| Council (Hermes/OpenClaw/Agent Zero roles) | answers via your API key - no install at all |
+| **OpenClaw** | the CLI is installed **on the stick** (`tools/openclaw`), and `RUN-OPENCLAW.bat` (Windows) / `run-openclaw.sh` (Linux) launch it with `OPENCLAW_STATE_DIR` + `OPENCLAW_CONFIG_PATH` pointing at `council-data/openclaw` - **its workspace, config and memory live on the stick, not on the host PC** |
+| Hermes / Agent Zero / CrewAI / Aider | installed on the PC (official installers) - the council doesn't depend on them |
+
+> **"OpenClaw said it lives on my PC"** — that's the *global* install
+> (`npm install -g openclaw@latest`); OpenClaw's default workspace is
+> `C:\Users\you\.openclaw`. On the pendrive build, use **`RUN-OPENCLAW.bat`**
+> instead of `openclaw` and everything (workspace, config, memory) stays on
+> the stick. To redirect an existing install manually:
+> ```powershell
+> $env:OPENCLAW_STATE_DIR = "E:\council-data\openclaw"
+> $env:OPENCLAW_CONFIG_PATH = "E:\council-data\openclaw\openclaw.json"
+> openclaw
+> ```
+
 ---
 ## 2. Complete setup
 

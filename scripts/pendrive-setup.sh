@@ -140,7 +140,51 @@ shell\start\command=START.bat
 EOF
 echo "      ok (note: Windows shows a 'Start CouncilKey-Os' prompt on plug-in)"
 
-# 6. optional: run the wizard so the stick has an API key baked in
+# 6. portable agents on the stick (OpenClaw runs FROM the stick, its
+#    workspace + config live on the stick - not on the host PC)
+echo "[6/7] Installing portable OpenClaw on the stick (optional)..."
+mkdir -p "$USB/council-data/openclaw"
+if command -v npm >/dev/null 2>&1; then
+  npm install --prefix "$USB/CouncilKey-Os/tools/openclaw" --no-audit --no-fund openclaw@latest >/dev/null 2>&1 &&     echo "      ok (openclaw CLI on the stick)" ||     echo "      ⚠ npm install failed - openclaw will use the host install; state still goes to the stick"
+else
+  echo "      ⚠ npm not found - skipping (openclaw will use the host install)"
+fi
+
+# RUN-OPENCLAW.bat - launches OpenClaw with ALL state on the stick
+cat > "$USB/RUN-OPENCLAW.bat" <<EOF
+@echo off
+rem RUN-OPENCLAW.bat - OpenClaw from the pendrive (Windows)
+rem Everything OpenClaw knows (workspace, config, memory) stays on the stick.
+setlocal
+set "STICK=%~dp0"
+set "OPENCLAW_STATE_DIR=%STICK%council-data\openclaw"
+set "OPENCLAW_CONFIG_PATH=%STICK%council-data\openclaw\openclaw.json"
+if exist "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" (
+  "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" %*
+) else (
+  openclaw %*
+)
+endlocal
+EOF
+
+cat > "$USB/run-openclaw.sh" <<EOF
+#!/usr/bin/env bash
+# run-openclaw.sh - OpenClaw from the pendrive (Linux/macOS)
+# Everything OpenClaw knows (workspace, config, memory) stays on the stick.
+set -euo pipefail
+STICK="\$(cd "\$(dirname "\$0")" && pwd)"
+export OPENCLAW_STATE_DIR="\$STICK/council-data/openclaw"
+export OPENCLAW_CONFIG_PATH="\$STICK/council-data/openclaw/openclaw.json"
+if [ -x "\$STICK/CouncilKey-Os/tools/openclaw/node_modules/.bin/openclaw" ]; then
+  exec "\$STICK/CouncilKey-Os/tools/openclaw/node_modules/.bin/openclaw" "\$@"
+else
+  exec openclaw "\$@"
+fi
+EOF
+chmod +x "$USB/run-openclaw.sh"
+echo "      ok (RUN-OPENCLAW.bat / run-openclaw.sh - agents' data stays on the stick)"
+
+# 7. optional: run the wizard so the stick has an API key baked in
 if [ "$WIZARD" -eq 1 ]; then
   echo "[6/6] Running the interactive wizard (API key + agents)..."
   COUNCIL_HOME="$USB/council-data" "$USB/CouncilKey-Os/.venv/bin/councilkey" setup
@@ -157,5 +201,6 @@ echo "   On any PC:"
 echo "     Windows  -> plug in, click 'Start CouncilKey-Os' (or double-click START.bat)"
 echo "     Linux    -> bash $USB/start.sh"
 echo "   Dashboard:  http://localhost:8443"
+echo "   Agents:     RUN-OPENCLAW.bat (Windows) / run-openclaw.sh (Linux) - data on the stick"
 echo "   Data stays on the stick: $USB/council-data"
 echo "=============================================="

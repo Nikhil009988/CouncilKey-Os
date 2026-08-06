@@ -481,3 +481,28 @@ real answers) but:
    command table: hermes / openclaw / agent.py / crewai run / aider).
 
 Verified: 97 tests, ruff clean, real ask returns 3 provider responses.
+
+## v1.11.0 (2026-08-05) - dashboard redesign (real chat) + agents on the pendrive
+
+### Redesign
+- Council tab is now a real chat UI: message bubbles (user right / council
+  left), streaming answers append into a live bubble, auto-scroll,
+  consensus + votes shown under each decision, "Clear" button, and the
+  last 3 journal conversations load as chat history on open. The plain
+  "result box" is gone.
+
+### Agents on the pendrive (user report: OpenClaw said it lives on the PC)
+- The pendrive build now installs OpenClaw **onto the stick**
+  (`tools/openclaw`, npm --prefix) and writes **RUN-OPENCLAW.bat** /
+  **run-openclaw.sh** that launch it with `OPENCLAW_STATE_DIR` and
+  `OPENCLAW_CONFIG_PATH` pointing at `council-data/openclaw` - workspace,
+  config and memory stay on the stick, not on the host PC. Same in the
+  PowerShell pendrive builder.
+- Guide: "And the agents? They run from the stick too" table + the exact
+  answer to "OpenClaw said it lives on my PC" (global npm install vs
+  RUN-OPENCLAW.bat) + manual env redirect for existing installs.
+
+### Verified
+- Built a stick: portable openclaw CLI on the stick, launcher runs it
+  (OpenClaw 2026.7.1-2), state env honored, stick state dir created.
+- 2 new tests (99 total), ruff clean. compile OK.
