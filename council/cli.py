@@ -476,6 +476,7 @@ def main(argv: list[str] | None = None) -> None:
     p_setup.add_argument("--api-key", help="API key for the provider (stored encrypted)")
     p_setup.add_argument("--no-agents", action="store_true", help="skip external agent installs")
     p_setup.add_argument("--skip-tests", action="store_true", help="don't run pytest at the end")
+    p_setup.add_argument("--skip-verify", action="store_true", help="don't run the council verification at the end")
 
     args = parser.parse_args(argv)
 
@@ -528,6 +529,7 @@ def main(argv: list[str] | None = None) -> None:
             api_key=args.api_key,
             no_agents=args.no_agents,
             skip_tests=args.skip_tests,
+            skip_verify=args.skip_verify,
         ))
     elif args.command == "version":
         print(cmd_version())

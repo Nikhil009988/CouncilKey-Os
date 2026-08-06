@@ -91,6 +91,21 @@
       </div>
     </div>
 
+    <!-- Setup-needed banner (hidden when configured) -->
+    <div id="setup-banner" class="hidden glass rounded-2xl p-4 border border-yellow-500/40 bg-yellow-500/5">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="text-sm">
+          <span class="font-semibold text-yellow-300">⚠ Council not configured yet</span>
+          <span class="text-slate-300"> — agents will answer in <b>mock mode</b> until you add an API key.</span>
+        </div>
+        <div class="flex gap-2">
+          <button id="banner-setup" class="px-4 py-1.5 rounded-lg bg-council-600 hover:bg-council-500 text-white text-sm font-semibold">Run setup wizard</button>
+          <button id="banner-hide" class="px-3 py-1.5 rounded-lg bg-council-700 hover:bg-council-600 text-sm">Hide</button>
+        </div>
+      </div>
+      <div class="mt-2 text-xs text-slate-400">In the terminal: <span class="font-mono text-slate-300">councilkey setup</span> — one command, ~1 min for the key. Your API key is stored encrypted and powers all 3 agents.</div>
+    </div>
+
     <!-- Tabs -->
     <div class="flex flex-wrap gap-2">
       <button class="tab-btn active px-4 py-2 rounded-xl border border-council-700/50 text-sm hover:border-council-600 transition" data-tab="council">Council</button>
@@ -412,6 +427,30 @@
       } catch (e) { finalEl.textContent = 'Stream error: ' + e.message; typing.classList.add('hidden'); }
     }
 
+    // --- setup banner ---
+    document.getElementById('banner-hide').addEventListener('click', () => document.getElementById('setup-banner').classList.add('hidden'));
+    document.getElementById('banner-setup').addEventListener('click', () => {
+      document.getElementById('banner-setup').textContent = 'Run in terminal: councilkey setup';
+      document.getElementById('banner-setup').disabled = true;
+    });
+
+    // --- load the last journal entry into the council view (persistent chat) ---
+    async function loadLastConversation() {
+      try {
+        const r = await apiFetch('/api/chat/history?limit=1');
+        const d = await r.json();
+        const entries = d.entries || [];
+        if (!entries.length) return;
+        const last = entries[entries.length - 1];
+        const box = document.getElementById('council-result');
+        const finalEl = document.getElementById('council-final');
+        box.classList.remove('hidden');
+        finalEl.textContent = '# Last session\n\n' + (last.prompt || '') + '\n\n' + (last.final || '');
+        document.getElementById('prompt').placeholder = 'Continue: ' + (last.prompt || 'ask council...').slice(0, 60);
+      } catch (e) { /* first run - no history yet */ }
+    }
+    loadLastConversation();
+
     document.getElementById('ask-btn').addEventListener('click', async () => {
       const prompt = document.getElementById('prompt').value.trim();
       if (!prompt) return;
@@ -625,6 +664,12 @@
         document.getElementById('mode-badge').textContent = 'Mode: ' + (data.council && data.council.mode ? data.council.mode : 'debate');
         const provider = data.provider || {};
         const llmBadge = document.getElementById('llm-badge');
+        const banner = document.getElementById('setup-banner');
+        if (provider.active) {
+          if (banner && !localStorage.getItem('council-banner-hidden')) banner.classList.add('hidden');
+        } else {
+          if (banner && !localStorage.getItem('council-banner-hidden')) banner.classList.remove('hidden');
+        }
         if (provider.active) {
           const pname = (provider.providers[provider.active] || {}).name || provider.active;
           llmBadge.textContent = 'AI: ' + pname + ' · ' + (provider.active_model || '');

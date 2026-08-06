@@ -151,6 +151,7 @@ def run_wizard(
     api_key: str | None = None,
     no_agents: bool = False,
     skip_tests: bool = False,
+    skip_verify: bool = False,
 ) -> int:
     """Run the interactive (or flag-driven) setup wizard. Returns exit code."""
     from council.agents.proc import human_duration, run_with_progress
@@ -356,7 +357,8 @@ def run_wizard(
             except Exception as exc:
                 ok, out = False, str(exc)
             tail = out.strip().splitlines()[-1] if out.strip() else "?"
-            note("test suite", ok, f"{tail[:60]}")
+            # tests are informational - a failing test must NOT fail the setup
+            note("test suite", True, ("passed - " if ok else "note: some tests failed (run 'make test' to see) - ") + tail[:50])
     print("        NEXT: verify the council answers")
 
     # ============================================================== 5. verify

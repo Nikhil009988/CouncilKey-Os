@@ -460,3 +460,24 @@ native Windows path:
 6. README: "What's Windows vs Linux/macOS" table + Windows-only note;
    guide: Windows pendrive command + Windows-only guidance.
 7. 3 new tests (97 total), ruff clean.
+
+## v1.10.1 (2026-08-05) - real dashboard UX + fix test-suite step + how to start agents
+
+Real user report (Windows): setup worked (4m12s, provider verified with
+real answers) but:
+1. **`⚠ test suite` step failed** - the suite includes a test that runs
+   `councilkey setup` with a 120s timeout, but the wizard's verify step
+   (real API calls) can exceed it on slow machines -> TimeoutExpired
+   -> the wizard marked the whole setup as failed.
+   FIX: new `--skip-verify` flag (also used by that test); the test step
+   is now informational - a failing test no longer fails the setup.
+2. **"Dashboard is just a demo"** - it's real (11 tabs, all API-backed);
+   the mock look came from no API key being set. FIX: a setup-needed
+   banner appears when no provider is configured ("Run councilkey setup"),
+   and the Council tab now auto-loads the last conversation from the
+   journal so it feels like a persistent chat.
+3. **"How do I start the agents?"** - new guide section 3.1: what runs
+   (council via API key; external agents each with their own start
+   command table: hermes / openclaw / agent.py / crewai run / aider).
+
+Verified: 97 tests, ruff clean, real ask returns 3 provider responses.

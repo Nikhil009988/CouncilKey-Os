@@ -142,6 +142,29 @@ Flags for automation: `councilkey setup --provider openai --api-key sk-... --no-
 
 ## 3. Start and use it
 
+### 3.1 Start the agents (what runs and how)
+
+Two layers, both started from the same terminal session:
+
+1. **The council (always works once the API key is set)** — the 3 role
+   agents answer through your provider. No separate process to start:
+   `councilkey serve` (or the dashboard) uses your key automatically.
+2. **The external agents (optional, installed in [3/5])** — each is its own
+   interactive program. Start them in their own terminal:
+
+| Agent | Start it | What you get |
+|---|---|---|
+| Hermes | `hermes` | interactive chat (config first: `hermes setup`) |
+| OpenClaw | `openclaw` | interactive chat (first run: `openclaw onboard`) |
+| Agent Zero | `cd tools/linux/agent-zero && .venv/bin/python agent.py` | interactive chat (needs Python 3.12+) |
+| CrewAI | `crewai create crew my_crew && cd my_crew && crewai run` | a crew of role agents working together |
+| Aider | `aider` (in a repo) | pair-programming chat — uses the same API key |
+
+> Tip: the external agents are optional — the dashboard's **Council tab**
+> already works with just your API key (no agent install needed).
+
+### 3.2 Start the dashboard
+
 ```bash
 ./scripts/start.sh          # Linux/macOS        -> http://localhost:8443
 scripts\start.bat           # Windows (double-click works)
