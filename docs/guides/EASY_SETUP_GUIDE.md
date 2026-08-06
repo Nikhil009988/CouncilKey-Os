@@ -359,4 +359,5 @@ is kept.
 | Port 8443 busy | `COUNCIL_PORT=9000 ./scripts/start.sh` |
 | Setup fails mid-download (no internet) | Re-run setup — finished steps are skipped; or `./scripts/setup.sh --no-agents` and install later |
 | Agent gateway shows but answers nothing | The gateway URL is wrong — check `COUNCIL_*_URL` and the agent's own README |
-| `councilkey` not found | You're not in the project venv — run from the repo: `./scripts/start.sh` or `.venv/bin/councilkey` |
+| `councilkey` not recognized in PowerShell | Use **`.\councilkey.bat`** (with the `.\` prefix) from the repo root, or `.\.venv\Scripts\councilkey.exe` — the venv's Scripts folder isn't on PATH, and PowerShell won't run files in the current folder without `.\` |
+| `git pull` says "Already up to date" but version is old | You're on a leftover branch, not `main`: `git checkout main && git pull` (a fresh clone is already on `main`) |
