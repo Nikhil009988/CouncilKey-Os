@@ -300,52 +300,58 @@ exit 1
 fi
 EOF
 
-cat > "$USB/RUN-CODEX.bat" <<'EOF'
+cat > "$USB/RUN-OPENCODE.bat" <<'EOF'
 @echo off
-rem RUN-CODEX.bat - Codex CLI from the pendrive (Windows) - NO Docker needed
-rem Codex runs locally: terminal, file editing and web tools on this PC.
-rem State and config stay on the stick (council-data\codex).
+rem RUN-OPENCODE.bat - OpenCode from the pendrive (Windows) - NO Docker needed
+rem OpenCode runs locally: terminal, file editing and web tools on this PC.
+rem State and config stay on the stick (council-data\opencode).
 setlocal
 set "STICK=%~dp0"
-set "CODEX_HOME=%STICK%council-data\codex"
-set "CODECONFIG=%STICK%council-data\codex\config.toml"
-if not exist "%CODEX_HOME%" mkdir "%CODEX_HOME%"
+set "OPENCODE_CONFIG=%STICK%council-data\opencode\opencode.json"
+set "XDG_CONFIG_HOME=%STICK%council-data\opencode\config"
+set "XDG_DATA_HOME=%STICK%council-data\opencode\data"
+if not exist "%STICK%council-data\opencode" mkdir "%STICK%council-data\opencode"
 
-rem 1. point Codex at the provider key stored in the encrypted vault
-call "%~dp0CouncilKey-Os\councilkey.bat" agents configure codex
+rem 1. point OpenCode at the provider key stored in the encrypted vault
+call "%~dp0CouncilKey-Os\councilkey.bat" agents configure opencode
 if errorlevel 1 (
   echo [error] no API key configured yet.
-  echo   Run once:  councilkey.bat setup   (choose OpenAI or OpenRouter)
+  echo   Run once:  councilkey.bat setup   (choose OpenAI / OpenRouter / Gemini / Anthropic)
   pause
   exit /b 1
 )
 for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show OPENROUTER_API_KEY 2^>nul') do set "OPENROUTER_API_KEY=%%K"
 for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show OPENAI_API_KEY 2^>nul') do set "OPENAI_API_KEY=%%K"
+for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show GEMINI_API_KEY 2^>nul') do set "GEMINI_API_KEY=%%K"
+for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show ANTHROPIC_API_KEY 2^>nul') do set "ANTHROPIC_API_KEY=%%K"
 
-rem 2. run codex (from the stick if installed there, else the PC install)
-if exist "%STICK%CouncilKey-Os\tools\codex\node_modules\.bin\codex.cmd" (
-  "%STICK%CouncilKey-Os\tools\codex\node_modules\.bin\codex.cmd" %*
+rem 2. run opencode (from the stick if installed there, else the PC install)
+if exist "%STICK%CouncilKey-Os\tools\opencode\node_modules\.bin\opencode.cmd" (
+  "%STICK%CouncilKey-Os\tools\opencode\node_modules\.bin\opencode.cmd" %*
 ) else (
-  codex %*
+  opencode %*
 )
 endlocal
 EOF
 
-cat > "$USB/run-codex.sh" <<'EOF'
+cat > "$USB/run-opencode.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 STICK="$(cd "$(dirname "$0")" && pwd)"
-export CODEX_HOME="$STICK/council-data/codex"
-export CODECONFIG="$STICK/council-data/codex/config.toml"
-mkdir -p "$CODEX_HOME"
-"$STICK/CouncilKey-Os/councilkey" agents configure codex
+export OPENCODE_CONFIG="$STICK/council-data/opencode/opencode.json"
+export XDG_CONFIG_HOME="$STICK/council-data/opencode/config"
+export XDG_DATA_HOME="$STICK/council-data/opencode/data"
+mkdir -p "$STICK/council-data/opencode"
+"$STICK/CouncilKey-Os/councilkey" agents configure opencode
 export OPENROUTER_API_KEY="$("$STICK/CouncilKey-Os/councilkey" key show OPENROUTER_API_KEY 2>/dev/null || true)"
 export OPENAI_API_KEY="$("$STICK/CouncilKey-Os/councilkey" key show OPENAI_API_KEY 2>/dev/null || true)"
-exec codex "$@"
+export GEMINI_API_KEY="$("$STICK/CouncilKey-Os/councilkey" key show GEMINI_API_KEY 2>/dev/null || true)"
+export ANTHROPIC_API_KEY="$("$STICK/CouncilKey-Os/councilkey" key show ANTHROPIC_API_KEY 2>/dev/null || true)"
+exec opencode "$@"
 EOF
 
 chmod +x "$USB"/run-*.sh
-echo "      ok (launchers: RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-CODEX)"
+echo "      ok (launchers: RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-OPENCODE)"
 
 
 # 7. session mode + agent menu + launch-all + stick README
@@ -446,7 +452,7 @@ echo   2) OpenClaw
 echo   3) Hermes
 echo   4) CrewAI
 echo   5) Aider
-echo   6) Codex  (local agent - no Docker)
+echo   6) OpenCode  (local agent - no Docker)
 echo   0) Quit
 echo ==============================================
 set /p choice="Choose (A/1-6/0): "
@@ -456,7 +462,7 @@ if "%choice%"=="2" goto oc
 if "%choice%"=="3" goto hermes
 if "%choice%"=="4" goto crewai
 if "%choice%"=="5" goto aider
-if "%choice%"=="6" goto codex
+if "%choice%"=="6" goto opencode
 if "%choice%"=="0" exit /b 0
 goto menu
 :all
@@ -465,7 +471,7 @@ start "OpenClaw" cmd /c "%~dp0RUN-OPENCLAW.bat"
 start "Hermes" cmd /c "%~dp0RUN-HERMES.bat"
 start "CrewAI" cmd /c "%~dp0RUN-CREWAI.bat"
 start "Aider" cmd /c "%~dp0RUN-AIDER.bat"
-start "Codex" cmd /c "%~dp0RUN-CODEX.bat"
+start "OpenCode" cmd /c "%~dp0RUN-OPENCODE.bat"
 goto done
 :dash
 call "%~dp0START.bat"
@@ -482,8 +488,8 @@ goto done
 :aider
 call "%~dp0RUN-AIDER.bat"
 goto done
-:codex
-call "%~dp0RUN-CODEX.bat"
+:opencode
+call "%~dp0RUN-OPENCODE.bat"
 goto done
 :done
 echo.
@@ -505,7 +511,7 @@ echo "  2) OpenClaw"
 echo "  3) Hermes"
 echo "  4) CrewAI"
 echo "  5) Aider"
-echo "  6) Codex  (local agent - no Docker)"
+echo "  6) OpenCode  (local agent - no Docker)"
 echo "  0) Quit"
 echo "=============================================="
 read -rp "Choose (A/1-6/0): " choice
@@ -516,14 +522,14 @@ case "$choice" in
     bash "$STICK/run-hermes.sh" &
     bash "$STICK/run-crewai.sh" &
     bash "$STICK/run-aider.sh" &
-    bash "$STICK/run-codex.sh" &
+    bash "$STICK/run-opencode.sh" &
     ;;
   1) bash "$STICK/start.sh" ;;
   2) bash "$STICK/run-openclaw.sh" ;;
   3) bash "$STICK/run-hermes.sh" ;;
   4) bash "$STICK/run-crewai.sh" ;;
   5) bash "$STICK/run-aider.sh" ;;
-  6) bash "$STICK/run-codex.sh" ;;
+  6) bash "$STICK/run-opencode.sh" ;;
   0) exit 0 ;;
   *) echo "try again"; bash "$0" ;;
 esac
@@ -537,7 +543,7 @@ cat > "$USB/launch-all.sh" <<'EOF'
 STICK="$(cd "$(dirname "$0")" && pwd)"
 bash "$STICK/start.sh" &
 sleep 2
-for launcher in run-openclaw.sh run-hermes.sh run-crewai.sh run-aider.sh run-codex.sh; do
+for launcher in run-openclaw.sh run-hermes.sh run-crewai.sh run-aider.sh run-opencode.sh; do
   [ -x "$STICK/$launcher" ] && bash "$STICK/$launcher" &
 done
 echo "all agents launched - dashboard at http://localhost:8443"
@@ -553,8 +559,8 @@ cat > "$USB/PENDRIVE-README.txt" <<EOF
 
 WHAT YOU HAVE
   This stick contains the whole CouncilKey-Os: the app, a portable
-  Python environment, and all 5 agents (Hermes, OpenClaw, Codex,
-  CrewAI, Aider). Codex is the builder/review agent - terminal, file
+  Python environment, and all 5 agents (Hermes, OpenClaw, OpenCode,
+  CrewAI, Aider). OpenCode is the builder/review agent - terminal, file
   editing and web tools, runs locally, NO Docker.
   ALL data - journal, memory, API keys, agent
   workspaces - lives on this stick in the "council-data" folder.
@@ -566,7 +572,7 @@ START ANY AGENT OR EVERYTHING AT ONCE
     START.bat          dashboard (council chat: 3 agents + vote)
     RUN-OPENCLAW.bat   OpenClaw      RUN-HERMES.bat   Hermes
     RUN-CREWAI.bat     CrewAI        RUN-AIDER.bat    Aider
-    RUN-CODEX.bat      Codex (local)     LAUNCH-ALL.bat   everything
+    RUN-OPENCODE.bat   OpenCode (local)  LAUNCH-ALL.bat   everything
 
 SESSION MODE (clone to PC, memory on stick, no traces)
   The stick runs everything by itself. Want it FASTER on this PC?
@@ -607,7 +613,7 @@ echo "   On any PC:"
 echo "     Windows  -> plug in, click 'Start CouncilKey-Os' (or double-click START.bat)"
 echo "     Linux    -> bash $USB/start.sh"
 echo "   Dashboard:  http://localhost:8443"
-echo "   Agents:     RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-CODEX (.bat)"
+echo "   Agents:     RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-OPENCODE (.bat)"
 echo "               or run-*.sh on Linux - ALL on the stick, data stays on the stick"
 echo "   Data stays on the stick: $USB/council-data"
 echo "=============================================="

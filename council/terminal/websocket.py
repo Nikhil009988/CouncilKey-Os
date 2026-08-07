@@ -224,8 +224,8 @@ async def terminal_websocket(ws: WebSocket, agent: str = "council") -> None:
         env["HERMES_HOME"] = env.get("HERMES_HOME", "/var/lib/council/hermes/real_home")
     elif agent == "openclaw":
         env["OPENCLAW_HOME"] = env.get("OPENCLAW_HOME", "/var/lib/council/openclaw")
-    elif agent == "codex":
-        env["CODEX_HOME"] = env.get("CODEX_HOME", "/var/lib/council/codex")
+    elif agent == "opencode":
+        env["OPENCODE_CONFIG"] = env.get("OPENCODE_CONFIG", "/var/lib/council/opencode/opencode.json")
 
     session = TerminalSession(shell=shell, env=env)
     try:

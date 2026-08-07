@@ -54,16 +54,16 @@ def models() -> JSONResponse:
 
 @app.post("/v1/responses")
 async def responses(request: Request):
-    """OpenAI Responses API (used by Codex CLI and other agents).
+    """OpenAI Responses API (used by Responses-protocol agents).
 
-    Codex 0.122+ only speaks the Responses API, so the demo server needs this
+    Some agents (e.g. OpenAI-protocol CLIs) only speak the Responses API, so the demo server needs this
     endpoint too - it mirrors chat/completions with a deterministic reply and
-    streams SSE events when the client asks for streaming (codex does).
+    streams SSE events when the client asks for streaming (opencode does).
     """
     body = json.loads(await request.body())
     system = ""
     user = ""
-    # codex sends either {"input": [{"role": "system"|"user", "content": ...}]}
+    # opencode sends either {"input": [{"role": "system"|"user", "content": ...}]}
     # or {"instructions": ..., "input": ...}
     instructions = body.get("instructions") or ""
     for msg in body.get("input") or []:
@@ -176,7 +176,7 @@ def _role_reply(system: str, prompt: str, via: str) -> str:
         voice = ("OpenClaw (execution): Concrete plan - step 1: prepare, step 2: execute, step 3: verify. "
                  "Each step has a clear deliverable and a rollback path. ")
     elif "builder and review" in system or "builder & review" in system:
-        voice = ("Codex (review): I checked the plan for safety and correctness. It is sound; "
+        voice = ("OpenCode (review): I checked the plan for safety and correctness. It is sound; "
                  "final answer follows. ")
     else:
         voice = "Demo assistant: "

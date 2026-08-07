@@ -65,7 +65,7 @@ def test_provider_catalog():
     from council.llm.provider import PROVIDERS, ROLE_SYSTEMS
 
     assert set(PROVIDERS) == {"openai", "openrouter", "gemini", "anthropic"}
-    assert set(ROLE_SYSTEMS) == {"hermes", "openclaw", "codex"}
+    assert set(ROLE_SYSTEMS) == {"hermes", "openclaw", "opencode"}
     assert PROVIDERS["openai"]["protocol"] == "openai"
     assert PROVIDERS["anthropic"]["protocol"] == "anthropic"
 
@@ -196,7 +196,7 @@ def test_cli_ask_together():
     )
     assert r.returncode == 0, r.stdout[-300:]
     assert "votes:" in r.stdout
-    assert "hermes" in r.stdout and "openclaw" in r.stdout and "codex" in r.stdout
+    assert "hermes" in r.stdout and "openclaw" in r.stdout and "opencode" in r.stdout
 
 
 def test_cli_ask_alone():
@@ -221,57 +221,66 @@ def test_agents_include_crewai_aider():
     assert AGENTS["aider"]["package"] == "aider-chat"
 
 
-def test_codex_no_docker_install():
-    """Codex: npm install, local execution, NO Docker."""
+def test_opencode_no_docker_install():
+    """OpenCode: npm install, local execution, NO Docker."""
     from council.agents.installer import AGENTS
 
-    assert AGENTS["codex"]["install"] == "npm"
-    assert AGENTS["codex"]["package"] == "@openai/codex"
+    assert AGENTS["opencode"]["install"] == "npm"
+    assert AGENTS["opencode"]["package"] == "opencode-ai"
     # runtime note says explicitly no Docker
-    assert "NO Docker" in AGENTS["codex"]["runtime"]
+    assert "NO Docker" in AGENTS["opencode"]["runtime"]
 
 
-def test_codex_configure_openrouter_writes_config(monkeypatch, tmp_path):
-    """configure(codex) writes a working config for the OpenRouter provider."""
+def test_opencode_configure_openrouter_writes_config(monkeypatch, tmp_path):
+    """configure(opencode) writes a working config for the OpenRouter provider."""
+    import json
+
     from council.agents.installer import configure
     from council.llm import provider as lp
 
     monkeypatch.setattr(lp, "active_provider", lambda: "openrouter")
-    monkeypatch.setenv("CODECONFIG", str(tmp_path / "config.toml"))
-    res = configure("codex")
+    monkeypatch.setenv("OPENCODE_CONFIG", str(tmp_path / "opencode.json"))
+    res = configure("opencode")
     assert res["ok"] is True
-    cfg = (tmp_path / "config.toml").read_text(encoding="utf-8")
-    assert "openrouter" in cfg
-    assert "https://openrouter.ai/api/v1" in cfg
-    assert 'env_key = "OPENROUTER_API_KEY"' in cfg
-    assert 'wire_api = "responses"' in cfg
-    assert "openai/gpt-5.3-codex" in cfg
+    cfg = json.loads((tmp_path / "opencode.json").read_text(encoding="utf-8"))
+    assert cfg["model"] == "openrouter/openrouter/auto"
+    prov = cfg["provider"]["openrouter"]
+    assert prov["npm"] == "@ai-sdk/openai-compatible"  # chat completions
+    assert prov["options"]["baseURL"] == "https://openrouter.ai/api/v1"
+    assert prov["options"]["apiKey"] == "{env:OPENROUTER_API_KEY}"
+    assert "openrouter/auto" in prov["models"]
 
 
-def test_codex_configure_needs_provider(monkeypatch, tmp_path):
+def test_opencode_configure_all_providers(monkeypatch, tmp_path):
+    """OpenCode supports OpenAI, OpenRouter, Gemini AND Anthropic keys."""
+    import json
+
+    from council.agents.installer import configure
+    from council.llm import provider as lp
+
+    for prov in ("openai", "openrouter", "gemini", "anthropic"):
+        monkeypatch.setattr(lp, "active_provider", lambda p=prov: p)
+        path = tmp_path / f"{prov}.json"
+        monkeypatch.setenv("OPENCODE_CONFIG", str(path))
+        res = configure("opencode")
+        assert res["ok"] is True, res
+        cfg = json.loads(path.read_text(encoding="utf-8"))
+        assert cfg["model"].startswith(f"{prov}/")
+        assert prov in cfg["provider"]
+
+
+def test_opencode_configure_needs_provider(monkeypatch, tmp_path):
     """No provider configured -> clear error with the exact fix command."""
     from council.agents.installer import configure
     from council.llm import provider as lp
 
     monkeypatch.setattr(lp, "active_provider", lambda: None)
-    monkeypatch.setenv("CODECONFIG", str(tmp_path / "config.toml"))
-    res = configure("codex")
+    monkeypatch.setenv("OPENCODE_CONFIG", str(tmp_path / "opencode.json"))
+    res = configure("opencode")
     assert res["ok"] is False
     assert "councilkey setup" in res["hint"]
     # nothing written
-    assert not (tmp_path / "config.toml").exists()
-
-
-def test_codex_configure_anthropic_clear_error(monkeypatch, tmp_path):
-    """Anthropic keys can't drive Codex - the message says so plainly."""
-    from council.agents.installer import configure
-    from council.llm import provider as lp
-
-    monkeypatch.setattr(lp, "active_provider", lambda: "anthropic")
-    monkeypatch.setenv("CODECONFIG", str(tmp_path / "config.toml"))
-    res = configure("codex")
-    assert res["ok"] is False
-    assert "cannot use an Anthropic key" in res["error"]
+    assert not (tmp_path / "opencode.json").exists()
 
 
 def test_cli_key_show_and_list(tmp_path):
@@ -300,19 +309,21 @@ def test_cli_key_show_and_list(tmp_path):
     assert "no key named" in r.stderr
 
 
-def test_pendrive_run_codex_launcher():
-    """The stick launcher keeps Codex state+config on the stick and loads
+def test_pendrive_run_opencode_launcher():
+    """The stick launcher keeps OpenCode state+config on the stick and loads
     the provider key from the encrypted vault at launch time."""
     sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
-    for token in ("RUN-CODEX.bat", "run-codex.sh", "CODEX_HOME", "CODECONFIG",
-                  "council-data/codex", "key show OPENROUTER_API_KEY",
-                  "agents configure codex", r"tools\codex\node_modules\.bin\codex.cmd"):
+    for token in ("RUN-OPENCODE.bat", "run-opencode.sh", "OPENCODE_CONFIG",
+                  "XDG_CONFIG_HOME", "XDG_DATA_HOME",
+                  "council-data/opencode", "key show OPENROUTER_API_KEY",
+                  "agents configure opencode", r"tools\opencode\node_modules\.bin\opencode.cmd"):
         assert token in sh, token
 
     ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
-    for token in ("RUN-CODEX.bat", "CODEX_HOME", "CODECONFIG",
-                  "council-data\\codex", "key show OPENROUTER_API_KEY",
-                  "agents configure codex", "tools\\codex\\node_modules\\.bin\\codex.cmd"):
+    for token in ("RUN-OPENCODE.bat", "OPENCODE_CONFIG", "XDG_CONFIG_HOME",
+                  "XDG_DATA_HOME", "council-data\\opencode",
+                  "key show OPENROUTER_API_KEY",
+                  "agents configure opencode", "tools\\opencode\\node_modules\\.bin\\opencode.cmd"):
         assert token in ps, token
 
 
@@ -368,8 +379,8 @@ def test_verify_only_checks_council_roles(monkeypatch):
     modes = client_modes()
     clients = build_default_clients()
     # invariant: clients and modes are exactly the 3 council roles
-    assert set(clients) == {"hermes", "openclaw", "codex"}
-    assert set(modes) == {"hermes", "openclaw", "codex"}
+    assert set(clients) == {"hermes", "openclaw", "opencode"}
+    assert set(modes) == {"hermes", "openclaw", "opencode"}
 
 
 def test_configure_openclaw_success_with_nonzero_exit(monkeypatch):
@@ -545,7 +556,7 @@ def test_pendrive_installs_all_agents_onto_stick():
     assert "hermes-agent crewai aider-chat" in sh
     assert "npm install --prefix" in sh
     # launchers for every agent
-    for name in ("RUN-OPENCLAW", "RUN-HERMES", "RUN-CREWAI", "RUN-AIDER", "RUN-CODEX"):
+    for name in ("RUN-OPENCLAW", "RUN-HERMES", "RUN-CREWAI", "RUN-AIDER", "RUN-OPENCODE"):
         assert name in sh
     # launchers are outside the --no-agents branch (always written)
     launcher_pos = sh.find("# --- launchers")
@@ -556,7 +567,7 @@ def test_pendrive_installs_all_agents_onto_stick():
     assert "council-data/agents" in sh
 
     ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
-    for name in ("RUN-OPENCLAW", "RUN-HERMES", "RUN-CREWAI", "RUN-AIDER", "RUN-CODEX"):
+    for name in ("RUN-OPENCLAW", "RUN-HERMES", "RUN-CREWAI", "RUN-AIDER", "RUN-OPENCODE"):
         assert name in ps
 
 

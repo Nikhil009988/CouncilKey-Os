@@ -1,6 +1,6 @@
 """Provider-based AI client for the three council roles.
 
-The council's three role agents (Hermes / OpenClaw / Codex) answer using
+The council's three role agents (Hermes / OpenClaw / OpenCode) answer using
 a model provider configured during setup - the API key is stored in the
 encrypted secrets vault (or env) and read at request time.
 
@@ -74,8 +74,8 @@ ROLE_SYSTEMS: dict[str, str] = {
         "Produce concrete, step-by-step action plans with specific commands and deliverables. "
         "You are direct, practical and execution-focused. Answer with your actionable plan."
     ),
-    "codex": (
-        "You are Codex, the builder and review agent of a council of three AI agents. "
+    "opencode": (
+        "You are OpenCode, the builder and review agent of a council of three AI agents. "
         "Build concrete solutions, review plans for safety, correctness and completeness, "
         "and write the final polished answer. You are rigorous about safety and details. "
         "Answer with your reviewed final answer."
@@ -84,7 +84,7 @@ ROLE_SYSTEMS: dict[str, str] = {
 
 # per-role model override (optional)
 ROLE_MODELS: dict[str, str] = {
-    "codex": "openrouter/auto",  # placeholder - only used when provider=openrouter
+    "opencode": "openrouter/auto",  # placeholder - only used when provider=openrouter
 }
 
 _provider_cache: tuple[float, str | None] | None = None

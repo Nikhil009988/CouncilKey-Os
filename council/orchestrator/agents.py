@@ -1,6 +1,6 @@
 """CouncilKey-Os production agent adapters.
 
-Each adapter talks to a local agent gateway (Hermes / OpenClaw / Codex).
+Each adapter talks to a local agent gateway (Hermes / OpenClaw / OpenCode).
 If a gateway is unreachable the adapter degrades to a deterministic mock
 response instead of crashing the council, and a circuit breaker avoids
 hammering a dead gateway.
@@ -120,11 +120,11 @@ class OpenClawClient:
         return {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
 
 
-class CodexClient:
-    """Gateway bridge for the codex role (custom HTTP bridge).
+class OpenCodeClient:
+    """Gateway bridge for the opencode role (custom HTTP bridge).
 
-    Codex CLI itself has no HTTP server - if you build a small bridge that
-    exposes it (POST /api/message with {"text": ...}), point COUNCIL_CODEX_URL
+    OpenCode CLI itself has no HTTP server - if you build a small bridge that
+    exposes it (POST /api/message with {"text": ...}), point COUNCIL_OPENCODE_URL
     at it and the council will use it as a live agent.
     """
 
@@ -134,7 +134,7 @@ class CodexClient:
 
     async def ask(self, prompt: str, timeout: float = 120.0) -> AgentResult:
         if not self.cb.allow():
-            return _mock("codex", "builder", prompt)
+            return _mock("opencode", "builder", prompt)
         start = time.monotonic()
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
@@ -145,10 +145,10 @@ class CodexClient:
                 r.raise_for_status()
                 data = r.json()
                 text = data.get("text") or data.get("response") or str(data)
-                return AgentResult("codex", "builder", text, time.monotonic() - start, "live")
+                return AgentResult("opencode", "builder", text, time.monotonic() - start, "live")
         except Exception as exc:
             self.cb.record_failure()
-            return _mock("codex", "builder", prompt, exc)
+            return _mock("opencode", "builder", prompt, exc)
 
 
 def _read_gateway_token(agent: str) -> str | None:
@@ -174,7 +174,7 @@ def _read_gateway_token(agent: str) -> str | None:
 GATEWAY_URLS = {
     "hermes": os.environ.get("COUNCIL_HERMES_URL", "http://127.0.0.1:18790"),
     "openclaw": os.environ.get("COUNCIL_OPENCLAW_URL", "http://127.0.0.1:18789"),
-    "codex": os.environ.get("COUNCIL_CODEX_URL", "http://127.0.0.1:50001"),
+    "opencode": os.environ.get("COUNCIL_OPENCODE_URL", "http://127.0.0.1:50001"),
 }
 
 
@@ -199,7 +199,7 @@ def client_modes(timeout: float = 0.8) -> dict[str, dict[str, str]]:
 
     provider = active_provider()
     modes: dict[str, dict[str, str]] = {}
-    for name in ("hermes", "openclaw", "codex"):
+    for name in ("hermes", "openclaw", "opencode"):
         if gateway_reachable(name, timeout):
             modes[name] = {"mode": "gateway", "detail": GATEWAY_URLS[name]}
         elif provider:
@@ -221,7 +221,7 @@ def build_default_clients() -> dict[str, AgentClient]:
     modes = client_modes()
     provider = active_provider()
     clients: dict[str, AgentClient] = {}
-    for name in ("hermes", "openclaw", "codex"):
+    for name in ("hermes", "openclaw", "opencode"):
         mode = modes[name]["mode"]
         if mode == "gateway":
             if name == "hermes":
@@ -229,7 +229,7 @@ def build_default_clients() -> dict[str, AgentClient]:
             elif name == "openclaw":
                 clients[name] = OpenClawClient(base_url=GATEWAY_URLS[name])
             else:
-                clients[name] = CodexClient(base_url=GATEWAY_URLS[name])
+                clients[name] = OpenCodeClient(base_url=GATEWAY_URLS[name])
         elif mode == "provider":
             clients[name] = ProviderAgentClient(name, provider=provider)
         else:

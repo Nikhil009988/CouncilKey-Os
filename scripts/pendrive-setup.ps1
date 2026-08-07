@@ -131,14 +131,14 @@ if ($NoAgents) {
     Write-Host "      ⚠ npm not found - openclaw will use the host install"
   }
 
-  # Codex CLI via npm into the stick (local agent - no Docker)
-  Write-Host "      installing codex onto the stick (npm)..."
-  New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\codex") | Out-Null
+  # OpenCode via npm into the stick (local agent - no Docker)
+  Write-Host "      installing opencode onto the stick (npm)..."
+  New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\opencode") | Out-Null
   if (Get-Command npm -ErrorAction SilentlyContinue) {
-    & npm install --prefix (Join-Path $Dest "tools\codex") --no-audit --no-fund @openai/codex | Out-Null
-    Write-Host "      ok (codex CLI on the stick)"
+    & npm install --prefix (Join-Path $Dest "tools\opencode") --no-audit --no-fund opencode-ai | Out-Null
+    Write-Host "      ok (opencode CLI on the stick)"
   } else {
-    Write-Host "      ⚠ npm not found - codex will use the host install"
+    Write-Host "      ⚠ npm not found - opencode will use the host install"
   }
 }
 
@@ -208,39 +208,42 @@ endlocal
 "@
 Set-Content -Encoding ASCII (Join-Path $Path "RUN-AIDER.bat") $AIDER_BAT
 
-$CODEX_BAT = @"
+$OPENCODE_BAT = @"
 @echo off
-rem RUN-CODEX.bat - Codex CLI from the pendrive (Windows) - NO Docker needed
-rem Codex runs locally: terminal, file editing and web tools on this PC.
-rem State and config stay on the stick (council-data\codex).
+rem RUN-OPENCODE.bat - OpenCode from the pendrive (Windows) - NO Docker needed
+rem OpenCode runs locally: terminal, file editing and web tools on this PC.
+rem State and config stay on the stick (council-data\opencode).
 setlocal
 set "STICK=%~dp0"
-set "CODEX_HOME=%STICK%council-data\codex"
-set "CODECONFIG=%STICK%council-data\codex\config.toml"
-if not exist "%CODEX_HOME%" mkdir "%CODEX_HOME%"
+set "OPENCODE_CONFIG=%STICK%council-data\opencode\opencode.json"
+set "XDG_CONFIG_HOME=%STICK%council-data\opencode\config"
+set "XDG_DATA_HOME=%STICK%council-data\opencode\data"
+if not exist "%STICK%council-data\opencode" mkdir "%STICK%council-data\opencode"
 
-rem 1. point Codex at the provider key stored in the encrypted vault
-call "%~dp0CouncilKey-Os\councilkey.bat" agents configure codex
+rem 1. point OpenCode at the provider key stored in the encrypted vault
+call "%~dp0CouncilKey-Os\councilkey.bat" agents configure opencode
 if errorlevel 1 (
   echo [error] no API key configured yet.
-  echo   Run once:  councilkey.bat setup   (choose OpenAI or OpenRouter)
+  echo   Run once:  councilkey.bat setup   (choose OpenAI / OpenRouter / Gemini / Anthropic)
   pause
   exit /b 1
 )
 for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show OPENROUTER_API_KEY 2^>nul') do set "OPENROUTER_API_KEY=%%K"
 for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show OPENAI_API_KEY 2^>nul') do set "OPENAI_API_KEY=%%K"
+for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show GEMINI_API_KEY 2^>nul') do set "GEMINI_API_KEY=%%K"
+for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show ANTHROPIC_API_KEY 2^>nul') do set "ANTHROPIC_API_KEY=%%K"
 
-rem 2. run codex (from the stick if installed there, else the PC install)
-if exist "%STICK%CouncilKey-Os\tools\codex\node_modules\.bin\codex.cmd" (
-  "%STICK%CouncilKey-Os\tools\codex\node_modules\.bin\codex.cmd" %*
+rem 2. run opencode (from the stick if installed there, else the PC install)
+if exist "%STICK%CouncilKey-Os\tools\opencode\node_modules\.bin\opencode.cmd" (
+  "%STICK%CouncilKey-Os\tools\opencode\node_modules\.bin\opencode.cmd" %*
 ) else (
-  codex %*
+  opencode %*
 )
 endlocal
 "@
-Set-Content -Encoding ASCII (Join-Path $Path "RUN-CODEX.bat") $CODEX_BAT
+Set-Content -Encoding ASCII (Join-Path $Path "RUN-OPENCODE.bat") $OPENCODE_BAT
 
-Write-Host "      ok (launchers: RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-CODEX)"
+Write-Host "      ok (launchers: RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-OPENCODE)"
 
 # 6. autorun.inf + optional wizard
 
@@ -304,7 +307,7 @@ echo   2) OpenClaw
 echo   3) Hermes
 echo   4) CrewAI
 echo   5) Aider
-echo   6) Codex  (local agent - no Docker)
+echo   6) OpenCode  (local agent - no Docker)
 echo   0) Quit
 echo ==============================================
 set /p choice="Choose (A/1-6/0): "
@@ -314,7 +317,7 @@ if "%choice%"=="2" goto oc
 if "%choice%"=="3" goto hermes
 if "%choice%"=="4" goto crewai
 if "%choice%"=="5" goto aider
-if "%choice%"=="6" goto codex
+if "%choice%"=="6" goto opencode
 if "%choice%"=="0" exit /b 0
 goto menu
 :all
@@ -323,7 +326,7 @@ start "OpenClaw" cmd /c "%~dp0RUN-OPENCLAW.bat"
 start "Hermes" cmd /c "%~dp0RUN-HERMES.bat"
 start "CrewAI" cmd /c "%~dp0RUN-CREWAI.bat"
 start "Aider" cmd /c "%~dp0RUN-AIDER.bat"
-start "Codex" cmd /c "%~dp0RUN-CODEX.bat"
+start "OpenCode" cmd /c "%~dp0RUN-OPENCODE.bat"
 goto done
 :dash
 call "%~dp0START.bat"
@@ -340,8 +343,8 @@ goto done
 :aider
 call "%~dp0RUN-AIDER.bat"
 goto done
-:codex
-call "%~dp0RUN-CODEX.bat"
+:opencode
+call "%~dp0RUN-OPENCODE.bat"
 goto done
 :done
 echo.
@@ -358,8 +361,8 @@ goto menu
 
 WHAT YOU HAVE
   This stick contains the whole CouncilKey-Os: the app, a portable
-  Python environment, and all 5 agents (Hermes, OpenClaw, Codex,
-  CrewAI, Aider). Codex is the builder/review agent - terminal, file
+  Python environment, and all 5 agents (Hermes, OpenClaw, OpenCode,
+  CrewAI, Aider). OpenCode is the builder/review agent - terminal, file
   editing and web tools that run locally on your PC: NO Docker needed.
   ALL data - journal, memory, API keys, agent workspaces - lives on
   this stick in the "council-data" folder.
@@ -371,7 +374,7 @@ START ANY AGENT OR EVERYTHING AT ONCE
     START.bat          dashboard (council chat: 3 agents + vote)
     RUN-OPENCLAW.bat   OpenClaw      RUN-HERMES.bat   Hermes
     RUN-CREWAI.bat     CrewAI        RUN-AIDER.bat    Aider
-    RUN-CODEX.bat      Codex (local, no Docker)
+    RUN-OPENCODE.bat   OpenCode (local, no Docker)
 
 SESSION MODE (clone to PC, memory on stick, no traces)
   start-session.bat  -> copies the code to this PC temporarily,
@@ -419,6 +422,6 @@ Write-Host " ✅ Pendrive ready!"
 Write-Host ""
 Write-Host "   On any Windows PC: plug in -> double-click START.bat"
 Write-Host "   Dashboard:         http://localhost:8443"
-Write-Host "   Agents:            RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-CODEX (.bat)"
+Write-Host "   Agents:            RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-OPENCODE (.bat)"
 Write-Host "   Data stays on the stick: $Path\council-data"
 Write-Host "=============================================="

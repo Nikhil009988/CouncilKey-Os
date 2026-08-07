@@ -1,6 +1,6 @@
 # CouncilKey-Os 🗝️
 
-**Your private AI council.** Three AI agents — Hermes, OpenClaw and Codex — debate every question, vote on the answer, and remember what they learn. Runs on your machine, on a USB stick, or in the cloud — your data stays yours.
+**Your private AI council.** Three AI agents — Hermes, OpenClaw and OpenCode — debate every question, vote on the answer, and remember what they learn. Runs on your machine, on a USB stick, or in the cloud — your data stays yours.
 
 <p align="center">
   <img src="images/banner.png" alt="CouncilKey-Os" width="640">
@@ -41,7 +41,7 @@ powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 -Full
 ```
 
 This installs **all 5 agents** (Hermes, OpenClaw, CrewAI, Aider via their
-official installers; Codex via npm, local, no Docker) and stores your
+official installers; OpenCode via npm, local, no Docker) and stores your
 API key from the environment (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY` /
 `GEMINI_API_KEY` / `OPENROUTER_API_KEY`) or `--api-key` / `-ApiKey`.
 No key? It prints the one command to add it. `councilkey agents verify`
@@ -57,7 +57,7 @@ The wizard asks what it needs and stores answers securely:
 
 1. **Model provider** — OpenAI · Anthropic · Gemini · OpenRouter (or skip and configure later)
 2. **API key** — asked with hidden input, stored **encrypted** in the secrets vault; one key powers the whole council
-3. **External agents** *(optional)* — Hermes, OpenClaw, Codex, CrewAI, Aider via their official installers
+3. **External agents** *(optional)* — Hermes, OpenClaw, OpenCode, CrewAI, Aider via their official installers
 
 > Non-interactive / CI:
 > ```bash
@@ -98,7 +98,7 @@ Put everything on a USB stick with one command — plug into any PC, click **STA
 You ask ──► 3 agents answer ──► council votes ──► journal + memory
               │  Hermes: memory/analysis     │  majority / weighted /
               │  OpenClaw: action/execution  │  LLM judge / hermes decides
-              │  Codex: builder/review       │
+              │  OpenCode: builder/review       │
                                          └──► final answer + reasoning
 ```
 
@@ -114,7 +114,7 @@ You ask ──► 3 agents answer ──► council votes ──► journal + me
 | **Council core** | ask / alone / debate / decompose, 4 voting strategies, SSE streaming, WebSocket chat, background task queue |
 | **Intelligence** | memory injection (RAG-lite), TF-IDF search, knowledge graph, journal + audit analytics, semantic result cache |
 | **Security** | encrypted secrets vault, optional API-key auth, rate limiting, terminal command guard, no-traces audit |
-| **Agents** | 5 optional external agents (Hermes, OpenClaw, Codex, CrewAI, Aider) via official installers |
+| **Agents** | 5 optional external agents (Hermes, OpenClaw, OpenCode, CrewAI, Aider) via official installers |
 | **Workspaces** | sandboxed canvas file browser, guarded WebSocket terminal, browser fetch, vision + voice panels |
 | **Portable** | one-command pendrive setup, bootc/live-ISO/portable build scripts, systemd service |
 

@@ -7,7 +7,7 @@ Runs `councilkey setup`:
                                      or skip; the key is stored encrypted in
                                      the secrets vault and used by the three
                                      council roles AND the external agents
-  3. external agents (optional)    - Hermes / OpenClaw / Codex via their
+  3. external agents (optional)    - Hermes / OpenClaw / OpenCode via their
                                      official installers; OpenClaw is
                                      configured non-interactively with the
                                      chosen provider
@@ -261,7 +261,7 @@ def run_wizard(
                 est = {
                     "hermes": "5-15 min (official installer)",
                     "openclaw": "1-3 min (npm)",
-                    "codex": "1-3 min (npm, no Docker)",
+                    "opencode": "1-3 min (npm, no Docker)",
                     "crewai": "2-5 min (pip)",
                     "aider": "1-2 min (pip)",
                 }.get(name, "?")
@@ -302,7 +302,7 @@ def run_wizard(
                 except Exception as exc:
                     note(f"install {', '.join(pip_names)}", False, str(exc)[:80])
 
-            # individual installs (hermes, openclaw, codex)
+            # individual installs (hermes, openclaw, opencode)
             for name in other_names:
                 from council.agents.installer import install as agent_install
 
@@ -337,19 +337,19 @@ def run_wizard(
                 except Exception:
                     pass
 
-            # point Codex at the provider key (OpenAI/OpenRouter) so it
+            # point OpenCode at the provider key (OpenAI/OpenRouter) so it
             # answers right after install - no extra steps for the user
-            if "codex" in choices and provider not in (None, "none"):
+            if "opencode" in choices and provider not in (None, "none"):
                 from council.agents.installer import configure as agent_configure
 
                 try:
-                    cfg = agent_configure("codex")
-                    note("configure Codex", cfg.get("ok", False),
+                    cfg = agent_configure("opencode")
+                    note("configure OpenCode", cfg.get("ok", False),
                          (cfg.get("detail") or cfg.get("error", ""))[:70])
                     if not cfg.get("ok") and cfg.get("hint"):
                         print(f"       hint: {cfg['hint']}")
                 except Exception as exc:
-                    note("configure Codex", False, str(exc)[:70])
+                    note("configure OpenCode", False, str(exc)[:70])
 
             print("        NEXT: finish setup (tests + verification)")
 

@@ -1,7 +1,7 @@
 # CouncilKey-Os - Architecture: Live Council of 3 Agents on One Pendrive
 
 ## Vision
-> A bootable pen drive that turns ANY PC into a secure council of AI agents: Hermes, OpenClaw, and Codex - working together, debating, voting, never leaving traces on host.
+> A bootable pen drive that turns ANY PC into a secure council of AI agents: Hermes, OpenClaw, and OpenCode - working together, debating, voting, never leaving traces on host.
 
 Plug in → Boot → Council is alive → Unplug → Host untouched.
 
@@ -37,7 +37,7 @@ Plug in → Boot → Council is alive → Unplug → Host untouched.
 │  │ council-network.service (WiFi + Tailscale VPN)      │    │
 │  │ council-hermes.service (rootless podman, UID 1000)  │    │
 │  │ council-openclaw.service (rootless podman, UID 1001)│    │
-│  │ codex: local CLI (no container)                  │   │
+│  │ opencode: local CLI (no container)                  │   │
 │  │ council-core.service (orchestrator + dashboard)     │    │
 │  └─────────────────────────────────────────────────────┘    │
 │                                                             │
@@ -71,13 +71,13 @@ Plug in → Boot → Council is alive → Unplug → Host untouched.
 - **Storage:** /var/lib/council/openclaw/.openclaw/
 - **Backend:** Node.js 24, rootless Podman container `ghcr.io/openclaw/openclaw:latest` + openshell
 
-### Codex (Agent of Code & Review)
+### OpenCode (Agent of Code & Review)
 - **Role:** The Builder - writes code, edits files, runs terminal commands, transparent
 - **Strengths:** Local execution (no Docker), terminal + file editing + web tools built in, works with OpenAI/OpenRouter keys
-- **In Council:** When the council needs code, tool creation or file manipulation, it delegates to Codex
-- **Port:** none (interactive CLI; gateway bridge via `COUNCIL_CODEX_URL` if you expose one)
-- **Storage:** /var/lib/council/codex/ (CODEX_HOME; on the pendrive: council-data/codex)
-- **Backend:** Codex CLI - npm `@openai/codex`, runs locally
+- **In Council:** When the council needs code, tool creation or file manipulation, it delegates to OpenCode
+- **Port:** none (interactive CLI; gateway bridge via `COUNCIL_OPENCODE_URL` if you expose one)
+- **Storage:** /var/lib/council/opencode/ (OPENCODE_CONFIG + XDG dirs; on the pendrive: council-data/opencode)
+- **Backend:** OpenCode CLI - npm `opencode-ai`, runs locally
 
 ---
 
@@ -97,7 +97,7 @@ council:
       weight: 1
       role: "action"
       timeout: 60s
-    codex:
+    opencode:
       weight: 1
       role: "builder"
       timeout: 120s
@@ -118,13 +118,13 @@ User -> Council Core (HTTP POST /api/council/ask)
   |-parallel-->
   |           -> Hermes: "I remember you liked minimal design, I'll provide context"
   |           -> OpenClaw: "I'll manage files and deployment"
-  |           -> Codex: "I'll write the HTML/CSS/JS code"
+  |           -> OpenCode: "I'll write the HTML/CSS/JS code"
   |
   |<-- responses --
   Council Core aggregates:
     Hermes: context + risks + skill suggestions
     OpenClaw: file ops plan + deployment steps
-    Codex: actual code artifacts
+    OpenCode: actual code artifacts
   |
   |-> Voting: If 2/3 agree code is safe, proceed
   |-> LLM Judge (optional): Claude judges if code meets requirements
@@ -152,7 +152,7 @@ USB (exFAT)
   /bin/linux/python-3.11/            (portable Python + uv)
   /tools/linux/openclaw/             (npm global)
   /tools/linux/hermes/               (venv)
-  /tools/codex/                     (npm @openai/codex)
+  /tools/opencode/                     (npm opencode-ai)
   /tools/linux/council-core/         (orchestrator)
   /config/                           (all configs)
   /temp/                             (all caches)
@@ -182,11 +182,11 @@ Based on `live-custom-ubuntu-from-scratch` path:
      /opt/council/
        hermes/ (uv venv + git clone NousResearch/hermes-agent)
        openclaw/ (npm install -g openclaw)
-       codex/ (npm install @openai/codex)
+       opencode/ (npm install opencode-ai)
        council-core/ (our orchestrator)
      ```
    - chroot: setup systemd units in /etc/systemd/system/council-*.service
-   - chroot: create council user UID 1000, openclaw 1001, hermes 1002 (codex runs as the logged-in user - no container)
+   - chroot: create council user UID 1000, openclaw 1001, hermes 1002 (opencode runs as the logged-in user - no container)
    - cleanup: truncate machine-id, apt clean, umount
 3. Create ISO:
    - mksquashfs chroot/ image/casper/filesystem.squashfs -comp xz
@@ -223,13 +223,13 @@ Based on Tank-OS:
   # /etc/containers/systemd/users/1000/council-core.container
   # /etc/containers/systemd/users/1001/hermes.container
   # /etc/containers/systemd/users/1002/openclaw.container
-  # codex runs as a local CLI (no container - no Docker)
+  # opencode runs as a local CLI (no container - no Docker)
   # /usr/local/bin/council
   ```
 - Each .container is Quadlet unit pointing to:
   - `ghcr.io/openclaw/openclaw:latest`
   - `ghcr.io/nousresearch/hermes-agent:latest` (or custom)
-  - codex CLI (npm @openai/codex)
+  - opencode CLI (npm opencode-ai)
   - `localhost/council-core:latest`
 - Secrets via `podman secret`, not baked
 - Build QCOW2/ISO/RAW via bootc-image-builder
@@ -254,7 +254,7 @@ Inside LUKS:
   /var/lib/council/
     hermes/ -> MEMORY.md, skills, SQLite FTS5 DB
     openclaw/ -> .openclaw/ soul.md, skills, memory DB
-    codex/ -> CODEX_HOME state (history, config)
+    opencode/ -> OPENCODE_CONFIG + XDG dirs state (history, config)
     shared/ -> shared memory.md, council journal git repo
     secrets/ -> podman secrets mount, 0600
     journal/ -> git repo of all council decisions: 2026-08-04-build-website.md etc
@@ -275,7 +275,7 @@ Inside LUKS:
 Web UI at https://council.local:8443 (self-signed cert, LAN accessible offline like Reefy)
 
 **Features:**
-- Agent status: 3 cards showing Hermes/OpenClaw/Codex online/offline, CPU/RAM, current task
+- Agent status: 3 cards showing Hermes/OpenClaw/OpenCode online/offline, CPU/RAM, current task
 - Council chat: Input -> broadcast -> voting visualization -> final answer
 - Journal: Git log of all council decisions, searchable via FTS5
 - Skills: Browse installed skills for each agent, install from Hub

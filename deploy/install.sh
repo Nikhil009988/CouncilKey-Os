@@ -19,7 +19,7 @@ if [ ! -d "$DEST/.venv" ]; then
 fi
 
 sudo mkdir -p /var/lib/council/{secrets,shared,journal,council,backups}
-sudo mkdir -p /var/lib/council/{hermes,openclaw,codex}/{keep,cache}
+sudo mkdir -p /var/lib/council/{hermes,openclaw,opencode}/{keep,cache}
 sudo useradd -r -d /var/lib/council -s /usr/sbin/nologin council 2>/dev/null || true
 sudo chown -R council:council /var/lib/council
 

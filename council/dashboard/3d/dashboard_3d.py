@@ -36,7 +36,7 @@ body { margin: 0; overflow: hidden; background: #0a0a0f; }
     </div>
     <div class="mt-4">
       <p class="text-xs opacity-50">Use mouse: Drag to orbit, Scroll to zoom, Right-drag to pan</p>
-      <p class="text-xs opacity-50 mt-1">Agents: 🧙 Hermes Sage (Memory), 🦞 OpenClaw Executor (Action), 🔧 Codex Builder (Code)</p>
+      <p class="text-xs opacity-50 mt-1">Agents: 🧙 Hermes Sage (Memory), 🦞 OpenClaw Executor (Action), 🔧 OpenCode Builder (Code)</p>
     </div>
   </div>
 </div>
@@ -78,7 +78,7 @@ for (let i = 0; i < 200; i++) {
   let type = i % 3;
   if (type === 0) color = 0x10b981; // Hermes - green - memory
   else if (type === 1) color = 0x3b82f6; // OpenClaw - blue - action
-  else color = 0x8b5cf6; // Codex - purple - builder
+  else color = 0x8b5cf6; // OpenCode - purple - builder
 
   const material = new THREE.MeshPhongMaterial({ color: color, emissive: color, emissiveIntensity: 0.2, shininess: 100 });
   const sphere = new THREE.Mesh(nodeGeometry, material);
@@ -107,11 +107,11 @@ for (let i = 0; i < 150; i++) {
   edges.push({ line, from, to });
 }
 
-// 3 Agents as 3D avatars - Hermes wizard, OpenClaw lobster, Codex builder - larger spheres with different colors and emissive
+// 3 Agents as 3D avatars - Hermes wizard, OpenClaw lobster, OpenCode builder - larger spheres with different colors and emissive
 const agents = [
   { name: "Hermes Sage", color: 0x10b981, pos: new THREE.Vector3(-15, 10, 0), emoji: "🧙" },
   { name: "OpenClaw Executor", color: 0x3b82f6, pos: new THREE.Vector3(0, 10, 0), emoji: "🦞" },
-  { name: "Codex Builder", color: 0x8b5cf6, pos: new THREE.Vector3(15, 10, 0), emoji: "🔧" }
+  { name: "OpenCode Builder", color: 0x8b5cf6, pos: new THREE.Vector3(15, 10, 0), emoji: "🔧" }
 ];
 
 agents.forEach(agent => {

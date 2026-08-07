@@ -22,15 +22,15 @@ Broadcast prompt to 3 agents in parallel, vote, return final synthesis.
 ```json
 {
   "strategy": "majority",
-  "votes": {"hermes": "approve", "openclaw": "approve", "codex": "approve"},
+  "votes": {"hermes": "approve", "openclaw": "approve", "opencode": "approve"},
   "approve_count": 3,
   "consensus_reached": true,
-  "best_agent": "codex",
+  "best_agent": "opencode",
   "final": "# Council Decision - Consensus 3/3 ✅\n...",
   "responses": [
     {"agent": "hermes", "role": "memory", "response": "...", "latency": 0.5, "status": "mock|live"},
     {"agent": "openclaw", "role": "action", "response": "...", "latency": 0.6, "status": "mock|live"},
-    {"agent": "codex", "role": "builder", "response": "...", "latency": 0.7, "status": "mock|live"}
+    {"agent": "opencode", "role": "builder", "response": "...", "latency": 0.7, "status": "mock|live"}
   ],
   "timestamp": "2026-08-04T00:00:00"
 }
@@ -39,7 +39,7 @@ Broadcast prompt to 3 agents in parallel, vote, return final synthesis.
 **Real adapters:**
 - OpenClaw: Tries POST http://127.0.0.1:18789/api/message with Bearer token from podman secret / file / env / ~/.openclaw/gateway.token, multiple endpoints fallback, circuit breaker 3 fails open 60s
 - Hermes: POST http://127.0.0.1:18790/api/message
-- Codex: optional gateway bridge - POST http://127.0.0.1:50001/api/message {text, context} (point COUNCIL_CODEX_URL at it)
+- OpenCode: optional gateway bridge - POST http://127.0.0.1:50001/api/message {text, context} (point COUNCIL_OPENCODE_URL at it)
 - Fallback mock if offline (graceful degradation for offline pendrive like Reefy LAN offline)
 
 **Voting strategies:**
@@ -58,7 +58,7 @@ Agent status + council config + journal.
   "agents": {
     "hermes": {"status": "online|offline (mock)", "role": "memory", "port": 18790},
     "openclaw": {"status": "online", "role": "action", "port": 18789},
-    "codex": {"status": "offline (mock)", "role": "builder", "port": 50001}
+    "opencode": {"status": "offline (mock)", "role": "builder", "port": 50001}
   },
   "council": {"mode": "debate", "consensus": {"strategy": "majority"}},
   "journal": [{"file": "2026-08-04-abc123.md", "size": 6365}]
@@ -81,7 +81,7 @@ From `council/storage/optimizer.py` audit() - keep vs cache per agent.
   "agents": {
     "hermes": {"keep_size": 160, "keep_size_human": "160.0B", "keep_files": 8, "cache_persist_size": 0, "cache_ram_size": 5242880, "cache_ram_human": "5.0MB"},
     "openclaw": {...},
-    "codex": {...},
+    "opencode": {...},
     "journal": {"keep_size": 6365, "keep_size_human": "6.2KB"}
   },
   "total_keep": 6595,
@@ -208,7 +208,7 @@ Returns CPU/RAM/storage per agent via `podman stats` + `df`.
   "agents": {
     "hermes": {"cpu": "5%", "ram": "200MB", "storage_keep": "45MB", "status": "online"},
     "openclaw": {"cpu": "2%", "ram": "100MB", "storage_keep": "30MB"},
-    "codex": {"cpu": "10%", "ram": "500MB", "storage_keep": "20MB"}
+    "opencode": {"cpu": "10%", "ram": "500MB", "storage_keep": "20MB"}
   },
   "host": {"cpu": "20%", "ram": "4GB/8GB", "storage_total": "120GB", "storage_keep_total": "230MB", "storage_cache_ram": "1.2GB"}
 }
@@ -231,7 +231,7 @@ When running `python3 council/orchestrator/main.py dashboard`, visit:
 |---|---|---|
 | GET | `/api/version` | Package version |
 | GET | `/api/system` | Host info: platform, python, cpu count, uptime, disk, council home |
-| GET | `/api/agents/status` | Live probe of hermes/openclaw/codex gateways (2s timeout, mock fallback) |
+| GET | `/api/agents/status` | Live probe of hermes/openclaw/opencode gateways (2s timeout, mock fallback) |
 | GET | `/api/scheduler/status` | Background scheduler state (nightly consolidation, journal prune) |
 | GET | `/api/metrics` | Now includes `uptime_seconds`, `disk`, `request_count`, `storage_split` |
 
@@ -317,7 +317,7 @@ COUNCIL_HOME=/var/lib/council ./scripts/verify-no-traces.sh --clean # audit + de
 |---|---|---|
 | POST | `/api/council/ask` | Standard ask — now cached (config `council.cache`) and returns `request_id` |
 | POST | `/api/council/ask/stream` | Server-Sent Events stream: `start` → `agent` (per response) → `final` → `done` |
-| POST | `/api/council/decompose` | `{"prompt": ...}` — splits the prompt into 3 role-based subtasks (Analysis/Hermes, Execution/OpenClaw, Review/Codex), executes them, votes on the combined result |
+| POST | `/api/council/decompose` | `{"prompt": ...}` — splits the prompt into 3 role-based subtasks (Analysis/Hermes, Execution/OpenClaw, Review/OpenCode), executes them, votes on the combined result |
 | POST | `/api/council/debate` | `{"prompt": ..., "rounds": 3}` — iterative debate: agents see each other's answers and revise; stops early on convergence (similarity ≥ 0.85 or CONFIRM) |
 
 ## Task queue
@@ -365,7 +365,7 @@ COUNCIL_HOME=/var/lib/council ./scripts/verify-no-traces.sh --clean # audit + de
 
 # v1.3.0 - Agent Installer
 
-The three agents (Hermes, OpenClaw, Codex) are installed by
+The three agents (Hermes, OpenClaw, OpenCode) are installed by
 `./scripts/setup.sh` (or the `install.sh` one-liner) from their official GitHub
 repos into `tools/linux/` (override with `COUNCIL_AGENTS_DIR`).
 
@@ -375,7 +375,7 @@ councilkey agents              # status table (installed? running? port?)
 councilkey agents install      # download + configure all 3 agents
 councilkey agents install hermes openclaw
 councilkey agents start        # best-effort launch of installed agents
-councilkey agents start codex
+councilkey agents start opencode
 ```
 
 ## API
@@ -388,7 +388,7 @@ Installed agents show up in `GET /api/status` and `/api/agents/status` as
 `running` (their gateway port answers), `installed`, or `not installed`.
 
 > Note: installing an agent clones its official repository (Hermes ~200MB,
-> Codex installs via npm (`@openai/codex`, a few MB). Needs internet
+> OpenCode installs via npm (`opencode-ai`, a few MB). Needs internet
 > + git on first run. Each agent's own README documents the canonical start
 > command; `councilkey agents start` tries common launchers and falls back to
 > printing the right hint.
@@ -406,11 +406,11 @@ prompt (no API keys, offline):
 |---|---|---|
 | memory & analysis | hermes | qwen2.5:3b |
 | action & execution | openclaw | qwen2.5:3b |
-| builder & review | codex | deepseek-coder:1.3b (falls back to qwen2.5:3b) |
+| builder & review | opencode | deepseek-coder:1.3b (falls back to qwen2.5:3b) |
 
 Fallback chain per agent (in `/api/status` as `mode`):
 1. **gateway** - an external agent server answers on its URL
-   (`COUNCIL_HERMES_URL` / `COUNCIL_OPENCLAW_URL` / `COUNCIL_CODEX_URL`)
+   (`COUNCIL_HERMES_URL` / `COUNCIL_OPENCLAW_URL` / `COUNCIL_OPENCODE_URL`)
 2. **local-llm** - Ollama is running (any model; preferred model picked first)
 3. **mock** - nothing available; explicitly labeled, never silent
 

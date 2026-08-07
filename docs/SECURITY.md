@@ -13,7 +13,7 @@ Based on deep scan of Hermes SECURITY.md + Tank-OS CVE-2026-27002 + Reefy securi
 - **Rootless Podman Quadlet**: No docker daemon running as root continuously. Each agent UID 1000-1003 maps to host 100000+ via subuid/subgid. Container root is unprivileged user on host.
 - **Read-only root**: Squashfs live + bootc immutable A/B, OS layer read-only, agents cannot modify system files, rollback on failure via `bootc rollback`.
 - **Approval gates**: Hermes command approval, OpenClaw pairing approval, ClawOS policyd gates every tool call, sensitive actions require 2/3 council vote (prevents OpenClaw email deletion incident from Tank-OS docs).
-- **Supply chain**: Pinned versions (OPENCLAW_REF=2026.7.1 fixes CVE-2026-27002 sandbox bind-mount escape chain, HERMES_REF pinned, CODEX_REF pinned (npm @openai/codex)), SBOM CycloneDX/SPDX, cosign signing, Trivy scanning.
+- **Supply chain**: Pinned versions (OPENCLAW_REF=2026.7.1 fixes CVE-2026-27002 sandbox bind-mount escape chain, HERMES_REF pinned, OPENCODE_REF pinned (npm opencode-ai)), SBOM CycloneDX/SPDX, cosign signing, Trivy scanning.
 
 ### What we DON'T protect (in-process heuristics not boundary):
 
@@ -49,7 +49,7 @@ council secrets list  # shows which keys set, not values
 
 ### 3. Isolation
 
-- Quadlet: `openclaw.container`, `hermes.container`, `council-core.container` each rootless (codex runs as a local CLI - no container, no Docker), separate UID, no shared credentials, cannot access other programs on host.
+- Quadlet: `openclaw.container`, `hermes.container`, `council-core.container` each rootless (opencode runs as a local CLI - no container, no Docker), separate UID, no shared credentials, cannot access other programs on host.
 - User namespace isolation: subuid 100000-165535 for council, 165536-231071 for hermes, etc.
 - Firewall: UFW or firewalld, only allow 8443 (dashboard), 18789 (openclaw gateway loopback only), 18790 (hermes loopback only). Dashboard binds 0.0.0.0 for LAN like Reefy (LAN access when internet down), but gateway binds 127.0.0.1 only unless behind Tailscale.
 
@@ -60,7 +60,7 @@ From Tank-OS commit: Pinned to tagged release, not main/latest, because specific
 ```dockerfile
 ARG OPENCLAW_REF=2026.7.1
 ARG HERMES_REF=v1.2.3  # pinned
-ARG CODEX_PACKAGE=@openai/codex # pinned via npm
+ARG OPENCODE_PACKAGE=opencode-ai # pinned via npm
 ```
 
 ### 5. SBOM + Signing

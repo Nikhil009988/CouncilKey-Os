@@ -4,7 +4,7 @@
 #   [1] Python environment + CouncilKey-Os
 #   [2] INSTALLS EVERYTHING to make the agents run:
 #       - all 5 external agents (Hermes, OpenClaw, CrewAI, Aider via their
-#         official installers; Codex via npm, no Docker)
+#         official installers; OpenCode via npm, no Docker)
 #       - the API key (from OPENAI_API_KEY / ANTHROPIC / GEMINI / OPENROUTER
 #         env, or the interactive wizard)
 #       - verifies the council answers

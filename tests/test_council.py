@@ -54,4 +54,4 @@ def test_journal_analyze_empty():
 def test_agents_mock():
     from council.orchestrator import agents as mod
     clients = mod.build_default_clients()
-    assert set(clients.keys()) == {"hermes", "openclaw", "codex"}
+    assert set(clients.keys()) == {"hermes", "openclaw", "opencode"}

@@ -72,10 +72,10 @@ if [ -f "$VENDOR_DIR/hermes/pyproject.toml" ] || [ -f "$VENDOR_DIR/hermes/requir
     "$PYTHON_VENV" -m pip install -e "$WIN_HERMES" || true
 fi
 
-# Codex CLI (npm - local execution, no Docker)
-if [ -d "$VENDOR_DIR/codex" ]; then
-    echo "Installing Codex CLI..."
-    npm install --prefix "$VENDOR_DIR/codex" --no-audit --no-fund @openai/codex || true
+# OpenCode (npm - local execution, no Docker)
+if [ -d "$VENDOR_DIR/opencode" ]; then
+    echo "Installing OpenCode..."
+    npm install --prefix "$VENDOR_DIR/opencode" --no-audit --no-fund opencode-ai || true
 fi
 
 # 4. Install common runtime deps
@@ -137,7 +137,7 @@ def setup_env(usb_root: Path) -> dict:
     env["XDG_DATA_HOME"] = str(config_dir / "data")
     env["HERMES_HOME"] = str(council_home / "hermes" / "real_home")
     env["OPENCLAW_HOME"] = str(council_home / "openclaw")
-    env["CODEX_HOME"] = str(council_home / "codex")
+    env["OPENCODE_CONFIG"] = str(council_home / "opencode" / "opencode.json")
     python_path = str(usb_root)
     if "PYTHONPATH" in env:
         env["PYTHONPATH"] = python_path + os.pathsep + env["PYTHONPATH"]
@@ -190,8 +190,8 @@ export XDG_CONFIG_HOME="$USB_ROOT/config"
 export XDG_DATA_HOME="$USB_ROOT/config/data"
 export HERMES_HOME="$COUNCIL_HOME/hermes/real_home"
 export OPENCLAW_HOME="$COUNCIL_HOME/openclaw"
-export CODEX_HOME="$COUNCIL_HOME/codex"
-mkdir -p "$COUNCIL_HOME"/{hermes/{keep,cache},openclaw/{keep,cache},codex/{keep,cache},shared,journal,secrets,council,lance}
+export OPENCODE_CONFIG="$COUNCIL_HOME/opencode/opencode.json"
+mkdir -p "$COUNCIL_HOME"/{hermes/{keep,cache},openclaw/{keep,cache},opencode/{keep,cache},shared,journal,secrets,council,lance}
 mkdir -p "$USB_ROOT/temp"
 if [ ! -d "$USB_ROOT/.venv" ]; then
     echo "ERROR: .venv not found. Run build script first."
@@ -220,14 +220,14 @@ set XDG_CONFIG_HOME=%USB_ROOT%\config
 set XDG_DATA_HOME=%USB_ROOT%\config\data
 set HERMES_HOME=%COUNCIL_HOME%\hermes\real_home
 set OPENCLAW_HOME=%COUNCIL_HOME%\openclaw
-set CODEX_HOME=%COUNCIL_HOME%\codex
+set OPENCODE_CONFIG=%COUNCIL_HOME%\opencode\opencode.json
 if not exist "%COUNCIL_HOME%" mkdir "%COUNCIL_HOME%"
 if not exist "%COUNCIL_HOME%\hermes\keep" mkdir "%COUNCIL_HOME%\hermes\keep"
 if not exist "%COUNCIL_HOME%\hermes\cache" mkdir "%COUNCIL_HOME%\hermes\cache"
 if not exist "%COUNCIL_HOME%\openclaw\keep" mkdir "%COUNCIL_HOME%\openclaw\keep"
 if not exist "%COUNCIL_HOME%\openclaw\cache" mkdir "%COUNCIL_HOME%\openclaw\cache"
-if not exist "%COUNCIL_HOME%\codex\keep" mkdir "%COUNCIL_HOME%\codex\keep"
-if not exist "%COUNCIL_HOME%\codex\cache" mkdir "%COUNCIL_HOME%\codex\cache"
+if not exist "%COUNCIL_HOME%\opencode\keep" mkdir "%COUNCIL_HOME%\opencode\keep"
+if not exist "%COUNCIL_HOME%\opencode\cache" mkdir "%COUNCIL_HOME%\opencode\cache"
 if not exist "%COUNCIL_HOME%\shared" mkdir "%COUNCIL_HOME%\shared"
 if not exist "%COUNCIL_HOME%\journal" mkdir "%COUNCIL_HOME%\journal"
 if not exist "%COUNCIL_HOME%\secrets" mkdir "%COUNCIL_HOME%\secrets"

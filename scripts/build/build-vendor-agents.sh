@@ -52,24 +52,24 @@ clone_openclaw() {
     fi
 }
 
-vendor_codex() {
-    local dest="$VENDOR_DIR/codex"
-    echo "--- Codex CLI (npm) ---"
+vendor_opencode() {
+    local dest="$VENDOR_DIR/opencode"
+    echo "--- OpenCode (npm) ---"
     mkdir -p "$dest"
-    # Codex: local builder/review abilities (terminal/file/web tools) -
+    # OpenCode: local builder/review abilities (terminal/file/web tools) -
     # no Docker, no source clone.
-    npm install --prefix "$dest" --no-audit --no-fund @openai/codex
+    npm install --prefix "$dest" --no-audit --no-fund opencode-ai
 }
 
 # Run cloning
 clone_hermes
 clone_openclaw
-vendor_codex
+vendor_opencode
 
 # Verify
 echo ""
 echo "=== Verification ==="
-for agent in hermes openclaw codex; do
+for agent in hermes openclaw opencode; do
     if [ -d "$VENDOR_DIR/$agent" ]; then
         size=$(du -sh "$VENDOR_DIR/$agent" 2>/dev/null | cut -f1)
         echo "✅ $agent: $size"
@@ -93,9 +93,9 @@ Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 - Commit: $(cd "$VENDOR_DIR/openclaw" && git rev-parse HEAD 2>/dev/null || echo "unknown")
 - Branch: $(cd "$VENDOR_DIR/openclaw" && git branch --show-current 2>/dev/null || echo "unknown")
 
-## Codex CLI (npm)
-- Package: @openai/codex
-- Version: $(npm view @openai/codex version 2>/dev/null || echo "unknown")
+## OpenCode (npm)
+- Package: opencode-ai
+- Version: $(npm view opencode-ai version 2>/dev/null || echo "unknown")
 EOF
 
 echo ""

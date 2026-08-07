@@ -1,41 +1,45 @@
 # Changelog
 
-## v1.17.0 (2026-08-07) - Codex joins the council (no Docker)
+## v1.18.0 (2026-08-07) - OpenCode joins the council (works with OpenRouter)
 
 ### Changed
-- The third council role is **Codex CLI** (`npm install -g @openai/codex`):
-  terminal, file editing and web tools that run directly on your PC -
-  **no Docker**. It is the builder & review agent of the council.
+- The third council role is now **OpenCode** (`npm install -g opencode-ai`):
+  a local agent with terminal, file editing and web tools that run directly
+  on your PC - **no Docker**. OpenCode speaks plain **Chat Completions**
+  (via `@ai-sdk/openai-compatible`), which is exactly what OpenRouter
+  natively supports - so your OpenRouter key works with it out of the box.
 - All role names, system prompts, dashboard labels, API docs, env vars
-  (`COUNCIL_CODEX_URL`) and storage layout (`council-data/codex/`) use
-  `codex`.
-- Pendrive: `RUN-CODEX.bat` / `run-codex.sh` launchers keep Codex state on
-  the stick (`CODEX_HOME` + `CODECONFIG` -> `council-data\codex`) and load
-  the provider key from the encrypted vault at launch time.
+  (`COUNCIL_OPENCODE_URL`) and storage layout (`council-data/opencode/`)
+  use `opencode`.
+- Pendrive: `RUN-OPENCODE.bat` / `run-opencode.sh` launchers keep OpenCode
+  state on the stick (`OPENCODE_CONFIG` + `XDG_CONFIG_HOME`/`XDG_DATA_HOME`
+  -> `council-data\opencode`) and load the provider key from the encrypted
+  vault at launch time.
 
 ### Added
-- `councilkey agents configure codex` - writes Codex's config for the
-  configured provider (OpenAI: default endpoint; OpenRouter: officially
-  documented `model_providers.openrouter` + `wire_api = "responses"`).
-  Clear messages when the provider can't drive Codex (Anthropic/Gemini).
+- `councilkey agents configure opencode` - writes OpenCode's config for the
+  configured provider. **All four providers work now**: OpenAI (native),
+  OpenRouter (`@ai-sdk/openai-compatible` + `openrouter/auto` model),
+  Google Gemini (OpenAI-compatible endpoint) and Anthropic (native
+  provider) - no more provider restrictions.
 - `councilkey key list` (masked) and `councilkey key show <NAME>` (raw
   value, used by the pendrive launchers so agents use the SAME key as the
   council, still encrypted at rest).
 - Demo server (`scripts/dev/llm-demo-server.py`) now speaks the OpenAI
-  Responses API (`/v1/responses`, streaming) so Codex CLI can be verified
-  end-to-end in sandboxes without real providers.
+  Responses API (`/v1/responses`, streaming) so OpenAI-protocol agents can
+  be verified end-to-end in sandboxes without real providers.
 
 ### Fixed
 - `councilkey ask` crashed with a raw traceback when `COUNCIL_HOME` was not
   writable (journal write) - journaling is now best-effort with a clear note.
 - `scripts/pendrive-setup.sh` wrote a launcher heredoc with corrupted
-  TAB/BELL characters in the path - the Codex launcher is written cleanly.
+  TAB/BELL characters in the path - the OpenCode launcher is written cleanly.
 
 ### Verified
-- Codex CLI 0.147.0 installs via npm in ~5s, runs against an OpenAI
-  Responses-compatible endpoint with `CODECONFIG`/`CODEX_HOME` pointing at
-  the stick, and all 3 council roles (hermes/openclaw/codex) answer and
-  vote in `councilkey ask` / `agents verify` (121 tests passing).
+- OpenCode 1.18.15 installs via npm in ~10s and runs against an
+  OpenAI-compatible endpoint (`opencode run`, exit 0, chat completions).
+- All 3 council roles (hermes/openclaw/opencode) answer and vote in
+  `councilkey ask` / `agents verify` (121 tests passing).
 
 ## v1.1.0 (2026-08-05)
 
@@ -68,7 +72,7 @@
 ## v1.2.0 (2026-08-05) - Advanced Orchestration & Intelligence
 
 ### Added
-- **Task decomposition** — `/api/council/decompose` splits complex prompts into role-based subtasks (Analysis→Hermes, Execution→OpenClaw, Review→Codex) and votes on the combined output
+- **Task decomposition** — `/api/council/decompose` splits complex prompts into role-based subtasks (Analysis→Hermes, Execution→OpenClaw, Review→OpenCode) and votes on the combined output
 - **Iterative debate** — `/api/council/debate` runs multi-round debates with revision prompts and automatic convergence detection (similarity/CONFIRM)
 - **Streaming responses** — `/api/council/ask/stream` emits Server-Sent Events as each agent answers (start → agent → final → done); dashboard has a Stream toggle
 - **Async task queue** — prioritized background tasks (`/api/tasks*`) for ask/decompose/debate with status tracking and cancellation
@@ -89,7 +93,7 @@
 ## v1.3.0 (2026-08-05) - One-command setup with automatic agent download
 
 ### Added
-- `./scripts/setup.sh` — one-command setup: Python env + package, **downloads the 3 agents automatically** (Hermes, OpenClaw, Codex from their official installers), installs their dependencies, runs the tests, prints final agent status; `--skip-agents` / `--skip-tests` flags
+- `./scripts/setup.sh` — one-command setup: Python env + package, **downloads the 3 agents automatically** (Hermes, OpenClaw, OpenCode from their official installers), installs their dependencies, runs the tests, prints final agent status; `--skip-agents` / `--skip-tests` flags
 - `install.sh` — one-liner installer (`curl | bash`), clones to `~/councilkey-os` and runs the full setup
 - `councilkey agents` CLI: `status` (installed/running/ports), `install` (clone + deps with step-by-step report), `start` (best-effort launcher + per-agent start hints)
 - `GET /api/agents/prereqs` endpoint; `install_agent` task kind for the background queue
@@ -103,14 +107,14 @@
 
 ### The problem fixed
 The dashboard showed 3 agents but none of them answered: the external agent
-repos (Hermes/OpenClaw/Codex) were cloned but their gateways never ran
+repos (Hermes/OpenClaw/OpenCode) were cloned but their gateways never ran
 (they are CLIs, not HTTP servers on fixed ports - and OpenClaw's cloned source
 tree was unbuilt, which is exactly why `openclaw` failed in PowerShell).
 
 ### What changed
 - **Local-LLM role agents (new default brain)**: the 3 council roles run on a
   local Ollama model with distinct system prompts (Hermes=analysis,
-  OpenClaw=execution, Codex=review). Real local inference, offline, no
+  OpenClaw=execution, OpenCode=review). Real local inference, offline, no
   API keys. Fallback chain per agent: external gateway -> local LLM -> explicit
   mock (never silently wrong).
 - `councilkey llm status|install|pull` - install Ollama (incl. `winget` on
@@ -122,7 +126,7 @@ tree was unbuilt, which is exactly why `openclaw` failed in PowerShell).
   winget for Ollama), fixed `start.bat` with clear errors
 - `scripts/dev/llm-demo-server.py` - dev-only Ollama-compatible fixture for CI/sandbox testing (clearly labeled; not part of the product)
 - Dashboard Agents tab shows the real per-agent backend + LLM badge in header
-- `COUNCIL_HERMES_URL` / `COUNCIL_OPENCLAW_URL` / `COUNCIL_CODEX_URL` env
+- `COUNCIL_HERMES_URL` / `COUNCIL_OPENCLAW_URL` / `COUNCIL_OPENCODE_URL` env
   overrides for external gateways
 - 9 new tests (66 total passing)
 
@@ -155,7 +159,7 @@ answers + vote + journal.
 ## v1.5.0 (2026-08-05) - Official installer setup, researched from the agents' own code
 
 ### What changed
-Studied the actual Hermes / OpenClaw / Codex repositories (their
+Studied the actual Hermes / OpenClaw / OpenCode repositories (their
 READMEs, entrypoints and install docs) and rebuilt setup around their
 official methods:
 
@@ -163,10 +167,10 @@ official methods:
 - **OpenClaw**: `npm install -g openclaw@latest` (their docs: the repo is a
   pnpm workspace — plain `npm install` of a clone is unsupported, which is
   exactly what caused the old "missing dist/entry.mjs" error)
-- **Codex**: local npm CLI; installer points to the official package
+- **OpenCode**: local npm CLI; installer points to the official package
   the A0 Launcher / `docker compose up` (clones source only for Docker)
 - `councilkey agents status` now reports the real detection: binary on PATH
-  (`hermes`, `openclaw`), npm for codex
+  (`hermes`, `openclaw`), npm for opencode
 - `councilkey agents install` runs the official installers; `start` hands
   interactive agents over to their own UIs with the right command
 - `setup.sh` / `setup.ps1` simplified: local LLM first (that's what makes
@@ -181,7 +185,7 @@ official methods:
   installed
 - Hermes installer path fails gracefully here (sandbox blocks the domain)
   with the exact manual command printed - works on real machines
-- Codex installs via npm with clear error messages
+- OpenCode installs via npm with clear error messages
 - 67 tests passing, ruff clean
 
 ## v1.5.1 (2026-08-05) - "Does openclaw actually start?" - tested and answered
@@ -264,7 +268,7 @@ journal, endpoint sweep 59/59, setup status endpoint reports correctly.
 ## v1.7.1 (2026-08-05) - councilkey ask: all 3 agents at once from the terminal
 
 - New `councilkey ask "question"` command - the three council roles
-  (Hermes/OpenClaw/Codex) answer the same prompt, then the vote runs.
+  (Hermes/OpenClaw/OpenCode) answer the same prompt, then the vote runs.
   Flags: --strategy (majority/weighted/llm_judge/hermes_decides),
   --debate --rounds N, --decompose, --alone <agent>.
 - Guide: new "Use all 3 agents at once" section (terminal / dashboard
@@ -314,7 +318,7 @@ Fix:
   lookup: npm -> npm.cmd) and `run_cmd()` (cross-platform runner used by
   the agent installer, the setup wizard's OpenClaw configuration and the
   official-installer step).
-- Codex install step message clarified: npm install with a clear hint
+- OpenCode install step message clarified: npm install with a clear hint
   hard requirement by design; message now says so and gives the Windows
   install command (winget install Docker.DockerDesktop).
 - 2 new tests for Windows command resolution (85 total), ruff clean.
@@ -429,7 +433,7 @@ Fixes / improvements:
   (choose provider -> install agents -> finish, etc).
 - **Per-agent selection**: instead of all-or-nothing, the wizard lists the
   5 agents with time estimates (Hermes 5-15 min, OpenClaw 1-3 min,
-  Codex 1-3 min, CrewAI 2-5 min, Aider 1-2 min) and you pick
+  OpenCode 1-3 min, CrewAI 2-5 min, Aider 1-2 min) and you pick
   which to install (comma-separated, e.g. 2,4 or 'all').
 - **Combined pip install**: CrewAI + Aider install in ONE pip command
   instead of two sequential ones (pip resolves shared deps once).
@@ -552,10 +556,10 @@ User request: "I want EVERYTHING on the pendrive."
   stick**, not the host PC:
   - hermes-agent, crewai, aider-chat → pip-installed **into the stick venv**
   - openclaw → npm-installed **into the stick** (`tools/openclaw`)
-  - codex → launcher provided (npm install, no Docker)
+  - opencode → launcher provided (npm install, no Docker)
 - Launchers for every agent (always written): `RUN-OPENCLAW.bat`,
   `RUN-HERMES.bat` (HERMES_HOME → stick), `RUN-CREWAI.bat`, `RUN-AIDER.bat`,
-  `RUN-CODEX.bat` + `run-*.sh` on Linux - each runs from the stick and
+  `RUN-OPENCODE.bat` + `run-*.sh` on Linux - each runs from the stick and
   keeps its state in `council-data/` on the stick.
 - `--no-agents` flag skips only the installs (launchers still written).
 - Verified: built a stick, all 10 launchers present, stick boots.
@@ -574,7 +578,7 @@ necessary things so the agents run.
 
 - **setup.sh --auto** / **setup.ps1 -Full**: non-interactive full setup -
   Python env + package, installs ALL 5 external agents (hermes, openclaw,
-  crewai, aider via official installers; codex launcher), stores the
+  crewai, aider via official installers; opencode launcher), stores the
   API key from env vars (OPENAI/ANTHROPIC/GEMINI/OPENROUTER_API_KEY) or
   --api-key/-ApiKey, then verifies. Without a key it prints the one command
   to add it.
@@ -636,7 +640,7 @@ Added to BOTH pendrive builders (pendrive-setup.sh + .ps1), so every stick
 now has:
 - **AGENTS.bat / agents-menu.sh** - interactive menu: A = ALL agents +
   dashboard at once, or pick 1-6 (dashboard / OpenClaw / Hermes / CrewAI /
-  Aider / Codex)
+  Aider / OpenCode)
 - **LAUNCH-ALL.bat / launch-all.sh** - start everything together
 - **SESSION MODE**: START-SESSION.bat / start-session.sh clone the code
   to the PC temporarily (fast SSD speed) while COUNCIL_HOME points at the

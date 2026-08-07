@@ -270,7 +270,7 @@ def cmd_llm(action: str, model: str | None) -> int:
 def cmd_agents(action: str, names: list[str]) -> int:
     """Manage the 3 external agents: status / install / start / env / configure / verify.
 
-    The external agents (Hermes, OpenClaw, Codex) are optional add-ons
+    The external agents (Hermes, OpenClaw, OpenCode) are optional add-ons
     installed with their own official installers. The council itself always
     answers via your model provider (councilkey setup).
     """
@@ -283,7 +283,7 @@ def cmd_agents(action: str, names: list[str]) -> int:
         return 2
 
     if action == "configure":
-        # point an installed agent at the user's provider key (codex today)
+        # point an installed agent at the user's provider key (opencode today)
         from council.agents.installer import configure
 
         failed = False
@@ -312,7 +312,7 @@ def cmd_agents(action: str, names: list[str]) -> int:
         if missing:
             print("not installed:", ", ".join(missing))
             print("install with: councilkey agents install")
-        print("\nnote: all 5 external agents install standalone (codex: npm, local, NO Docker -")
+        print("\nnote: all 5 external agents install standalone (opencode: npm, local, NO Docker -")
         print("it runs terminal/file/web tools directly on your PC).")
         print("the council itself always answers via your model provider:")
         print("      councilkey setup   /   councilkey agents env")
@@ -393,7 +393,7 @@ def cmd_agents(action: str, names: list[str]) -> int:
         from council.orchestrator.agents import build_default_clients, client_modes
 
         # 1. council roles (real ask)
-        roles = ["hermes", "openclaw", "codex"]
+        roles = ["hermes", "openclaw", "opencode"]
         print("== 1/2 verifying the council (real ask - each agent up to 30s, please wait) ==")
         modes = client_modes()
         clients = build_default_clients()
@@ -446,7 +446,7 @@ def cmd_key(action: str, names: list[str]) -> int:
     """Show/list API keys from the encrypted vault.
 
     `councilkey key show NAME` prints the raw key on stdout - used by the
-    pendrive launchers (RUN-CODEX.bat) so agents get the SAME key as the
+    pendrive launchers (RUN-OPENCODE.bat) so agents get the SAME key as the
     council without ever storing it in plain text.
     """
     from council.secrets.vault import get_secret, list_secrets
@@ -566,7 +566,7 @@ def main(argv: list[str] | None = None) -> None:
     p_ask = sub.add_parser("ask", help="ask the council - ALL 3 agents at once + vote")
     p_ask.add_argument("prompt", help="the question to ask")
     p_ask.add_argument("--strategy", default="majority", choices=["majority", "weighted", "llm_judge", "hermes_decides"])
-    p_ask.add_argument("--alone", metavar="AGENT", help="ask a single agent (hermes/openclaw/codex)")
+    p_ask.add_argument("--alone", metavar="AGENT", help="ask a single agent (hermes/openclaw/opencode)")
     p_ask.add_argument("--decompose", action="store_true", help="split into role-based subtasks")
     p_ask.add_argument("--debate", action="store_true", help="iterative multi-round debate")
     p_ask.add_argument("--rounds", type=int, default=3, help="debate rounds (default 3)")

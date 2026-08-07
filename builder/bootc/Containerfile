@@ -22,7 +22,7 @@ COPY pyproject.toml /opt/councilkey/pyproject.toml
 
 # Persistent layout (mounted volumes override these in production)
 RUN mkdir -p /var/lib/council/{secrets,shared,journal,council,backups} \
-       /var/lib/council/{hermes,openclaw,codex}/{keep,cache}
+       /var/lib/council/{hermes,openclaw,opencode}/{keep,cache}
 
 WORKDIR /opt/councilkey
 EXPOSE 8443

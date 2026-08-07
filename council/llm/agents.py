@@ -6,7 +6,7 @@ external gateway servers that rarely run, the council asks a local LLM
 
 - hermes     -> memory & analysis  (qwen2.5:3b)
 - openclaw   -> action & execution (qwen2.5:3b)
-- codex      -> builder & code     (deepseek-coder:1.3b, falls back to qwen2.5:3b)
+- opencode      -> builder & code     (deepseek-coder:1.3b, falls back to qwen2.5:3b)
 
 Every agent gets a distinct system prompt, so three real, different answers
 are produced for the council to vote on. If Ollama is not installed/running,
@@ -54,12 +54,12 @@ ROLE_AGENTS: dict[str, dict[str, Any]] = {
             "Answer the user's request with your actionable plan."
         ),
     },
-    "codex": {
+    "opencode": {
         "role": "builder",
         "model": "deepseek-coder:1.3b",
         "temperature": 0.4,
         "system": (
-            "You are Codex, the builder and review agent of a council of three AI agents. "
+            "You are OpenCode, the builder and review agent of a council of three AI agents. "
             "You build concrete solutions, review plans for safety and correctness, and you "
             "write the final polished answer. You are rigorous about safety and details. "
             "Answer the user's request with your reviewed, final answer."

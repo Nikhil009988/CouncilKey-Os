@@ -19,7 +19,7 @@ User: "Build me a website"
   ↓ Council Core broadcasts parallel to 3 agents (like Tank-OS Quadlets)
   ├── Hermes Sage (Memory & Learning): Provides context from MEMORY.md 1000 facts, skills/web-dev, USER.md preferences
   ├── OpenClaw Executor (Action & Comms): Plans file ops, search Firecrawl, shell/file/browser, notify Telegram after 2/3 vote
-  └── Codex Builder (Code & Review): writes code in work_dir, edits files, runs terminal commands - locally, no Docker
+  └── OpenCode Builder (Code & Review): writes code in work_dir, edits files, runs terminal commands - locally, no Docker
   ↓ Collect 3 responses
   ↓ Vote: majority 2/3, or weighted, or llm_judge (Claude/GPT judges best), or hermes_decides Sage final
   ↓ If consensus (2/3 approve), execute approved actions
@@ -31,7 +31,7 @@ User: "Build me a website"
 - Safety: No single agent can act alone, 2/3 vote required prevents email deletion incident (real incident from Tank-OS docs)
 - Memory: Hermes FTS5 historical context
 - Action: OpenClaw phone bridge
-- Transparency: Codex writes code inspectable
+- Transparency: OpenCode writes code inspectable
 - Resilience: One offline, others vote, journal preserves
 
 **CLI:**
@@ -59,24 +59,24 @@ User: "I want only Hermes to research quantum computing"
 - User trusts one agent more for specific task
 - Faster (no voting overhead)
 - Testing individual agent
-- Agent-specific features: Hermes TUI multiline editing, OpenClaw WhatsApp bridge, Codex local terminal/file/web tools
+- Agent-specific features: Hermes TUI multiline editing, OpenClaw WhatsApp bridge, OpenCode local terminal/file/web tools
 
 **CLI:**
 ```bash
 council ask --mode alone --agent hermes "Research quantum computing"
 council ask --mode alone --agent openclaw "Deploy website via shell"
-council ask --mode alone --agent codex "Write code for website in work_dir"
+council ask --mode alone --agent opencode "Write code for website in work_dir"
 
 # Direct solo terminals (like you know normally):
 council shell hermes    # podman exec -it hermes sh or local .venv
 hermes                  # Hermes TUI direct - Full TUI multiline editing, slash-command autocomplete, streaming tool output
 openclaw                # OpenClaw CLI - openclaw onboard, openclaw gateway start 18789, openclaw dashboard 18788
-codex                   # Codex CLI (interactive) - local execution
+opencode                   # OpenCode CLI (interactive) - local execution
 
 # Direct (single agent):
 council hermes "prompt"      # Solo Hermes
 council openclaw "prompt"    # Solo OpenClaw
-council codex "prompt"  # Solo Codex
+council opencode "prompt"  # Solo OpenCode
 ```
 
 **Dashboard:** Agents tab -> Each card has [Solo Ask] button -> Ask only that agent
@@ -90,7 +90,7 @@ User can start together, then if consensus fails or user wants, switch to alone 
 User: "Build website" -> Together: 3 agents debate, no consensus (2/3 disagree)
 User: "Ok, let Hermes alone design, then council vote"
   -> Alone: Hermes alone designs minimal website (uses MEMORY.md 1000 facts, skills/web-dev)
-  -> Together: Council votes on Hermes design, OpenClaw executes, Codex writes code
+  -> Together: Council votes on Hermes design, OpenClaw executes, OpenCode writes code
 ```
 
 ---
@@ -109,7 +109,7 @@ We have 2 profiles for this:
    - `bin/linux/node-v22.14-linux-x64/` - Portable Node.js runs directly from USB, no install
    - `tools/linux/openclaw/node_modules/` - OpenClaw npm global on USB
    - `tools/linux/hermes/.venv/` - Hermes Python venv on USB
-   - `tools/codex/` - Codex CLI (npm) on USB
+   - `tools/opencode/` - OpenCode CLI (npm) on USB
    - `tools/linux/council-core/.venv/` - Council core venv on USB
    - `bin/win/` - Same for Windows
 
@@ -121,7 +121,7 @@ We have 2 profiles for this:
    export CLAUDE_CONFIG_DIR="$USB/config/.claude"
    export HERMES_HOME="$USB/config/council/hermes/real_home"  # real_home has keep/ -> persistence + cache/ -> /tmp/council (RAM) or USB/temp
    export OPENCLAW_HOME="$USB/config/council/openclaw/real_home"
-   export CODEX_HOME="$USB/config/council/codex"
+   export OPENCODE_CONFIG + XDG dirs="$USB/config/council/opencode"
    export COUNCIL_HOME="$USB/config/council"
    export TMPDIR="$USB/temp"  # All temp to USB, not host /tmp
    export NPM_CONFIG_CACHE="$USB/temp/npm-cache"
@@ -157,7 +157,7 @@ We have 2 profiles for this:
 5. **Data Stored In Pendrive:**
    - `config/council/hermes/keep/` - SOUL.md, MEMORY.md, USER.md, config.yaml, skills custom, memories, cron, pairing, hooks - SMART kept
    - `config/council/openclaw/keep/` - soul.md, skills, pairing
-   - `config/council/codex/keep/` - CODEX_HOME state (history, config)
+   - `config/council/opencode/keep/` - OPENCODE_CONFIG + XDG dirs state (history, config)
    - `config/council/shared/memory.md` + `journal/*.md` git
    - `config/council/secrets/` - API keys GPG encrypted 700
    - `temp/` - Cache that would be deleted on unplug, but stored in pendrive temp/ for debugging, with option to delete via `council storage-optimize` or `council cleanup`
@@ -221,16 +221,16 @@ council ask --mode together --strategy llm_judge "Build website"
 # Alone - Solo agent
 council ask --mode alone --agent hermes "Research quantum computing"
 council ask --mode alone --agent openclaw "Deploy website"
-council ask --mode alone --agent codex "Write code in work_dir"
+council ask --mode alone --agent opencode "Write code in work_dir"
 
 # Direct solo (like you know normally terminal too)
 council hermes "prompt"  # solo
 council openclaw "prompt"
-council codex "prompt"
+council opencode "prompt"
 council shell hermes  # podman exec -it hermes sh
 hermes  # Hermes TUI direct
 openclaw  # OpenClaw CLI
-codex  # Codex CLI
+opencode  # OpenCode CLI
 
 # Storage + no traces
 council storage-audit  # Keep smart vs Cache RAM auto delete on unplug
@@ -250,7 +250,7 @@ council cleanup  # Manual trigger delete heavy on unplug logic
 
 **`scripts/build-portable.sh` already does:**
 - Downloads Node.js Linux+Win, resolves symlinks cp -rL for exFAT (no symlinks)
-- Installs hermes (pip), openclaw + codex (npm) on USB
+- Installs hermes (pip), openclaw + opencode (npm) on USB
 - Creates start.sh with env redirect to USB + trap cleanup EXIT
 
 **Enhanced for together+alone + no traces:**
@@ -282,7 +282,7 @@ council cleanup  # Manual trigger delete heavy on unplug logic
 
 **Alone:** `council ask --mode alone --agent hermes "Research quantum"` -> Only Hermes alone, no vote, faster
 
-**You can switch:** Together for safety, alone for speed or agent-specific features (Hermes TUI, OpenClaw WhatsApp, Codex terminal)
+**You can switch:** Together for safety, alone for speed or agent-specific features (Hermes TUI, OpenClaw WhatsApp, OpenCode terminal)
 
 **No Traces After Unplug:**
 
@@ -292,7 +292,7 @@ council cleanup  # Manual trigger delete heavy on unplug logic
 
 **Data Stored in Pendrive:** Always in pendrive, not host:
 
-- Portable: `USB/config/council/hermes/keep/` SOUL.md MEMORY.md USER.md skills/ etc. + `openclaw/keep/` + `codex/keep/` + `shared/memory.md` + `journal/*.md` git + `secrets/` GPG encrypted
+- Portable: `USB/config/council/hermes/keep/` SOUL.md MEMORY.md USER.md skills/ etc. + `openclaw/keep/` + `opencode/keep/` + `shared/memory.md` + `journal/*.md` git + `secrets/` GPG encrypted
 - Live: `/var/lib/council/` same structure on persistence partition LUKS2 encrypted ext4, RO 5GB smart initial + RW 100-300MB daily learning
 
 Both profiles ensure after unplug, agents removed from PC, data in pendrive.
@@ -301,7 +301,7 @@ Both profiles ensure after unplug, agents removed from PC, data in pendrive.
 
 ## Next Implementation
 
-- Update council/orchestrator/main.py to support --mode together|alone --agent hermes|openclaw|codex
+- Update council/orchestrator/main.py to support --mode together|alone --agent hermes|openclaw|opencode
 - Update dashboard 6 tabs to have Together/Solo buttons
 - Enhance start.sh with cleanup trap + verify-no-traces
 - Update build-live-iso.sh grub.cfg with Amnesiac No Trace entry

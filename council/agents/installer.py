@@ -6,7 +6,7 @@ Each agent is installed the way its own project documents:
               -> `hermes` CLI + messaging gateway. Interactive chat agent.
 - OpenClaw    `npm install -g openclaw@latest` -> `openclaw` CLI.
               Multi-channel personal assistant. Interactive chat agent.
-- Codex       `npm install -g @openai/codex` -> `codex` CLI (OpenHands/OpenAI).
+- OpenCode       `npm install -g opencode-ai` -> `opencode` CLI (OpenHands/OpenAI).
               Local coding agent with terminal, file and web tools - runs on
               your PC, NO Docker needed.
 
@@ -15,7 +15,7 @@ services. The council's always-working brains are the provider role agents
 (council.llm.provider); the external agents are optional add-ons you use
 through their own interfaces. When an external agent DOES expose an HTTP
 endpoint (e.g. a custom gateway bridge), point the council at it via
-COUNCIL_HERMES_URL / COUNCIL_OPENCLAW_URL / COUNCIL_CODEX_URL.
+COUNCIL_HERMES_URL / COUNCIL_OPENCLAW_URL / COUNCIL_OPENCODE_URL.
 """
 from __future__ import annotations
 
@@ -52,15 +52,15 @@ AGENTS: dict[str, dict[str, Any]] = {
         "runtime": "node/npm",
         "start_hint": "openclaw                     # interactive chat\nopenclaw onboard --install-daemon   # guided onboarding",
     },
-    "codex": {
+    "opencode": {
         "install": "npm",
-        "package": "@openai/codex",
-        "bin": "codex",
-        "_npm_name": "codex",
-        "_next": "councilkey agents configure codex   # point it at your API key (OpenAI/OpenRouter)",
+        "package": "opencode-ai",
+        "bin": "opencode",
+        "_npm_name": "opencode",
+        "_next": "councilkey agents configure opencode   # point it at your API key",
         "role": "builder & review (external, optional)",
-        "runtime": "node/npm - local execution, NO Docker (terminal/file/web tools built in)",
-        "start_hint": "codex                     # interactive chat in any folder\ncodex exec \"your task\"      # one-shot task\ncouncilkey agents configure codex   # point it at your API key",
+        "runtime": "node/npm - local execution, NO Docker (chat completions - works with OpenRouter)",
+        "start_hint": "opencode                     # interactive TUI in any folder\nopencode run \"your task\"     # one-shot task\ncouncilkey agents configure opencode   # point it at your API key",
     },
     "crewai": {
         "install": "pip",
@@ -117,9 +117,9 @@ def status(names: list[str] | None = None) -> dict[str, dict[str, Any]]:
             home_bin = Path.home() / ".local" / "bin" / "hermes"
             win_bin = Path(os.environ.get("LOCALAPPDATA", "")) / "hermes" / "hermes.exe"
             installed = installed or home_bin.exists() or win_bin.exists()
-        # codex can also live on the pendrive: CouncilKey-Os/tools/codex
-        if name == "codex":
-            stick_bin = AGENTS_DIR.parent / "codex" / "node_modules" / ".bin" / ("codex.cmd" if os.name == "nt" else "codex")
+        # opencode can also live on the pendrive: CouncilKey-Os/tools/opencode
+        if name == "opencode":
+            stick_bin = AGENTS_DIR.parent / "opencode" / "node_modules" / ".bin" / ("opencode.cmd" if os.name == "nt" else "opencode")
             installed = installed or stick_bin.exists()
         # crewai/aider install into the project venv
         if name in ("crewai", "aider"):
@@ -156,7 +156,7 @@ def install(name: str) -> dict[str, Any]:
 
 
 def _install_npm(info: dict[str, Any]) -> dict[str, Any]:
-    """Install an npm-based agent (openclaw / codex) with Windows-proof
+    """Install an npm-based agent (openclaw / opencode) with Windows-proof
     command resolution."""
     from council.agents.proc import resolve_cmd, which_resolved
 
@@ -275,81 +275,112 @@ def start(name: str, wait: int = 30) -> dict[str, Any]:
     if name == "hermes":
         return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"],
                 "first_run": "hermes setup   (interactive wizard - configure model provider)"}
-    if name == "codex":
+    if name == "opencode":
         return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"],
-                "diagnose": "councilkey agents configure codex",
-                "one_shot": 'codex exec "your question"',
-                "first_run": "councilkey agents configure codex   (points Codex at your API key)"}
+                "diagnose": "councilkey agents configure opencode",
+                "one_shot": 'opencode exec "your question"',
+                "first_run": "councilkey agents configure opencode   (points OpenCode at your API key)"}
     return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"]}
 
 
-# ------------------------------------------------------------- codex config
-def configure(name: str = "codex") -> dict[str, Any]:
-    """Write the config that points an external agent at the user's provider.
+# ------------------------------------------------------------- opencode config
+OPENCODE_PROVIDERS: dict[str, dict[str, Any]] = {
+    # provider id from `councilkey setup` -> OpenCode provider block
+    "openai": {
+        "name": "OpenAI",
+        "provider_id": "openai",
+        "npm": None,  # built-in provider (Responses API on api.openai.com)
+        "base_url": None,
+        "env_key": "OPENAI_API_KEY",
+        "models": {"gpt-4o-mini": {"name": "GPT-4o mini"}},
+        "default_model": "gpt-4o-mini",
+    },
+    "openrouter": {
+        "name": "OpenRouter",
+        "provider_id": "openrouter",
+        "npm": "@ai-sdk/openai-compatible",  # chat completions - universal
+        "base_url": "https://openrouter.ai/api/v1",
+        "env_key": "OPENROUTER_API_KEY",
+        "models": {
+            "openrouter/auto": {"name": "OpenRouter Auto (default router)"},
+            "openai/gpt-4o-mini": {"name": "GPT-4o mini"},
+        },
+        "default_model": "openrouter/auto",
+    },
+    "gemini": {
+        "name": "Google Gemini",
+        "provider_id": "gemini",
+        "npm": "@ai-sdk/openai-compatible",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "env_key": "GEMINI_API_KEY",
+        "models": {"gemini-2.0-flash": {"name": "Gemini 2.0 Flash"}},
+        "default_model": "gemini-2.0-flash",
+    },
+    "anthropic": {
+        "name": "Anthropic",
+        "provider_id": "anthropic",
+        "npm": None,  # built-in provider
+        "base_url": None,
+        "env_key": "ANTHROPIC_API_KEY",
+        "models": {"claude-3-5-haiku-latest": {"name": "Claude 3.5 Haiku"}},
+        "default_model": "claude-3-5-haiku-latest",
+    },
+}
 
-    Codex CLI speaks the OpenAI "Responses" protocol, so it works with the
-    OpenAI and OpenRouter providers out of the box (OpenRouter officially
-    documents this setup). Gemini/Anthropic keys can't be used by Codex
-    directly - we say so clearly instead of writing a broken config.
 
-    The config file goes to $CODECONFIG when set (pendrive mode keeps it on
-    the stick), otherwise to ~/.codex/config.toml.
+def configure(name: str = "opencode") -> dict[str, Any]:
+    """Write the config that points OpenCode at the user's provider.
+
+    OpenCode speaks plain Chat Completions, which every provider supports -
+    OpenAI, OpenRouter, Google Gemini (OpenAI-compatible endpoint) and
+    Anthropic (native provider) all get a working config.
+
+    The config file goes to $OPENCODE_CONFIG when set (pendrive mode keeps it
+    on the stick), otherwise to ~/.config/opencode/opencode.json.
     """
-    if name != "codex":
-        return {"ok": False, "error": f"configure is only implemented for 'codex' (got {name!r})"}
+    if name != "opencode":
+        return {"ok": False, "error": f"configure is only implemented for 'opencode' (got {name!r})"}
 
     from council.llm.provider import active_provider
 
     provider = active_provider()
-    if not provider:
-        return {"ok": False, "name": "codex",
+    if not provider or provider == "none":
+        return {"ok": False, "name": "opencode",
                 "error": "no API key configured yet - run: councilkey setup",
-                "hint": "councilkey setup   (choose OpenAI or OpenRouter, paste the key - stored encrypted)"}
+                "hint": "councilkey setup   (choose a provider, paste the key - stored encrypted)"}
 
-    if provider == "anthropic":
-        return {"ok": False, "name": "codex",
-                "error": "Codex CLI speaks the OpenAI protocol - it cannot use an Anthropic key directly",
-                "hint": "choose OpenAI or OpenRouter in 'councilkey setup', or use Claude Code for Anthropic"}
-    if provider == "gemini":
-        return {"ok": False, "name": "codex",
-                "error": "Codex CLI needs an OpenAI-compatible endpoint - Gemini's API is not compatible",
-                "hint": "choose OpenAI or OpenRouter in 'councilkey setup', or use the Gemini CLI for Gemini keys"}
+    info = OPENCODE_PROVIDERS.get(provider)
+    if not info:
+        return {"ok": False, "name": "opencode",
+                "error": f"provider {provider!r} is not supported by OpenCode - choose from {sorted(OPENCODE_PROVIDERS)}"}
 
-    config_path = Path(os.environ.get("CODECONFIG", Path.home() / ".codex" / "config.toml"))
+    config_path = Path(os.environ.get("OPENCODE_CONFIG", Path.home() / ".config" / "opencode" / "opencode.json"))
     try:
         config_path.parent.mkdir(parents=True, exist_ok=True)
-        if provider == "openai":
-            # Codex's built-in default provider IS OpenAI - only the key env
-            # var is needed. Write a minimal config so nothing is ambiguous.
-            content = (
-                "# written by councilkey - provider: openai (Codex's default)\n"
-                'model_reasoning_effort = "high"\n'
-            )
-            config_path.write_text(content, encoding="utf-8")
-            return {"ok": True, "name": "codex",
-                    "detail": f"config written: {config_path} (provider: openai - no base URL needed)",
-                    "next": "run: codex   (OPENAI_API_KEY is loaded from the vault when you launch)"}
-        # provider == "openrouter" (officially documented by OpenRouter)
-        content = (
-            "# written by councilkey - provider: openrouter\n"
-            '# change the model anytime (any OpenRouter model that supports the Responses API)\n'
-            'model = "openai/gpt-5.3-codex"\n'
-            'model_provider = "openrouter"\n'
-            'model_reasoning_effort = "high"\n\n'
-            "[model_providers.openrouter]\n"
-            'name = "OpenRouter"\n'
-            'base_url = "https://openrouter.ai/api/v1"\n'
-            'env_key = "OPENROUTER_API_KEY"\n'
-            'wire_api = "responses"\n'
-        )
-        config_path.write_text(content, encoding="utf-8")
-        return {"ok": True, "name": "codex",
-                "detail": f"config written: {config_path} (provider: openrouter, model: openai/gpt-5.3-codex)",
-                "next": "run: codex   (OPENROUTER_API_KEY is loaded from the vault when you launch)"}
+        provider_block: dict[str, Any] = {
+            "name": info["name"],
+            "options": {"apiKey": f"{{env:{info['env_key']}}}"},
+            "models": info["models"],
+        }
+        if info["npm"]:
+            provider_block["npm"] = info["npm"]
+        if info["base_url"]:
+            provider_block["options"]["baseURL"] = info["base_url"]
+        config = {
+            "$schema": "https://opencode.ai/config.json",
+            "model": f"{info['provider_id']}/{info['default_model']}",
+            "provider": {info["provider_id"]: provider_block},
+        }
+        import json
+
+        config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+        return {"ok": True, "name": "opencode",
+                "detail": f"config written: {config_path} (provider: {provider}, model: {info['default_model']})",
+                "next": f"run: opencode   ({info['env_key']} is loaded from the vault when you launch)"}
     except Exception as exc:
-        return {"ok": False, "name": "codex",
-                "error": f"could not write the Codex config at {config_path}: {exc}",
-                "hint": "make sure the folder is writable, then re-run: councilkey agents configure codex"}
+        return {"ok": False, "name": "opencode",
+                "error": f"could not write the OpenCode config at {config_path}: {exc}",
+                "hint": "make sure the folder is writable, then re-run: councilkey agents configure opencode"}
 
 
 def openclaw_local_command() -> str:

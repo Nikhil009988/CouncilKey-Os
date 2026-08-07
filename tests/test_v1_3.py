@@ -11,12 +11,12 @@ sys.path.insert(0, str(ROOT))
 def test_agents_installer_known_agents():
     from council.agents.installer import AGENTS
 
-    assert set(AGENTS) == {"hermes", "openclaw", "codex", "crewai", "aider"}
+    assert set(AGENTS) == {"hermes", "openclaw", "opencode", "crewai", "aider"}
     # each agent documents its official install method
     assert AGENTS["hermes"]["install"] == "official-installer"
     assert AGENTS["openclaw"]["install"] == "npm"
-    assert AGENTS["codex"]["install"] == "npm"
-    assert AGENTS["codex"]["package"] == "@openai/codex"
+    assert AGENTS["opencode"]["install"] == "npm"
+    assert AGENTS["opencode"]["package"] == "opencode-ai"
     assert AGENTS["crewai"]["install"] == "pip"
     assert AGENTS["aider"]["install"] == "pip"
     # official URLs/commands are present
@@ -30,7 +30,7 @@ def test_agents_status_shape():
     from council.agents.installer import status
 
     data = status()
-    assert set(data) == {"hermes", "openclaw", "codex", "crewai", "aider"}
+    assert set(data) == {"hermes", "openclaw", "opencode", "crewai", "aider"}
     for name, info in data.items():
         assert "installed" in info
         assert "binary" in info

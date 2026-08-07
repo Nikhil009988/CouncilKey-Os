@@ -18,7 +18,7 @@ def test_decompose_prompt_structure():
     subtasks = decompose_prompt("build a website")
     assert len(subtasks) == 3
     assert [s["id"] for s in subtasks] == ["analysis", "execution", "review"]
-    assert all(s["agent"] in ("hermes", "openclaw", "codex") for s in subtasks)
+    assert all(s["agent"] in ("hermes", "openclaw", "opencode") for s in subtasks)
 
 
 def test_run_decomposed():

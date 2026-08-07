@@ -12,7 +12,7 @@ from typing import Any
 COUNCIL_HOME = Path(os.environ.get("COUNCIL_HOME", "/var/lib/council"))
 
 # Top-level directories that may be backed up / restored.
-BACKUP_RELS = ["hermes/keep", "openclaw/keep", "codex/keep", "shared", "journal", "council", "secrets"]
+BACKUP_RELS = ["hermes/keep", "openclaw/keep", "opencode/keep", "shared", "journal", "council", "secrets"]
 ALLOWED_TOP = {rel.split("/")[0] for rel in BACKUP_RELS}
 
 

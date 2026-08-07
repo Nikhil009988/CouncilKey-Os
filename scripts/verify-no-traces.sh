@@ -38,7 +38,7 @@ n=$(find "$COUNCIL_HOME" -type d \( -name '.cache' -o -name '.npm' -o -name '.pi
 if [ "$n" -eq 0 ]; then pass "no package-manager caches"; else fail "package-manager cache dirs: $n"; [ "$CLEAN" -eq 1 ] && find "$COUNCIL_HOME" -type d \( -name '.cache' -o -name '.npm' -o -name '.pip' \) -exec rm -rf {} + 2>/dev/null; fi
 
 # 5. Cache RAM usage under 512MB (heavy RAW data should be flushed on unplug)
-cache_total=$(du -sb "$COUNCIL_HOME"/hermes/cache "$COUNCIL_HOME"/openclaw/cache "$COUNCIL_HOME"/codex/cache 2>/dev/null | awk '{s+=$1} END {print s+0}')
+cache_total=$(du -sb "$COUNCIL_HOME"/hermes/cache "$COUNCIL_HOME"/openclaw/cache "$COUNCIL_HOME"/opencode/cache 2>/dev/null | awk '{s+=$1} END {print s+0}')
 cache_mb=$((cache_total / 1024 / 1024))
 if [ "$cache_total" -lt 536870912 ]; then pass "cache RAM under 512MB (${cache_mb}MB)"; else fail "cache RAM too big: ${cache_mb}MB"; fi
 

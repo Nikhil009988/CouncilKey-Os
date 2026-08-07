@@ -28,7 +28,7 @@ What the script does:
 - Installs:
   - OpenClaw: npm install -g openclaw@latest to tools/linux/openclaw
   - Hermes: git clone NousResearch/hermes-agent + uv venv to tools/linux/hermes
-  - Codex: npm install --prefix tools/codex @openai/codex (no Docker)
+  - OpenCode: npm install --prefix tools/opencode opencode-ai (no Docker)
   - Council Core: our orchestrator to tools/linux/council-core
 - Creates config/ templates for API keys
 - Copies launcher scripts start.sh / start.bat
@@ -40,7 +40,7 @@ bash /media/$USER/COUNCIL/start.sh
 # Then:
 council status
 council ask "hello council, introduce yourselves"
-# Type 'hermes' for Hermes TUI, 'openclaw' for OpenClaw, 'codex' for Codex
+# Type 'hermes' for Hermes TUI, 'openclaw' for OpenClaw, 'opencode' for OpenCode
 
 # Windows
 Double-click start.bat
@@ -85,15 +85,15 @@ sudo ./scripts/build-live-iso.sh noble
      ```bash
      /opt/council/hermes - uv + hermes-agent
      /opt/council/openclaw - npm install -g openclaw
-     /opt/council/codex - npm install -g @openai/codex
+     /opt/council/opencode - npm install -g opencode-ai
      /opt/council/council-core - pip install fastapi uvicorn
      ```
 4. Setup systemd units from council/systemd/*.service to /etc/systemd/system/
    - council-hermes.service -> ExecStart=/opt/council/hermes/.venv/bin/hermes gateway start
    - council-openclaw.service -> ExecStart=/usr/bin/openclaw gateway start
-   - codex runs locally (CLI) - no service container needed
+   - opencode runs locally (CLI) - no service container needed
    - council-core.service -> ExecStart=python3 /opt/council/council-core/main.py
-5. Create council user (UID 1000), hermes 1001, openclaw 1002, set linger, subuid/subgid (codex runs as the user)
+5. Create council user (UID 1000), hermes 1001, openclaw 1002, set linger, subuid/subgid (opencode runs as the user)
 6. Cleanup chroot: truncate /etc/machine-id, apt clean, rm /tmp/*, umount
 7. Prepare image/:
    - mksquashfs chroot image/casper/filesystem.squashfs -comp xz -e boot
@@ -196,7 +196,7 @@ qemu-system-x86_64 \
 # In another terminal
 ssh -p 2222 council@localhost
 # Inside VM
-podman ps  # should show 3 containers: hermes, openclaw, council-core (codex runs locally, no container)
+podman ps  # should show 3 containers: hermes, openclaw, council-core (opencode runs locally, no container)
 council status
 journalctl -u council-core -f
 ```
@@ -240,7 +240,7 @@ sudo bootc rollback  # if needed
 
 ```bash
 council ask "What is quantum computing? Debate among yourselves"
-# -> Hermes provides memory/context, OpenClaw provides web search, Codex writes demo code, vote
+# -> Hermes provides memory/context, OpenClaw provides web search, OpenCode writes demo code, vote
 
 council status
 council logs --agent hermes -f
