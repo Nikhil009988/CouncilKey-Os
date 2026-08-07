@@ -53,7 +53,7 @@ Current orchestrator uses mock responses when ports closed. To make real:
 
 - **OpenClaw real**: Install via npm, run `openclaw gateway start` gives HTTP API at 18789. Need to implement POST /api/message forwarding in AgentAdapter.ask()
 - **Hermes real**: After cloning hermes-agent, `hermes gateway setup` creates config, `hermes gateway start` gives API at 18790. Implement tool.
-- **Agent-Zero real**: `python run_ui.py --port 50001` gives WebUI + API at /api/message. Implement forwarding.
+- **Codex gateway bridge**: expose Codex CLI as an HTTP endpoint (`COUNCIL_CODEX_URL`) and implement forwarding so the council can use the local Codex directly.
 
 Then voting becomes real - 3 LLMs debating.
 

@@ -93,7 +93,7 @@ sudo ./scripts/build-live-iso.sh noble
    - council-openclaw.service -> ExecStart=/usr/bin/openclaw gateway start
    - codex runs locally (CLI) - no service container needed
    - council-core.service -> ExecStart=python3 /opt/council/council-core/main.py
-5. Create council user (UID 1000), hermes 1001, openclaw 1002, agent0 1003, set linger, subuid/subgid
+5. Create council user (UID 1000), hermes 1001, openclaw 1002, set linger, subuid/subgid (codex runs as the user)
 6. Cleanup chroot: truncate /etc/machine-id, apt clean, rm /tmp/*, umount
 7. Prepare image/:
    - mksquashfs chroot image/casper/filesystem.squashfs -comp xz -e boot
@@ -167,7 +167,7 @@ chmod +x scripts/build-bootc.sh
 # 1. podman build -t localhost/councilkey-os:latest -f builder/bootc/Containerfile builder/bootc/
 #    - Base: quay.io/fedora/fedora-bootc:44
 #    - Installs: podman, python3, nodejs 22, cloud-init, openssh-server, qemu-guest-agent, tailscale
-#    - Creates users council(1000), hermes(1001), openclaw(1002), agent0(1003) + linger + subuid
+#    - Creates users council(1000), hermes(1001), openclaw(1002) + linger + subuid
 #    - Copies rootfs-overlay/ with Quadlet units
 # 2. Build QCOW2
 #    mkdir -p output/bootc
@@ -240,7 +240,7 @@ sudo bootc rollback  # if needed
 
 ```bash
 council ask "What is quantum computing? Debate among yourselves"
-# -> Hermes provides memory/context, OpenClaw provides web search, Agent0 writes demo code, vote
+# -> Hermes provides memory/context, OpenClaw provides web search, Codex writes demo code, vote
 
 council status
 council logs --agent hermes -f

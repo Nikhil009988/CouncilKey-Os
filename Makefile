@@ -7,7 +7,6 @@ IMAGE_URI ?= localhost/$(IMAGE)
 VERSION ?= $(shell cat VERSION 2>/dev/null || echo 1.0.0-dev)
 OPENCLAW_REF ?= 2026.7.1
 HERMES_REF ?= main
-AGENTZERO_REF ?= main
 
 # Prefer the project venv when it exists, fall back to system python
 PY := $(if $(wildcard .venv/bin/python),.venv/bin/python,python)

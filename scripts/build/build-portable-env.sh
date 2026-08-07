@@ -72,7 +72,7 @@ if [ -f "$VENDOR_DIR/hermes/pyproject.toml" ] || [ -f "$VENDOR_DIR/hermes/requir
     "$PYTHON_VENV" -m pip install -e "$WIN_HERMES" || true
 fi
 
-# Codex CLI (npm - replaces Agent Zero: local execution, no Docker)
+# Codex CLI (npm - local execution, no Docker)
 if [ -d "$VENDOR_DIR/codex" ]; then
     echo "Installing Codex CLI..."
     npm install --prefix "$VENDOR_DIR/codex" --no-audit --no-fund @openai/codex || true

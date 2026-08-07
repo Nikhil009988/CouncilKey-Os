@@ -222,7 +222,7 @@ def test_agents_include_crewai_aider():
 
 
 def test_codex_no_docker_install():
-    """Codex replaces Agent Zero: npm install, local execution, NO Docker."""
+    """Codex: npm install, local execution, NO Docker."""
     from council.agents.installer import AGENTS
 
     assert AGENTS["codex"]["install"] == "npm"

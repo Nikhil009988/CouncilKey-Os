@@ -58,7 +58,7 @@ Agent status + council config + journal.
   "agents": {
     "hermes": {"status": "online|offline (mock)", "role": "memory", "port": 18790},
     "openclaw": {"status": "online", "role": "action", "port": 18789},
-    "agent0": {"status": "offline (mock)", "role": "builder", "port": 50001}
+    "codex": {"status": "offline (mock)", "role": "builder", "port": 50001}
   },
   "council": {"mode": "debate", "consensus": {"strategy": "majority"}},
   "journal": [{"file": "2026-08-04-abc123.md", "size": 6365}]
@@ -317,7 +317,7 @@ COUNCIL_HOME=/var/lib/council ./scripts/verify-no-traces.sh --clean # audit + de
 |---|---|---|
 | POST | `/api/council/ask` | Standard ask — now cached (config `council.cache`) and returns `request_id` |
 | POST | `/api/council/ask/stream` | Server-Sent Events stream: `start` → `agent` (per response) → `final` → `done` |
-| POST | `/api/council/decompose` | `{"prompt": ...}` — splits the prompt into 3 role-based subtasks (Analysis/Hermes, Execution/OpenClaw, Review/AgentZero), executes them, votes on the combined result |
+| POST | `/api/council/decompose` | `{"prompt": ...}` — splits the prompt into 3 role-based subtasks (Analysis/Hermes, Execution/OpenClaw, Review/Codex), executes them, votes on the combined result |
 | POST | `/api/council/debate` | `{"prompt": ..., "rounds": 3}` — iterative debate: agents see each other's answers and revise; stops early on convergence (similarity ≥ 0.85 or CONFIRM) |
 
 ## Task queue

@@ -424,7 +424,6 @@ is kept.
 | Wizard looks stuck (blinking cursor after an install) | It's working - installs/tests/API calls print a message first and run silently after. Watch for the next ✅ line; long steps show timing. Tests are skippable (answer **n**) |
 | Hermes installer won't download | Run it manually: `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash` |
 | Codex won't answer | Run `councilkey agents configure codex` - it needs an **OpenAI or OpenRouter** key (Codex speaks the OpenAI protocol; Gemini/Anthropic keys can't drive it). Check the model in the config: `councilkey agents configure codex` shows where it was written |
-| Why was Agent Zero replaced by Codex? | Agent Zero's special abilities (terminal/browser/sub-agents) require **Docker**. Codex gives the same builder/review abilities (terminal, file editing, web) and runs locally - no Docker, no Python 3.12 requirement |
 | `llm pull` fails | Check internet; try a smaller model: `councilkey llm pull qwen2.5:1.5b` |
 | Ollama installed but "not running" | Start it: `ollama serve` (Linux/macOS) or the Ollama app (Windows) |
 | Port 8443 busy | `COUNCIL_PORT=9000 ./scripts/start.sh` |

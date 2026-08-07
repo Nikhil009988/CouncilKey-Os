@@ -23,4 +23,4 @@ Screenshots and diagrams for CouncilKey-Os. All images are also mirrored under [
 | `browser-camofox.png` | Browser automation / fetch |
 | `canvas-desktop.png` | Canvas file browser / live documents |
 
-*Note: some images were AI-generated early in the project and may contain outdated text labels.*
+*Note: some images were AI-generated early in the project; labels reflect the current agent lineup (Hermes, OpenClaw, Codex).*

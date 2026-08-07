@@ -554,8 +554,8 @@ cat > "$USB/PENDRIVE-README.txt" <<EOF
 WHAT YOU HAVE
   This stick contains the whole CouncilKey-Os: the app, a portable
   Python environment, and all 5 agents (Hermes, OpenClaw, Codex,
-  CrewAI, Aider). Codex replaced Agent Zero - same builder/review
-  powers (terminal, file editing, web) but runs locally, NO Docker.
+  CrewAI, Aider). Codex is the builder/review agent - terminal, file
+  editing and web tools, runs locally, NO Docker.
   ALL data - journal, memory, API keys, agent
   workspaces - lives on this stick in the "council-data" folder.
 

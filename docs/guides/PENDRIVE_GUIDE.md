@@ -52,7 +52,7 @@ We looked at how Hermes, OpenClaw and Codex each store data. Every agent has two
 ```
 /var/lib/council/
 ├── secrets/ (700, gpg encrypted, LUKS protected)
-│   ├── hermes.env.gpg, openclaw.env.gpg, agentzero.settings.gpg
+│   ├── hermes.env.gpg, openclaw.env.gpg, codex.settings.gpg
 ├── hermes/
 │   ├── keep/ (real files on LUKS - SMART)
 │   │   ├── SOUL.md, MEMORY.md, USER.md, config.yaml, skills/custom + .usage.json, memories/, cron/, pairing/, hooks/
@@ -88,7 +88,7 @@ We built `council/dashboard/new_dashboard.py` v2 with:
 
 1. **Council:** Ask council - broadcast parallel to 3 agents (Tank-OS Quadlet style), voting visualization (majority/weighted/llm_judge/hermes_decides), final synthesis
 
-2. **Agents:** 3 cards Hermes Sage, OpenClaw Executor, Agent0 Builder - status online/offline, keep vs cache size, [Shell] [Logs] [Restart] [Open Port] buttons
+2. **Agents:** 3 cards Hermes Sage, OpenClaw Executor, Codex Builder - status online/offline, keep vs cache size, [Shell] [Logs] [Restart] [Open Port] buttons
 
 3. **Storage Optimizer:** 
    - Audit Now -> shows keep smart 100-300MB vs cache RAM 1-10GB auto delete, storage bar visual
@@ -194,7 +194,7 @@ sudo ./scripts/build-live-iso.sh noble amd64
 # 2. Mount dev/run/proc/sys
 # 3. Chroot: apt install linux-generic casper network-manager docker.io podman python3 nodejs 22 + council agents to /opt/council/
 # 4. Setup optimized storage: builder/live/council-storage-setup.sh creates keep/cache split + tmpfs symlinks
-# 5. Systemd units: council-persist-mount.service (finds LUKS, mounts), council-storage-setup.service, council-hermes.service (1001), council-openclaw.service (1002), council-agentzero.service (1003), council-core.service, council-cleanup.service ExecStop
+# 5. Systemd units: council-persist-mount.service (finds LUKS, mounts), council-storage-setup.service, council-hermes.service (1001), council-openclaw.service (1002), council-core.service, council-cleanup.service ExecStop (codex runs as a local CLI - no service)
 # 6. mksquashfs chroot/ image/casper/filesystem.squashfs -comp xz (RO, no wear)
 # 7. Kernel+initrd, grub.cfg (Try Council Live, Try Persistence, Amnesiac No Trace, Install), EFI FAT efiboot.img, BIOS bios.img, manifest, md5sum, xorriso ISO
 

@@ -170,13 +170,11 @@ def _read_gateway_token(agent: str) -> str | None:
 
 
 # External gateway URLs can be overridden per agent via env vars
-# (COUNCIL_HERMES_URL etc.). COUNCIL_AGENTZERO_URL is still honored for
-# backward compatibility with old setups.
+# (COUNCIL_HERMES_URL etc.).
 GATEWAY_URLS = {
     "hermes": os.environ.get("COUNCIL_HERMES_URL", "http://127.0.0.1:18790"),
     "openclaw": os.environ.get("COUNCIL_OPENCLAW_URL", "http://127.0.0.1:18789"),
-    "codex": os.environ.get("COUNCIL_CODEX_URL")
-    or os.environ.get("COUNCIL_AGENTZERO_URL", "http://127.0.0.1:50001"),
+    "codex": os.environ.get("COUNCIL_CODEX_URL", "http://127.0.0.1:50001"),
 }
 
 

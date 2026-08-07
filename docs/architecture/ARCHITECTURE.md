@@ -37,7 +37,7 @@ Plug in → Boot → Council is alive → Unplug → Host untouched.
 │  │ council-network.service (WiFi + Tailscale VPN)      │    │
 │  │ council-hermes.service (rootless podman, UID 1000)  │    │
 │  │ council-openclaw.service (rootless podman, UID 1001)│    │
-│  │ council-agentzero.service (rootless podman, UID 1002)│   │
+│  │ codex: local CLI (no container)                  │   │
 │  │ council-core.service (orchestrator + dashboard)     │    │
 │  └─────────────────────────────────────────────────────┘    │
 │                                                             │
@@ -97,7 +97,7 @@ council:
       weight: 1
       role: "action"
       timeout: 60s
-    agent0:
+    codex:
       weight: 1
       role: "builder"
       timeout: 120s
@@ -118,13 +118,13 @@ User -> Council Core (HTTP POST /api/council/ask)
   |-parallel-->
   |           -> Hermes: "I remember you liked minimal design, I'll provide context"
   |           -> OpenClaw: "I'll manage files and deployment"
-  |           -> Agent0: "I'll write the HTML/CSS/JS code"
+  |           -> Codex: "I'll write the HTML/CSS/JS code"
   |
   |<-- responses --
   Council Core aggregates:
     Hermes: context + risks + skill suggestions
     OpenClaw: file ops plan + deployment steps
-    Agent0: actual code artifacts
+    Codex: actual code artifacts
   |
   |-> Voting: If 2/3 agree code is safe, proceed
   |-> LLM Judge (optional): Claude judges if code meets requirements
@@ -186,7 +186,7 @@ Based on `live-custom-ubuntu-from-scratch` path:
        council-core/ (our orchestrator)
      ```
    - chroot: setup systemd units in /etc/systemd/system/council-*.service
-   - chroot: create council user UID 1000, openclaw 1001, hermes 1002, agent0 1003 with subuid ranges
+   - chroot: create council user UID 1000, openclaw 1001, hermes 1002 (codex runs as the logged-in user - no container)
    - cleanup: truncate machine-id, apt clean, umount
 3. Create ISO:
    - mksquashfs chroot/ image/casper/filesystem.squashfs -comp xz
@@ -217,7 +217,7 @@ Based on Tank-OS:
   FROM quay.io/fedora/fedora-bootc:44
   RUN dnf install podman python3 nodejs 22 cloud-init openssh-server
   # Create 4 users with linger and subuid
-  RUN useradd -u 1000 council && useradd -u 1001 hermes && useradd -u 1002 openclaw && useradd -u 1003 agent0
+  RUN useradd -u 1000 council && useradd -u 1001 hermes && useradd -u 1002 openclaw
   COPY rootfs/ /
   # rootfs has:
   # /etc/containers/systemd/users/1000/council-core.container
@@ -275,7 +275,7 @@ Inside LUKS:
 Web UI at https://council.local:8443 (self-signed cert, LAN accessible offline like Reefy)
 
 **Features:**
-- Agent status: 3 cards showing Hermes/OpenClaw/Agent0 online/offline, CPU/RAM, current task
+- Agent status: 3 cards showing Hermes/OpenClaw/Codex online/offline, CPU/RAM, current task
 - Council chat: Input -> broadcast -> voting visualization -> final answer
 - Journal: Git log of all council decisions, searchable via FTS5
 - Skills: Browse installed skills for each agent, install from Hub

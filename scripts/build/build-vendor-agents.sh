@@ -56,8 +56,8 @@ vendor_codex() {
     local dest="$VENDOR_DIR/codex"
     echo "--- Codex CLI (npm) ---"
     mkdir -p "$dest"
-    # Codex replaces Agent Zero: same builder/review abilities but runs
-    # locally (terminal/file/web tools) - no Docker, no source clone.
+    # Codex: local builder/review abilities (terminal/file/web tools) -
+    # no Docker, no source clone.
     npm install --prefix "$dest" --no-audit --no-fund @openai/codex
 }
 
@@ -93,7 +93,7 @@ Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 - Commit: $(cd "$VENDOR_DIR/openclaw" && git rev-parse HEAD 2>/dev/null || echo "unknown")
 - Branch: $(cd "$VENDOR_DIR/openclaw" && git branch --show-current 2>/dev/null || echo "unknown")
 
-## Codex CLI (npm - replaces Agent Zero)
+## Codex CLI (npm)
 - Package: @openai/codex
 - Version: $(npm view @openai/codex version 2>/dev/null || echo "unknown")
 EOF

@@ -8,8 +8,7 @@ Each agent is installed the way its own project documents:
               Multi-channel personal assistant. Interactive chat agent.
 - Codex       `npm install -g @openai/codex` -> `codex` CLI (OpenHands/OpenAI).
               Local coding agent with terminal, file and web tools - runs on
-              your PC, NO Docker needed. Replaces Agent Zero, whose special
-              abilities (terminal/browser/sub-agents) required Docker.
+              your PC, NO Docker needed.
 
 All three are interactive agents with their own UIs - they are NOT HTTP
 services. The council's always-working brains are the provider role agents

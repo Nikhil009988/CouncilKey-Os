@@ -359,9 +359,8 @@ goto menu
 WHAT YOU HAVE
   This stick contains the whole CouncilKey-Os: the app, a portable
   Python environment, and all 5 agents (Hermes, OpenClaw, Codex,
-  CrewAI, Aider). Codex replaced Agent Zero - it gives you the same
-  builder/review powers (terminal, file editing, web) but runs
-  locally on your PC: NO Docker needed.
+  CrewAI, Aider). Codex is the builder/review agent - terminal, file
+  editing and web tools that run locally on your PC: NO Docker needed.
   ALL data - journal, memory, API keys, agent workspaces - lives on
   this stick in the "council-data" folder.
 

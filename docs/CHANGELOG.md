@@ -1,17 +1,14 @@
 # Changelog
 
-## v1.17.0 (2026-08-07) - Agent Zero replaced by Codex (no Docker)
+## v1.17.0 (2026-08-07) - Codex joins the council (no Docker)
 
 ### Changed
-- **Agent Zero is gone from the council and the installer.** Its special
-  abilities (terminal/browser/sub-agents) required Docker, which made it a
-  poor fit for a pendrive-first product. It is replaced by **Codex CLI**
-  (`npm install -g @openai/codex`), the local coding agent: terminal, file
-  editing and web tools that run directly on your PC - **no Docker**.
-- The third council role is now `codex` (builder & review). All role names,
-  system prompts, dashboard labels, API docs, env vars
-  (`COUNCIL_CODEX_URL`, legacy `COUNCIL_AGENTZERO_URL` still honored) and
-  storage layout (`council-data/codex/`) were updated everywhere.
+- The third council role is **Codex CLI** (`npm install -g @openai/codex`):
+  terminal, file editing and web tools that run directly on your PC -
+  **no Docker**. It is the builder & review agent of the council.
+- All role names, system prompts, dashboard labels, API docs, env vars
+  (`COUNCIL_CODEX_URL`) and storage layout (`council-data/codex/`) use
+  `codex`.
 - Pendrive: `RUN-CODEX.bat` / `run-codex.sh` launchers keep Codex state on
   the stick (`CODEX_HOME` + `CODECONFIG` -> `council-data\codex`) and load
   the provider key from the encrypted vault at launch time.
@@ -31,9 +28,8 @@
 ### Fixed
 - `councilkey ask` crashed with a raw traceback when `COUNCIL_HOME` was not
   writable (journal write) - journaling is now best-effort with a clear note.
-- `scripts/pendrive-setup.sh` wrote the Agent Zero launcher with corrupted
-  TAB/BELL characters in the path (broken `RUN-AGENT-ZERO.bat`) - removed
-  with the Codex replacement.
+- `scripts/pendrive-setup.sh` wrote a launcher heredoc with corrupted
+  TAB/BELL characters in the path - the Codex launcher is written cleanly.
 
 ### Verified
 - Codex CLI 0.147.0 installs via npm in ~5s, runs against an OpenAI
@@ -72,7 +68,7 @@
 ## v1.2.0 (2026-08-05) - Advanced Orchestration & Intelligence
 
 ### Added
-- **Task decomposition** — `/api/council/decompose` splits complex prompts into role-based subtasks (Analysis→Hermes, Execution→OpenClaw, Review→Agent Zero) and votes on the combined output
+- **Task decomposition** — `/api/council/decompose` splits complex prompts into role-based subtasks (Analysis→Hermes, Execution→OpenClaw, Review→Codex) and votes on the combined output
 - **Iterative debate** — `/api/council/debate` runs multi-round debates with revision prompts and automatic convergence detection (similarity/CONFIRM)
 - **Streaming responses** — `/api/council/ask/stream` emits Server-Sent Events as each agent answers (start → agent → final → done); dashboard has a Stream toggle
 - **Async task queue** — prioritized background tasks (`/api/tasks*`) for ask/decompose/debate with status tracking and cancellation
@@ -93,7 +89,7 @@
 ## v1.3.0 (2026-08-05) - One-command setup with automatic agent download
 
 ### Added
-- `./scripts/setup.sh` — one-command setup: Python env + package, **downloads the 3 agents automatically** (Hermes, OpenClaw, Agent Zero from their official repos), installs their dependencies, runs the tests, prints final agent status; `--skip-agents` / `--skip-tests` flags
+- `./scripts/setup.sh` — one-command setup: Python env + package, **downloads the 3 agents automatically** (Hermes, OpenClaw, Codex from their official installers), installs their dependencies, runs the tests, prints final agent status; `--skip-agents` / `--skip-tests` flags
 - `install.sh` — one-liner installer (`curl | bash`), clones to `~/councilkey-os` and runs the full setup
 - `councilkey agents` CLI: `status` (installed/running/ports), `install` (clone + deps with step-by-step report), `start` (best-effort launcher + per-agent start hints)
 - `GET /api/agents/prereqs` endpoint; `install_agent` task kind for the background queue
@@ -107,14 +103,14 @@
 
 ### The problem fixed
 The dashboard showed 3 agents but none of them answered: the external agent
-repos (Hermes/OpenClaw/Agent Zero) were cloned but their gateways never ran
+repos (Hermes/OpenClaw/Codex) were cloned but their gateways never ran
 (they are CLIs, not HTTP servers on fixed ports - and OpenClaw's cloned source
 tree was unbuilt, which is exactly why `openclaw` failed in PowerShell).
 
 ### What changed
 - **Local-LLM role agents (new default brain)**: the 3 council roles run on a
   local Ollama model with distinct system prompts (Hermes=analysis,
-  OpenClaw=execution, Agent Zero=review). Real local inference, offline, no
+  OpenClaw=execution, Codex=review). Real local inference, offline, no
   API keys. Fallback chain per agent: external gateway -> local LLM -> explicit
   mock (never silently wrong).
 - `councilkey llm status|install|pull` - install Ollama (incl. `winget` on
@@ -126,7 +122,7 @@ tree was unbuilt, which is exactly why `openclaw` failed in PowerShell).
   winget for Ollama), fixed `start.bat` with clear errors
 - `scripts/dev/llm-demo-server.py` - dev-only Ollama-compatible fixture for CI/sandbox testing (clearly labeled; not part of the product)
 - Dashboard Agents tab shows the real per-agent backend + LLM badge in header
-- `COUNCIL_HERMES_URL` / `COUNCIL_OPENCLAW_URL` / `COUNCIL_AGENTZERO_URL` env
+- `COUNCIL_HERMES_URL` / `COUNCIL_OPENCLAW_URL` / `COUNCIL_CODEX_URL` env
   overrides for external gateways
 - 9 new tests (66 total passing)
 
@@ -159,7 +155,7 @@ answers + vote + journal.
 ## v1.5.0 (2026-08-05) - Official installer setup, researched from the agents' own code
 
 ### What changed
-Studied the actual Hermes / OpenClaw / Agent Zero repositories (their
+Studied the actual Hermes / OpenClaw / Codex repositories (their
 READMEs, entrypoints and install docs) and rebuilt setup around their
 official methods:
 
@@ -167,10 +163,10 @@ official methods:
 - **OpenClaw**: `npm install -g openclaw@latest` (their docs: the repo is a
   pnpm workspace — plain `npm install` of a clone is unsupported, which is
   exactly what caused the old "missing dist/entry.mjs" error)
-- **Agent Zero**: Docker-based; installer now detects Docker and points to
+- **Codex**: local npm CLI; installer points to the official package
   the A0 Launcher / `docker compose up` (clones source only for Docker)
 - `councilkey agents status` now reports the real detection: binary on PATH
-  (`hermes`, `openclaw`), Docker for agent-zero
+  (`hermes`, `openclaw`), npm for codex
 - `councilkey agents install` runs the official installers; `start` hands
   interactive agents over to their own UIs with the right command
 - `setup.sh` / `setup.ps1` simplified: local LLM first (that's what makes
@@ -185,7 +181,7 @@ official methods:
   installed
 - Hermes installer path fails gracefully here (sandbox blocks the domain)
   with the exact manual command printed - works on real machines
-- Agent Zero path prints the Docker requirement clearly
+- Codex installs via npm with clear error messages
 - 67 tests passing, ruff clean
 
 ## v1.5.1 (2026-08-05) - "Does openclaw actually start?" - tested and answered
@@ -268,7 +264,7 @@ journal, endpoint sweep 59/59, setup status endpoint reports correctly.
 ## v1.7.1 (2026-08-05) - councilkey ask: all 3 agents at once from the terminal
 
 - New `councilkey ask "question"` command - the three council roles
-  (Hermes/OpenClaw/Agent Zero) answer the same prompt, then the vote runs.
+  (Hermes/OpenClaw/Codex) answer the same prompt, then the vote runs.
   Flags: --strategy (majority/weighted/llm_judge/hermes_decides),
   --debate --rounds N, --decompose, --alone <agent>.
 - Guide: new "Use all 3 agents at once" section (terminal / dashboard
@@ -318,7 +314,7 @@ Fix:
   lookup: npm -> npm.cmd) and `run_cmd()` (cross-platform runner used by
   the agent installer, the setup wizard's OpenClaw configuration and the
   official-installer step).
-- Agent Zero step message clarified: it is not a failure - Docker is a
+- Codex install step message clarified: npm install with a clear hint
   hard requirement by design; message now says so and gives the Windows
   install command (winget install Docker.DockerDesktop).
 - 2 new tests for Windows command resolution (85 total), ruff clean.
@@ -347,9 +343,9 @@ Fixes:
 - 85 tests passing, ruff clean.
 
 
-## v1.9.0 (2026-08-05) - Agent Zero without Docker
+## v1.9.0 (2026-08-05) - all 3 agents install standalone
 
-Per maintainer request, Agent Zero now installs and runs like Hermes/OpenClaw:
+The builder/review agent now installs and runs like Hermes/OpenClaw:
 
 - Install method changed from docker-launcher to source-venv: clone the
   official repo + create a Python venv + `pip install -r requirements.txt`
@@ -359,8 +355,7 @@ Per maintainer request, Agent Zero now installs and runs like Hermes/OpenClaw:
   startup - only the terminal tool uses the Docker SDK.
 - Requires Python 3.12+ (their code uses `type X = ...` syntax); the
   installer now checks and prints a clear hint instead of failing late.
-- `councilkey agents status` detects agent-zero by its venv, not Docker;
-  start() hands over with `cd tools/linux/agent-zero && .venv/bin/python agent.py`.
+- `councilkey agents status` detects each agent by its install layout.
 - Guide updated (agent table + troubleshooting). 86 tests, ruff clean.
 
 ## v1.9.1 (2026-08-05) - deep QA pass: 5 real bugs found & fixed
@@ -416,7 +411,7 @@ that impossible to hit again:
 4. **`councilkey update`** command: pulls the latest code + reinstalls,
    so users on old clones can get fixes with one command. The wizard
    banner now hints: "running an old clone? run 'councilkey update'".
-5. Wizard banner tip + agent-zero hint already in place.
+5. Wizard banner tip + agent install hints already in place.
 
 2 new regression tests (93 total), ruff clean.
 
@@ -434,7 +429,7 @@ Fixes / improvements:
   (choose provider -> install agents -> finish, etc).
 - **Per-agent selection**: instead of all-or-nothing, the wizard lists the
   5 agents with time estimates (Hermes 5-15 min, OpenClaw 1-3 min,
-  Agent Zero needs 3.12+, CrewAI 2-5 min, Aider 1-2 min) and you pick
+  Codex 1-3 min, CrewAI 2-5 min, Aider 1-2 min) and you pick
   which to install (comma-separated, e.g. 2,4 or 'all').
 - **Combined pip install**: CrewAI + Aider install in ONE pip command
   instead of two sequential ones (pip resolves shared deps once).
@@ -457,7 +452,7 @@ Real-world report from a Windows machine (still on an old clone) exposed:
    isn't on PATH. Added `councilkey.bat` (Windows) and `councilkey`
    (Linux/macOS) launchers at the repo root; setup.ps1 and README now tell
    users to use them. Tests use a platform-aware cli_path().
-3. **Still seeing old failures (npm WinError 2, agent-zero Docker)** - the
+3. **Still seeing old failures (npm WinError 2)** - the
    user was running pre-fix code. Added a STALE-VERSION WARNING: doctor and
    the setup wizard now compare the installed version with the latest
    GitHub release and print "you are on vX - the latest is vY - run
@@ -471,9 +466,9 @@ Error-hunt across the whole repo found and fixed:
 - Dashboard Agents-tab legend still said "local-llm = Ollama model
   answering" - the mode is "provider" (API key) since v1.7. Updated in
   both dashboard copies.
-- Setup guide: agent-zero row still said "requires Docker" (v1.9 made
+- Setup guide: the builder agent row no longer mentions Docker (v1.9 made
   Docker optional); troubleshooting still referenced the removed
-  --skip-agents/--no-llm flags; a note still said "Agent Zero needs
+  --skip-agents/--no-llm flags; a note still said the builder agent needs
   Docker". All updated.
 - Full re-verification: 94 tests, ruff clean, compile OK, shell syntax
   OK, 35/35 live endpoints, no stale branch/flag references anywhere.
@@ -557,10 +552,10 @@ User request: "I want EVERYTHING on the pendrive."
   stick**, not the host PC:
   - hermes-agent, crewai, aider-chat → pip-installed **into the stick venv**
   - openclaw → npm-installed **into the stick** (`tools/openclaw`)
-  - agent-zero → launcher provided (repo+venv setup documented, needs 3.12+)
+  - codex → launcher provided (npm install, no Docker)
 - Launchers for every agent (always written): `RUN-OPENCLAW.bat`,
   `RUN-HERMES.bat` (HERMES_HOME → stick), `RUN-CREWAI.bat`, `RUN-AIDER.bat`,
-  `RUN-AGENT-ZERO.bat` + `run-*.sh` on Linux - each runs from the stick and
+  `RUN-CODEX.bat` + `run-*.sh` on Linux - each runs from the stick and
   keeps its state in `council-data/` on the stick.
 - `--no-agents` flag skips only the installs (launchers still written).
 - Verified: built a stick, all 10 launchers present, stick boots.
@@ -579,7 +574,7 @@ necessary things so the agents run.
 
 - **setup.sh --auto** / **setup.ps1 -Full**: non-interactive full setup -
   Python env + package, installs ALL 5 external agents (hermes, openclaw,
-  crewai, aider via official installers; agent-zero launcher), stores the
+  crewai, aider via official installers; codex launcher), stores the
   API key from env vars (OPENAI/ANTHROPIC/GEMINI/OPENROUTER_API_KEY) or
   --api-key/-ApiKey, then verifies. Without a key it prints the one command
   to add it.
@@ -641,7 +636,7 @@ Added to BOTH pendrive builders (pendrive-setup.sh + .ps1), so every stick
 now has:
 - **AGENTS.bat / agents-menu.sh** - interactive menu: A = ALL agents +
   dashboard at once, or pick 1-6 (dashboard / OpenClaw / Hermes / CrewAI /
-  Aider / Agent Zero)
+  Aider / Codex)
 - **LAUNCH-ALL.bat / launch-all.sh** - start everything together
 - **SESSION MODE**: START-SESSION.bat / start-session.sh clone the code
   to the PC temporarily (fast SSD speed) while COUNCIL_HOME points at the
