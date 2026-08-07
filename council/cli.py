@@ -312,6 +312,12 @@ def cmd_agents(action: str, names: list[str]) -> int:
         if missing:
             print("not installed:", ", ".join(missing))
             print("install with: councilkey agents install")
+        print("\nwhere the data lives:")
+        for name, info in data.items():
+            stick = "  ✔ on the pendrive" if info.get("on_stick") else ""
+            print(f"  {name:<10} -> {info.get('data', '?')}{stick}")
+        print("  (launched from the stick's RUN-*.bat, agents keep their state")
+        print("   on the pendrive - nothing stays on this PC)")
         print("\nnote: all 5 external agents install standalone (opencode: npm, local, NO Docker -")
         print("it runs terminal/file/web tools directly on your PC).")
         print("the council itself always answers via your model provider:")

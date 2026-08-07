@@ -782,3 +782,25 @@ def test_doctor_reports_provider_status():
     assert "model provider" in src
     assert "no API key - run: councilkey setup" in src
     assert "add a key with: councilkey setup" in src
+
+
+def test_agents_status_shows_data_location(monkeypatch):
+    """agents status must show where each agent keeps its state - and mark
+    it as 'on the pendrive' when the stick launchers have set the env vars."""
+    from council.agents.installer import data_location, status
+
+    # PC defaults resolve to the user home (no stick env set)
+    data = status()
+    for name in ("hermes", "openclaw", "opencode"):
+        assert "data" in data[name]
+        assert data[name]["on_stick"] is False
+    assert "workspace" in data_location("openclaw")
+    assert data_location("opencode").endswith("opencode.json")
+
+    # with the stick launcher env vars set, the same state is pendrive-clean
+    monkeypatch.setenv("COUNCIL_HOME", "E:/council-data")
+    monkeypatch.setenv("OPENCLAW_WORKSPACE_DIR", "E:/council-data/openclaw/workspace")
+    monkeypatch.setenv("OPENCODE_CONFIG", "E:/council-data/opencode/opencode.json")
+    data = status(["openclaw", "opencode"])
+    assert data["openclaw"]["on_stick"] is True
+    assert data["opencode"]["on_stick"] is True

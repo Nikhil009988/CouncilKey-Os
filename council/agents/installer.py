@@ -104,6 +104,32 @@ def check_prereqs() -> dict[str, bool]:
     }
 
 
+def data_location(name: str) -> str:
+    """Where an agent keeps its state (PC default vs pendrive override).
+
+    The pendrive launchers (RUN-OPENCLAW.bat, RUN-OPENCODE.bat, ...) set
+    these env vars to the stick, so the resolved path tells you whether the
+    agent is running PC-local or pendrive-clean.
+    """
+    home = Path.home()
+    if name == "hermes":
+        return os.environ.get("HERMES_HOME", str(home / ".hermes"))
+    if name == "openclaw":
+        return (
+            os.environ.get("OPENCLAW_WORKSPACE_DIR")
+            or os.environ.get("OPENCLAW_STATE_DIR")
+            or os.environ.get("OPENCLAW_HOME")
+            or str(home / ".openclaw" / "workspace")
+        )
+    if name == "opencode":
+        return os.environ.get("OPENCODE_CONFIG", str(home / ".config" / "opencode" / "opencode.json"))
+    if name == "aider":
+        return os.environ.get("AIDER_CONFIG_DIR", str(home / ".aider"))
+    if name == "crewai":
+        return "project folders (no global state)"
+    return str(home / f".{name}")
+
+
 def status(names: list[str] | None = None) -> dict[str, dict[str, Any]]:
     """Per-agent: installed (binary on PATH / docker present)? running?"""
     out: dict[str, dict[str, Any]] = {}
@@ -125,6 +151,9 @@ def status(names: list[str] | None = None) -> dict[str, dict[str, Any]]:
         if name in ("crewai", "aider"):
             venv_bin = REPO_ROOT / ".venv" / ("Scripts" if os.name == "nt" else "bin") / binary
             installed = installed or venv_bin.exists()
+        data = data_location(name)
+        council_home = Path(os.environ.get("COUNCIL_HOME", ""))
+        on_stick = bool(council_home) and data.startswith(str(council_home))
         out[name] = {
             "role": info["role"],
             "install": info["install"],
@@ -132,6 +161,8 @@ def status(names: list[str] | None = None) -> dict[str, dict[str, Any]]:
             "binary": binary,
             "installed": installed,
             "state": "installed" if installed else "not installed",
+            "data": data,
+            "on_stick": on_stick,
         }
     return out
 
