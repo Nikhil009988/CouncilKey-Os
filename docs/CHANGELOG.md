@@ -666,3 +666,26 @@ Verified: built a fake PC home (key + journal), pushed it, stick's
 council-data has the key (councilkey agents env shows it) + journal.
 
 2 new tests (113 total), ruff clean.
+
+## v1.16.0 (2026-08-05) - fresh-user problem audit & fixes
+
+Thought through every step a NEW user (especially Windows-only) hits and
+fixed the failure points:
+
+1. **Missing Python / git -> cryptic crash.** setup.ps1 and setup.sh now
+   CHECK first and print exact install commands
+   (winget install Python.Python.3.11 / Git.Git, python.org link, open a
+   NEW terminal). venv creation failures also get a clear message.
+2. **`councilkey.bat` before setup -> cryptic error.** Now says "project
+   not set up yet - run: powershell ... scripts\setup.ps1".
+3. **Port 8443 busy (very common).** start.sh now detects it and
+   auto-picks the next free port (8444..8463) with a message.
+4. **doctor was confusing**: mock agents / missing ollama counted as
+   failures. Now: provider status shown ("no API key - run councilkey
+   setup"), mock is informational with the fix hint, ollama is
+   optional-not-needed, exit code 0 on a healthy-but-not-configured
+   machine.
+5. Verified `councilkey ask` before setup is graceful (mock + hint), and
+   re-running setup after a partial failure recovers cleanly.
+
+3 new tests (116 total), ruff clean, compile + shell + ps1 braces OK.

@@ -654,3 +654,35 @@ def test_cli_has_pendrive_push():
     src = open(cli_mod.__file__, encoding="utf-8").read()
     assert "pendrive-push" in src
     assert "pendrive_push" in src
+
+
+def test_setup_scripts_check_prerequisites():
+    """setup must give CLEAR errors when python/git are missing (not a
+    cryptic crash)."""
+    sh = (ROOT / "scripts" / "setup.sh").read_text(encoding="utf-8")
+    assert "Python is not installed" in sh
+    assert "git is not installed" in sh
+    assert "exit 1" in sh
+
+    ps = (ROOT / "scripts" / "setup.ps1").read_text(encoding="utf-8")
+    assert "Python is not installed" in ps
+    assert "winget install Python.Python.3.11" in ps
+    assert "git is not installed" in ps
+
+
+def test_start_script_picks_free_port():
+    """start.sh detects a busy port and picks the next free one."""
+    sh = (ROOT / "scripts" / "start.sh").read_text(encoding="utf-8")
+    assert "port $PORT is busy" in sh
+    assert "seq $((PORT + 1))" in sh
+    assert "COUNCIL_PORT" in sh
+
+
+def test_doctor_reports_provider_status():
+    """doctor must tell the user whether a model provider key is set."""
+    import council.cli as cli_mod
+
+    src = open(cli_mod.__file__, encoding="utf-8").read()
+    assert "model provider" in src
+    assert "no API key - run: councilkey setup" in src
+    assert "add a key with: councilkey setup" in src

@@ -23,5 +23,17 @@ if [ "${COUNCIL_START_AGENTS:-0}" = "1" ] && [ -x "$ROOT/.venv/bin/councilkey" ]
   "$ROOT/.venv/bin/councilkey" agents start || true
 fi
 
-exec "$ROOT/.venv/bin/python" -m uvicorn council.orchestrator.main:app \
-  --host "${COUNCIL_HOST:-0.0.0.0}" --port "${COUNCIL_PORT:-8443}"
+PORT="${COUNCIL_PORT:-8443}"
+HOST="${COUNCIL_HOST:-0.0.0.0}"
+# if the port is busy, pick the next free one (common first-run problem)
+if [ -n "$( (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null; echo ok )" ]; then
+  echo "  ⚠ port $PORT is busy - trying the next free port..."
+  for p in $(seq $((PORT + 1)) $((PORT + 20))); do
+    if ! (exec 3<>/dev/tcp/127.0.0.1/$p) 2>/dev/null; then
+      PORT=$p
+      break
+    fi
+  done
+fi
+echo "  Dashboard: http://localhost:$PORT   (Ctrl+C to stop)"
+exec "$ROOT/.venv/bin/python" -m uvicorn council.orchestrator.main:app --host "$HOST" --port "$PORT"

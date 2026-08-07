@@ -7,7 +7,9 @@ rem   (or use the full path:  .\.venv\Scripts\councilkey.exe)
 setlocal
 set "ROOT=%~dp0"
 if not exist "%ROOT%.venv\Scripts\councilkey.exe" (
-  echo [error] project not set up yet - run:  scripts\setup.ps1
+  echo [error] project not set up yet.
+  echo   Run setup first (one command):
+  echo     powershell -ExecutionPolicy Bypass -File "%ROOT%scripts\setup.ps1"
   exit /b 1
 )
 "%ROOT%.venv\Scripts\councilkey.exe" %*

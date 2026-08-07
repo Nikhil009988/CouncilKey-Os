@@ -25,11 +25,37 @@ Write-Host "=============================================="
 Write-Host " CouncilKey-Os setup (Windows)"
 Write-Host "=============================================="
 
+# 0. prerequisites with CLEAR messages
+if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+  Write-Host ""
+  Write-Host "❌ Python is not installed or not on PATH."
+  Write-Host ""
+  Write-Host "   Install it (tick 'Add python.exe to PATH' during install):"
+  Write-Host "     https://www.python.org/downloads/"
+  Write-Host "   or one command:"
+  Write-Host "     winget install Python.Python.3.11"
+  Write-Host ""
+  Write-Host "   Then open a NEW terminal and re-run this setup."
+  exit 1
+}
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+  Write-Host ""
+  Write-Host "❌ git is not installed."
+  Write-Host "   Install it:  winget install Git.Git"
+  Write-Host "   Then open a NEW terminal and re-run this setup."
+  exit 1
+}
+
 # 1. Python + package
 Write-Host ""
 Write-Host "[1/3] Installing CouncilKey-Os..."
 if (-not (Test-Path "$ROOT\.venv")) {
   python -m venv "$ROOT\.venv"
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ could not create the Python environment."
+    Write-Host "   Make sure Python 3.11+ is installed (python.org) and re-run."
+    exit 1
+  }
 }
 & "$ROOT\.venv\Scripts\pip.exe" install -q -e "$ROOT[dev]"
 Write-Host "      ok - 'councilkey' CLI ready"

@@ -36,11 +36,27 @@ echo "=============================================="
 echo " CouncilKey-Os setup"
 echo "=============================================="
 
+# 0. prerequisites with CLEAR messages
+if ! command -v python3 >/dev/null 2>&1 && ! command -v python >/dev/null 2>&1; then
+  echo ""
+  echo "❌ Python is not installed or not on PATH."
+  echo ""
+  echo "   Install it (Linux: sudo apt install python3 python3-venv)"
+  echo "   macOS: https://www.python.org/downloads/"
+  echo "   Then open a NEW terminal and re-run this setup."
+  exit 1
+fi
+if ! command -v git >/dev/null 2>&1; then
+  echo ""
+  echo "❌ git is not installed.  Install it and re-run."
+  exit 1
+fi
+
 # 1. Python environment + package
 echo ""
 echo "[1/3] Installing CouncilKey-Os..."
 if [ ! -d "$ROOT/.venv" ]; then
-  python3 -m venv "$ROOT/.venv"
+  python3 -m venv "$ROOT/.venv" 2>/dev/null || python -m venv "$ROOT/.venv"
 fi
 "$ROOT/.venv/bin/pip" install -q -e "$ROOT[dev]"
 echo "      ok - 'councilkey' CLI ready"

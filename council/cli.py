@@ -124,12 +124,29 @@ def cmd_doctor() -> int:
     except Exception as exc:
         check("agent clients", False, str(exc))
     else:
-        check("agent clients", True, json.dumps(agents))
+        # mock = no key yet (informational, not a failure)
+        if any("mock" in v for v in agents.values()):
+            checks.append(("agent clients", True, json.dumps(agents) + " (add a key with: councilkey setup)"))
+        else:
+            check("agent clients", True, json.dumps(agents))
 
     from council.llm.ollama import is_running
+    from council.llm.provider import provider_status
+
+    # provider status (the important one for users)
+    prov = provider_status()
+    active = prov.get("active")
+    if active:
+        cfg = prov.get("providers", {}).get(active, {})
+        check("model provider", True, f"{cfg.get('name', active)} ({cfg.get('model', '')})")
+    else:
+        check("model provider", False, "no API key - run: councilkey setup")
 
     ollama = is_running()
-    check("ollama", bool(ollama.get("running")), str(ollama.get("error", "")))
+    if ollama.get("running"):
+        check("ollama", True, "running (optional)")
+    else:
+        checks.append(("ollama", True, "not installed (optional - not needed)"))
 
     stale = check_stale()
     if stale:
