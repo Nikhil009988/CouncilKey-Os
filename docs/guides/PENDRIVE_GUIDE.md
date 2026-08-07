@@ -2,7 +2,7 @@
 
 ## Goal
 
-Run the three agents (Hermes, OpenClaw, Agent Zero) from a USB pendrive, control them from one dashboard (or the terminal), and keep only what makes them smarter — while deleting heavy session data automatically when the pendrive is unplugged.
+Run the three agents (Hermes, OpenClaw, Codex) from a USB pendrive, control them from one dashboard (or the terminal), and keep only what makes them smarter — while deleting heavy session data automatically when the pendrive is unplugged.
 
 This guide explains how the storage design achieves that.
 
@@ -10,7 +10,7 @@ This guide explains how the storage design achieves that.
 
 ## Storage research summary
 
-We looked at how Hermes, OpenClaw and Agent Zero each store data. Every agent has two kinds of data:
+We looked at how Hermes, OpenClaw and Codex each store data. Every agent has two kinds of data:
 
 **Key finding:** Each agent has TWO types of data:
 
@@ -18,7 +18,7 @@ We looked at how Hermes, OpenClaw and Agent Zero each store data. Every agent ha
    - `SOUL.md` / `soul.md` - Personality
    - `MEMORY.md`, `USER.md` - Curated long-term memory (not raw logs) - Hermes background_review process distills sessions -> MEMORY.md
    - `skills/*.md` custom + curator-managed + `.usage.json` (use_count, pinned) - **SELF-IMPROVEMENT** - Hermes creates new skill after complex task
-   - `knowledge/custom/`, `solutions/` - Agent Zero custom knowledge + memorized solutions
+   - `codex/` - Codex CLI state (history, config) - CODEX_HOME on the stick
    - `cron/`, `pairing/` - Automations + allowed Telegram/Discord users
    - `config.yaml`, `settings.json`, `openclaw.json` - Model choices, toolsets
    - `secrets/` - `.env`, `auth.json` (Nous Portal 300+ models), `api_keys` - MUST be LUKS encrypted
@@ -30,7 +30,7 @@ We looked at how Hermes, OpenClaw and Agent Zero each store data. Every agent ha
    - `logs/` all agents
    - `image_cache/`, `audio_cache/`, `cache/`, `tmp/`, `__pycache__/`
    - `lsp/bin/` 100MB+ LSP binaries
-   - Agent Zero `workdir/` old >7d not in `solutions/`
+   - Codex session files older than 7 days
    - `.venv/` 500MB+ each - Should be in RO squashfs ISO, not persistence wear
 
 **Why delete raw is safe:** Hermes `learning_graph.py` + `background_review.py` shows after N turns (skill_nudge_interval=10), auxiliary LLM reviews conversation, extracts skills into `skills/*.md` and facts into `MEMORY.md`. So raw sessions are already distilled.
@@ -64,9 +64,9 @@ We looked at how Hermes, OpenClaw and Agent Zero each store data. Every agent ha
 ├── openclaw/
 │   ├── keep/ soul.md, MEMORY.md, skills custom, pairing/
 │   └── real_home/ soul.md->keep/, skills->keep/, logs->/tmp/council/openclaw/logs
-├── agent-zero/
+├── codex/
 │   ├── keep/ settings.json, knowledge/custom/, solutions/, agents/custom/
-│   └── real_home/ usr/settings.json->keep/settings.json, workdir/tmp -> /tmp/council/agent-zero/tmp
+│   └── CODEX_HOME (history, config) on the stick
 ├── shared/memory.md (cross-agent R/W) + skills/
 ├── journal/.git/ (git versioned decisions)
 └── council/council.yaml
@@ -98,7 +98,7 @@ We built `council/dashboard/new_dashboard.py` v2 with:
 
 4. **Journal:** Git versioned council decisions, searchable, export
 
-5. **Terminal:** xterm.js via WebSocket, `council shell hermes` = `podman exec -it hermes sh`, also `hermes` TUI, `openclaw` CLI, `agent-zero` WebUI
+5. **Terminal:** xterm.js via WebSocket, `council shell hermes` = `podman exec -it hermes sh`, also `hermes` TUI, `openclaw` CLI, `codex` CLI
 
 6. **Secrets:** Vault - shows ANTHROPIC_KEY ✅, OPENAI ✅, GEMINI ✅, Nous Portal single sub 300+ models, Edit GPG + podman secret create pattern like Tank-OS
 
@@ -111,7 +111,7 @@ council shell hermes
 hermes                 # Hermes TUI direct
 openclaw gateway start # 18789
 openclaw dashboard     # Control UI 18788
-agent-zero             # WebUI 50001
+codex                  # Codex CLI (local, no Docker)
 ```
 
 ---
@@ -124,7 +124,7 @@ agent-zero             # WebUI 50001
 - Hermes skills/ grows: you ask complex task → agent creates new skill `build-minimal-website` + updates .usage.json use_count
 - USER.md grows: better user modeling, knows you prefer minimal, secure
 - OpenClaw soul.md + memory grows
-- Agent Zero knowledge/custom/ + solutions/ grows
+- Codex state grows on the stick (council-data/codex)
 - Shared memory.md + journal git grows
 
 **Metrics dashboard shows:** Skills created per week, Memory entries per week, Cron jobs, Journal decisions. Storage keep growth should be slow linear, not exponential like raw sessions. If keep >500MB, optimizer suggests archiving old skills.
@@ -173,7 +173,7 @@ council dashboard --port 8443  # opens https://localhost:8443 with 6 tabs
 - Sets HERMES_HOME=/USB/config/council/hermes/real_home (symlinked keep/cache)
 - Redirects TMPDIR, NPM_CONFIG_CACHE, XDG_CACHE to USB/temp + /tmp/council tmpfs
 - Starts council-core dashboard background
-- Gives clean bash with council, hermes, openclaw, agent-zero in PATH
+- Gives clean bash with council, hermes, openclaw, codex in PATH
 - No traces on host
 
 ### Option 2: Live ISO (30-60 min, true bootable pendrive, recommended)
@@ -244,7 +244,7 @@ cp builder/bootc/config.toml.example builder/bootc/config.toml
 qemu-system-x86_64 -M virt -accel kvm -cpu host -smp 4 -m 4096 -drive file=output/bootc/qcow2/disk.qcow2,format=qcow2,if=virtio -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp::2222-:22 -nographic
 # Other terminal:
 ssh -p 2222 council@localhost
-podman ps  # should show 4 containers: hermes, openclaw, agent-zero, council-core
+podman ps  # should show 3 containers: hermes, openclaw, council-core (codex runs locally, no container)
 council status
 journalctl -u council-core -f
 
@@ -286,12 +286,12 @@ council storage-setup       # setup keep/cache split + tmpfs symlinks (first boo
 council logs --agent hermes -f
 council shell hermes        # podman exec -it hermes sh
 council shell openclaw
-council shell agent-zero
+council shell codex
 hermes                      # Hermes TUI direct
 openclaw onboard            # Setup OpenClaw
 openclaw gateway start      # 18789
 openclaw dashboard          # Control UI 18788
-agent-zero                  # WebUI 50001
+codex                       # Codex CLI (local)
 council dashboard --port 8443  # Unified dashboard https://localhost:8443 with 6 tabs
 council journal             # git log of council decisions
 council cleanup             # manual trigger delete heavy on unplug logic + sync keep

@@ -61,12 +61,12 @@ Add `--wizard` to bake in your API key + agents during the build:
 
 | Agent | On the stick |
 |---|---|
-| Council (Hermes/OpenClaw/Agent Zero roles) | answers via your API key - no install at all |
+| Council (Hermes/OpenClaw/Codex roles) | answers via your API key - no install at all |
 | **Hermes** | installed **into the stick venv** (`pip install hermes-agent`) - `RUN-HERMES.bat` runs it from the stick with `HERMES_HOME` on the stick |
 | **OpenClaw** | CLI installed **on the stick** (`tools/openclaw` via npm) - `RUN-OPENCLAW.bat` sets `OPENCLAW_STATE_DIR` + `OPENCLAW_CONFIG_PATH` to `council-data/openclaw` |
 | **CrewAI** | installed **into the stick venv** - `RUN-CREWAI.bat` |
 | **Aider** | installed **into the stick venv** - `RUN-AIDER.bat` |
-| **Agent Zero** | `RUN-AGENT-ZERO.bat` (needs its repo + venv set up on the stick once, Python 3.12+) |
+| **Codex** | `RUN-CODEX.bat` (npm CLI on the stick - local execution, no Docker) |
 
 **Everything - the app, the venv, the agents and all their data - lives on
 the stick.** Rebuild with `./scripts/pendrive-setup.sh /media/USB --wizard`
@@ -76,7 +76,7 @@ the stick.** Rebuild with `./scripts/pendrive-setup.sh /media/USB --wizard`
 
 | Mode | How | What happens |
 |---|---|---|
-| **Agent menu** | double-click `AGENTS.bat` (or `bash agents-menu.sh`) | menu: **A = ALL agents + dashboard**, or pick 1–6 (dashboard / OpenClaw / Hermes / CrewAI / Aider / Agent Zero) |
+| **Agent menu** | double-click `AGENTS.bat` (or `bash agents-menu.sh`) | menu: **A = ALL agents + dashboard**, or pick 1–6 (dashboard / OpenClaw / Hermes / CrewAI / Aider / Codex) |
 | **Everything at once** | `LAUNCH-ALL.bat` / `launch-all.sh` | starts the dashboard + every installed agent together |
 | **Session mode** | `START-SESSION.bat` (or `start-session.sh`) | **clones the code to this PC temporarily** (fast), keeps ALL memory on the stick (`council-data`); `END-SESSION.bat` stops it and **deletes the PC copy** — unplug any time, nothing of yours is on the PC |
 
@@ -140,7 +140,7 @@ always know it's working:
 |---|---|
 | **[1/5]** Prerequisites | checks python + git |
 | **[2/5]** Provider + API key | choose OpenAI · Anthropic · Gemini · OpenRouter · Skip, enter the key (hidden, stored **encrypted**); OpenClaw configured automatically (retried later if not installed yet) |
-| **[3/5]** External agents | **pick which agents** (comma-separated, e.g. `2,4`): 1 Hermes (5-15 min) · 2 OpenClaw (1-3 min) · 3 Agent Zero (needs Python 3.12+) · 4 CrewAI (2-5 min) · 5 Aider (1-2 min) · 0 none. CrewAI + Aider install together in one pip command |
+| **[3/5]** External agents | **pick which agents** (comma-separated, e.g. `2,4`): 1 Hermes (5-15 min) · 2 OpenClaw (1-3 min) · 3 Codex (1-3 min, npm, no Docker) · 4 CrewAI (2-5 min) · 5 Aider (1-2 min) · 0 none. CrewAI + Aider install together in one pip command |
 | **[4/5]** Tests | optional, default skip (`make test` later) |
 | **[5/5]** Verify | asks each council role a real question, shows the backend |
 
@@ -159,7 +159,7 @@ Flags for automation: `councilkey setup --provider openai --api-key sk-... --no-
 | OpenClaw (`npm install -g openclaw@latest`) | 1–3 min |
 | CrewAI (`pip install crewai`) | 2–5 min |
 | Aider (`pip install aider-chat`) | 1–2 min |
-| Agent Zero | source + Python venv (no Docker; needs Python 3.12+) |
+| Codex | npm `@openai/codex` - local execution, **no Docker** |
 | Test suite | ~1 min (skippable - press **n** when asked) |
 | Verify (real API calls) | 10–60 s |
 | **Total** | **~10–25 min** on a normal connection |
@@ -193,7 +193,7 @@ Two layers, both started from the same terminal session:
 |---|---|---|
 | Hermes | `hermes` | interactive chat (config first: `hermes setup`) |
 | OpenClaw | `openclaw` | interactive chat (first run: `openclaw onboard`) |
-| Agent Zero | `cd tools/linux/agent-zero && .venv/bin/python agent.py` | interactive chat (needs Python 3.12+) |
+| Codex | `codex` (or `codex exec "your task"`) | local agent: terminal, file editing, web tools - runs on your PC, no Docker |
 | CrewAI | `crewai create crew my_crew && cd my_crew && crewai run` | a crew of role agents working together |
 | Aider | `aider` (in a repo) | pair-programming chat — uses the same API key |
 
@@ -266,7 +266,7 @@ setup) with distinct system prompts:
 |---|---|---|
 | memory & analysis | Hermes | gpt-4o-mini · claude-3-5-haiku · gemini-2.0-flash |
 | action & execution | OpenClaw | same provider |
-| builder & review | Agent Zero | same provider |
+| builder & review | Codex | same provider |
 
 One API key powers all three roles (and the external agents). The key is
 stored **encrypted** in the secrets vault. This is what answers in the
@@ -277,7 +277,7 @@ shows the backend (gateway / provider / mock).
 > offline use — it is not part of the default flow.
 
 ### Layer 2 — the external agents (optional, interactive tools)
-Hermes, OpenClaw and Agent Zero are interactive chat agents with their own
+Hermes, OpenClaw and Codex are interactive chat agents with their own
 UIs (CLI, messaging platforms, Docker desktop). The council uses them by
 name as roles, but you interact with them directly through their own
 interfaces. Each is installed with its **official installer**:
@@ -286,7 +286,7 @@ interfaces. Each is installed with its **official installer**:
 |---|---|---|
 | Hermes | `curl -fsSL https://hermes-agent.nousresearch.com/install.sh \| bash` (Linux/macOS) · `iex (irm https://hermes-agent.nousresearch.com/install.ps1)` (Windows) | `hermes` → interactive chat · `hermes gateway` → messaging |
 | OpenClaw | `npm install -g openclaw@latest` | `openclaw onboard --install-daemon` → guided onboarding |
-| Agent Zero | `git clone` + Python venv (`pip install -r requirements.txt`) - **no Docker needed** | `cd tools/linux/agent-zero && .venv/bin/python agent.py` - interactive chat. Docker optional: adds the built-in terminal/browser tools. Needs **Python 3.12+** |
+| Codex | `npm install -g @openai/codex` (official package) | `codex` - interactive; `codex exec "task"` - one-shot. Terminal, file and web tools run **locally - no Docker**. Works with your OpenAI or OpenRouter key (`councilkey agents configure codex`) |
 | **CrewAI** (4th) | `pip install crewai` (official package) | `crewai create crew my_crew && cd my_crew && crewai run` — role-based teams work **together** natively |
 | **Aider** (5th) | `pip install aider-chat` (official package) | `aider` — chat with your repo; uses the **same API keys** as our setup (OpenAI/Anthropic/Gemini/OpenRouter) |
 
@@ -297,13 +297,13 @@ more voice in your workflow.
 
 `councilkey agents install` runs these official installers for you.
 If an external agent exposes an HTTP endpoint, point the council at it with
-`COUNCIL_HERMES_URL` / `COUNCIL_OPENCLAW_URL` / `COUNCIL_AGENTZERO_URL` and
+`COUNCIL_HERMES_URL` / `COUNCIL_OPENCLAW_URL` / `COUNCIL_CODEX_URL` and
 it becomes the 🟢 gateway backend for that role.
 
 > Why not clone the repos instead? Their own docs say so: OpenClaw is a
 > pnpm workspace (plain `npm install` of the clone is unsupported — that's
 > what caused the "missing dist/entry.mjs" error), Hermes ships its own
-> installer, and Agent Zero is a heavy Python stack. Official installers are the
+> installer, and Codex ships as an npm package. Official installers are the
 > supported path for all three.
 
 ### Testing an external agent after setup (e.g. OpenClaw)
@@ -358,14 +358,14 @@ councilkey ask "plan a 3-day trip to Goa"
 ```
 ```
 == Council: together (majority) ==
-   votes: hermes:approve, openclaw:approve, agent-zero:approve
+   votes: hermes:approve, openclaw:approve, codex:approve
    - hermes       openai (gpt-4o-mini)           0.4s
    - openclaw     openai (gpt-4o-mini)           0.5s
-   - agent-zero   openai (gpt-4o-mini)           0.4s
+   - codex        openai (gpt-4o-mini)           0.4s
    consensus: ✅ 3/3
 
 # Council Decision - Consensus 3/3 ✅
-## hermes (council-role) ... ## openclaw (council-role) ... ## agent-zero ...
+## hermes (council-role) ... ## openclaw (council-role) ... ## codex ...
 ```
 Variants:
 ```bash
@@ -392,7 +392,7 @@ curl -X POST http://localhost:8443/api/council/ask \
 ```
 
 All three hit the same engine: each of the 3 roles (Hermes=analysis,
-OpenClaw=execution, Agent Zero=review) answers independently with its own
+OpenClaw=execution, Codex=review) answers independently with its own
 system prompt, then the council votes (2/3 by default) and journals the
 decision.
 
@@ -423,8 +423,8 @@ is kept.
 | `provider error: TLS/SSL` | No internet to the provider, or a custom `*_BASE_URL` is unreachable |
 | Wizard looks stuck (blinking cursor after an install) | It's working - installs/tests/API calls print a message first and run silently after. Watch for the next ✅ line; long steps show timing. Tests are skippable (answer **n**) |
 | Hermes installer won't download | Run it manually: `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash` |
-| Agent Zero won't install | If your Python is < 3.12: it needs Python 3.12+ (`type` syntax). Install Python 3.12+ from python.org and re-run. Docker is NOT required anymore |
-| Does Agent Zero work like Hermes/OpenClaw? | Yes now — it installs standalone (source + Python venv). Docker is optional (adds terminal/browser tools), not required |
+| Codex won't answer | Run `councilkey agents configure codex` - it needs an **OpenAI or OpenRouter** key (Codex speaks the OpenAI protocol; Gemini/Anthropic keys can't drive it). Check the model in the config: `councilkey agents configure codex` shows where it was written |
+| Why was Agent Zero replaced by Codex? | Agent Zero's special abilities (terminal/browser/sub-agents) require **Docker**. Codex gives the same builder/review abilities (terminal, file editing, web) and runs locally - no Docker, no Python 3.12 requirement |
 | `llm pull` fails | Check internet; try a smaller model: `councilkey llm pull qwen2.5:1.5b` |
 | Ollama installed but "not running" | Start it: `ollama serve` (Linux/macOS) or the Ollama app (Windows) |
 | Port 8443 busy | `COUNCIL_PORT=9000 ./scripts/start.sh` |

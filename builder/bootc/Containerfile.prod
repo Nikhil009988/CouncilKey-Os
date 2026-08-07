@@ -19,7 +19,7 @@ COPY pyproject.toml /opt/councilkey/pyproject.toml
 COPY deploy/councilkey.service /usr/lib/systemd/system/councilkey.service
 
 RUN mkdir -p /var/lib/council/{secrets,shared,journal,council,backups} \
-       /var/lib/council/{hermes,openclaw,agent-zero}/{keep,cache} \
+       /var/lib/council/{hermes,openclaw,codex}/{keep,cache} \
     && useradd -r -d /var/lib/council -s /usr/sbin/nologin council \
     && chown -R council:council /var/lib/council \
     && systemctl enable councilkey.service

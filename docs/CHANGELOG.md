@@ -1,5 +1,46 @@
 # Changelog
 
+## v1.17.0 (2026-08-07) - Agent Zero replaced by Codex (no Docker)
+
+### Changed
+- **Agent Zero is gone from the council and the installer.** Its special
+  abilities (terminal/browser/sub-agents) required Docker, which made it a
+  poor fit for a pendrive-first product. It is replaced by **Codex CLI**
+  (`npm install -g @openai/codex`), the local coding agent: terminal, file
+  editing and web tools that run directly on your PC - **no Docker**.
+- The third council role is now `codex` (builder & review). All role names,
+  system prompts, dashboard labels, API docs, env vars
+  (`COUNCIL_CODEX_URL`, legacy `COUNCIL_AGENTZERO_URL` still honored) and
+  storage layout (`council-data/codex/`) were updated everywhere.
+- Pendrive: `RUN-CODEX.bat` / `run-codex.sh` launchers keep Codex state on
+  the stick (`CODEX_HOME` + `CODECONFIG` -> `council-data\codex`) and load
+  the provider key from the encrypted vault at launch time.
+
+### Added
+- `councilkey agents configure codex` - writes Codex's config for the
+  configured provider (OpenAI: default endpoint; OpenRouter: officially
+  documented `model_providers.openrouter` + `wire_api = "responses"`).
+  Clear messages when the provider can't drive Codex (Anthropic/Gemini).
+- `councilkey key list` (masked) and `councilkey key show <NAME>` (raw
+  value, used by the pendrive launchers so agents use the SAME key as the
+  council, still encrypted at rest).
+- Demo server (`scripts/dev/llm-demo-server.py`) now speaks the OpenAI
+  Responses API (`/v1/responses`, streaming) so Codex CLI can be verified
+  end-to-end in sandboxes without real providers.
+
+### Fixed
+- `councilkey ask` crashed with a raw traceback when `COUNCIL_HOME` was not
+  writable (journal write) - journaling is now best-effort with a clear note.
+- `scripts/pendrive-setup.sh` wrote the Agent Zero launcher with corrupted
+  TAB/BELL characters in the path (broken `RUN-AGENT-ZERO.bat`) - removed
+  with the Codex replacement.
+
+### Verified
+- Codex CLI 0.147.0 installs via npm in ~5s, runs against an OpenAI
+  Responses-compatible endpoint with `CODECONFIG`/`CODEX_HOME` pointing at
+  the stick, and all 3 council roles (hermes/openclaw/codex) answer and
+  vote in `councilkey ask` / `agents verify` (121 tests passing).
+
 ## v1.1.0 (2026-08-05)
 
 ### Added

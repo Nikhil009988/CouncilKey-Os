@@ -10,9 +10,9 @@ fi
 if [ ! -d "$USB/tools/linux/hermes" ]; then
   git clone --depth=1 https://github.com/NousResearch/hermes-agent.git "$USB/tools/linux/hermes" || true
 fi
-if [ ! -d "$USB/tools/linux/agent-zero" ]; then
-  git clone --depth=1 https://github.com/frdel/agent-zero-exe.git "$USB/tools/linux/agent-zero" || true
-fi
+# Codex CLI replaces Agent Zero (no Docker, local execution) - npm
+mkdir -p "$USB/tools/linux/codex"
+npm install --prefix "$USB/tools/linux/codex" --no-audit --no-fund @openai/codex || true
 cp "$ROOT/council/orchestrator/main.py" "$USB/tools/linux/council-core/main.py"
 cp "$ROOT/scripts/start.sh" "$USB/start.sh"
 chmod +x "$USB/start.sh"

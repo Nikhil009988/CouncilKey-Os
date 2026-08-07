@@ -4,7 +4,7 @@ Screenshots and diagrams for CouncilKey-Os. All images are also mirrored under [
 
 | File | What it shows |
 |---|---|
-| `banner.png` | Project banner — three agents (Hermes, OpenClaw, Agent Zero) on a USB drive |
+| `banner.png` | Project banner — three council agents (Hermes, OpenClaw, Codex) on a USB drive |
 | `architecture.png` | Partition + persistence architecture (EFI, live squashfs, LUKS-encrypted persist) |
 | `dashboard.png` | Dashboard mockup — council chat, agent cards, voting bars, storage |
 | `dashboard-neat-v4.png` | Dashboard v4 UI concept |

@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -320,17 +321,26 @@ def _safe_slug(prompt: str, maxlen: int = 40) -> str:
     return f"{s}-{digest}"
 
 
-def _append_journal(prompt: str, result: dict[str, Any]) -> Path:
+def _append_journal(prompt: str, result: dict[str, Any]) -> Path | None:
     ts = time.strftime("%Y-%m-%d-%H%M%S")
     path = JOURNAL_DIR / f"{ts}-{_safe_slug(prompt)}.md"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        f"# Council Journal {ts}\n\n## Prompt\n{prompt}\n\n## Mode\n{result.get('mode', 'council')}\n\n"
-        f"## Strategy\n{result.get('strategy')}\n\n## Votes\n{result.get('votes')}\n\n"
-        f"## Final\n{result.get('final')}\n",
-        encoding="utf-8",
-    )
-    return path
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            f"# Council Journal {ts}\n\n## Prompt\n{prompt}\n\n## Mode\n{result.get('mode', 'council')}\n\n"
+            f"## Strategy\n{result.get('strategy')}\n\n## Votes\n{result.get('votes')}\n\n"
+            f"## Final\n{result.get('final')}\n",
+            encoding="utf-8",
+        )
+        return path
+    except OSError as exc:
+        # journaling is best-effort - never crash a council answer for it
+        print(
+            f"note: could not write the journal ({exc}). "
+            "Set COUNCIL_HOME to a writable folder to keep a journal.",
+            file=sys.stderr,
+        )
+        return None
 
 
 def _effective_prompt(prompt: str) -> str:

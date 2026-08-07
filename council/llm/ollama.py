@@ -16,7 +16,7 @@ OLLAMA_MODELS_DIR = COUNCIL_HOME / "models" / "ollama"
 
 RECOMMENDED_MODELS = {
     "qwen2.5:3b": {"size": "1.9GB", "role": "general", "description": "Best balance size/smart: 3B params, 32k context, tool calling, coding"},
-    "deepseek-coder:1.3b": {"size": "0.8GB", "role": "code", "description": "Specialized code model for Agent Zero"},
+    "deepseek-coder:1.3b": {"size": "0.8GB", "role": "code", "description": "Specialized code model for the Codex builder role"},
     "nomic-embed-text": {"size": "274MB", "role": "embeddings", "description": "Embedding model for LanceDB RAG"},
     "qwen2.5:7b": {"size": "4.7GB", "role": "general", "description": "Smarter 7B model if storage allows"},
     "llama3.2:3b": {"size": "2.0GB", "role": "general", "description": "Meta's Llama 3.2 3B"},
@@ -162,7 +162,7 @@ def get_model_defaults() -> dict[str, object]:
     return {
         "hermes": "qwen2.5:3b",
         "openclaw": "qwen2.5:3b",
-        "agent-zero": "deepseek-coder:1.3b",
+        "codex": "deepseek-coder:1.3b",
         "embeddings": "nomic-embed-text",
         "llm_judge": "qwen2.5:7b"  # fallback to qwen2.5:3b if not available
     }

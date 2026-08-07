@@ -268,11 +268,11 @@ def cmd_llm(action: str, model: str | None) -> int:
 
 
 def cmd_agents(action: str, names: list[str]) -> int:
-    """Manage the 3 external agents: status / install / start / verify.
+    """Manage the 3 external agents: status / install / start / env / configure / verify.
 
-    The external agents (Hermes, OpenClaw, Agent Zero) are optional add-ons
+    The external agents (Hermes, OpenClaw, Codex) are optional add-ons
     installed with their own official installers. The council itself always
-    works via the local-LLM role agents (councilkey llm status/pull).
+    answers via your model provider (councilkey setup).
     """
     from council.agents.installer import AGENTS, install, start, status
 
@@ -281,6 +281,24 @@ def cmd_agents(action: str, names: list[str]) -> int:
     if bad:
         print(f"unknown agent(s): {', '.join(bad)} - choose from {sorted(AGENTS)}")
         return 2
+
+    if action == "configure":
+        # point an installed agent at the user's provider key (codex today)
+        from council.agents.installer import configure
+
+        failed = False
+        for name in selected:
+            res = configure(name)
+            if res.get("ok"):
+                print(f"  ✅ {name}: {res.get('detail', 'configured')}")
+                if res.get("next"):
+                    print(f"     next: {res['next']}")
+            else:
+                failed = True
+                print(f"  ❌ {name}: {res.get('error', 'configure failed')}")
+                if res.get("hint"):
+                    print(f"     hint: {res['hint']}")
+        return 1 if failed else 0
 
     if action == "status":
         data = status(names)
@@ -294,8 +312,8 @@ def cmd_agents(action: str, names: list[str]) -> int:
         if missing:
             print("not installed:", ", ".join(missing))
             print("install with: councilkey agents install")
-        print("\nnote: all 5 external agents install standalone (agent-zero: python venv,")
-        print("Docker only adds its optional terminal/browser tools).")
+        print("\nnote: all 5 external agents install standalone (codex: npm, local, NO Docker -")
+        print("it runs terminal/file/web tools directly on your PC).")
         print("the council itself always answers via your model provider:")
         print("      councilkey setup   /   councilkey agents env")
         return 0
@@ -375,7 +393,7 @@ def cmd_agents(action: str, names: list[str]) -> int:
         from council.orchestrator.agents import build_default_clients, client_modes
 
         # 1. council roles (real ask)
-        roles = ["hermes", "openclaw", "agent-zero"]
+        roles = ["hermes", "openclaw", "codex"]
         print("== 1/2 verifying the council (real ask - each agent up to 30s, please wait) ==")
         modes = client_modes()
         clients = build_default_clients()
@@ -398,8 +416,7 @@ def cmd_agents(action: str, names: list[str]) -> int:
         from council.agents.installer import AGENTS
 
         for name, info in AGENTS.items():
-            if name in ("agent-zero",):  # docker/venv based, checked by status
-                continue
+
             binary = shutil.which(info["bin"])
             # venv-installed agents (crewai/aider/hermes) live in .venv
             if not binary:
@@ -423,6 +440,39 @@ def cmd_agents(action: str, names: list[str]) -> int:
         return 0
 
     return 2
+
+
+def cmd_key(action: str, names: list[str]) -> int:
+    """Show/list API keys from the encrypted vault.
+
+    `councilkey key show NAME` prints the raw key on stdout - used by the
+    pendrive launchers (RUN-CODEX.bat) so agents get the SAME key as the
+    council without ever storing it in plain text.
+    """
+    from council.secrets.vault import get_secret, list_secrets
+
+    if action == "list":
+        keys = list_secrets().get("keys", [])
+        if not keys:
+            print("(no keys stored yet - run: councilkey setup)")
+            return 0
+        for k in sorted(keys):
+            v = get_secret(k) or ""
+            hint = f"{v[:2]}****{v[-2:]}" if len(v) > 4 else "****"
+            print(f"  {k:<28} {hint}")
+        return 0
+
+    # action == "show"
+    name = names[0] if names else ""
+    if not name:
+        print("usage: councilkey key show <NAME>   (e.g. OPENROUTER_API_KEY)", file=sys.stderr)
+        return 2
+    value = get_secret(name)
+    if value is None:
+        print(f"no key named {name!r} in the vault - run: councilkey setup", file=sys.stderr)
+        return 1
+    print(value)
+    return 0
 
 
 def cmd_ask(
@@ -499,10 +549,15 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("version", help="print version")
     sub.add_parser("which", help="show where this CLI is installed (PC vs pendrive)")
 
-    p_agents = sub.add_parser("agents", help="manage the 3 agents (status/install/start/env/verify)")
+    p_agents = sub.add_parser("agents", help="manage the 3 agents (status/install/start/env/configure/verify)")
     p_agents.add_argument("action", nargs="?", default="status",
-                          choices=["status", "install", "start", "env", "verify"])
+                          choices=["status", "install", "start", "env", "configure", "verify"])
     p_agents.add_argument("names", nargs="*", help="agent names (default: all)")
+
+    p_key = sub.add_parser("key", help="show/list API keys from the encrypted vault")
+    p_key.add_argument("action", nargs="?", default="list", choices=["list", "show"],
+                       help="list = masked names (default), show = print one key (for launchers)")
+    p_key.add_argument("name", nargs="?", help="key name to print, e.g. OPENROUTER_API_KEY")
 
     p_llm = sub.add_parser("llm", help="manage the local LLM backend (status/install/pull)")
     p_llm.add_argument("action", nargs="?", default="status", choices=["status", "install", "pull"])
@@ -511,7 +566,7 @@ def main(argv: list[str] | None = None) -> None:
     p_ask = sub.add_parser("ask", help="ask the council - ALL 3 agents at once + vote")
     p_ask.add_argument("prompt", help="the question to ask")
     p_ask.add_argument("--strategy", default="majority", choices=["majority", "weighted", "llm_judge", "hermes_decides"])
-    p_ask.add_argument("--alone", metavar="AGENT", help="ask a single agent (hermes/openclaw/agent-zero)")
+    p_ask.add_argument("--alone", metavar="AGENT", help="ask a single agent (hermes/openclaw/codex)")
     p_ask.add_argument("--decompose", action="store_true", help="split into role-based subtasks")
     p_ask.add_argument("--debate", action="store_true", help="iterative multi-round debate")
     p_ask.add_argument("--rounds", type=int, default=3, help="debate rounds (default 3)")
@@ -558,6 +613,8 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(cmd_storage(args.dry_run))
     elif args.command == "agents":
         sys.exit(cmd_agents(args.action, args.names))
+    elif args.command == "key":
+        sys.exit(cmd_key(args.action, [args.name] if args.name else []))
     elif args.command == "llm":
         sys.exit(cmd_llm(args.action, args.model))
     elif args.command == "pendrive-push":

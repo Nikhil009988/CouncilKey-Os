@@ -300,41 +300,52 @@ exit 1
 fi
 EOF
 
-cat > "$USB/RUN-AGENT-ZERO.bat" <<'EOF'
+cat > "$USB/RUN-CODEX.bat" <<'EOF'
 @echo off
-rem RUN-AGENT-ZERO.bat - Agent Zero from the pendrive (Windows)
-rem Needs Python 3.12+ (their code uses 3.12 syntax). State stays on the stick.
+rem RUN-CODEX.bat - Codex CLI from the pendrive (Windows) - NO Docker needed
+rem Codex runs locally: terminal, file editing and web tools on this PC.
+rem State and config stay on the stick (council-data\codex).
 setlocal
 set "STICK=%~dp0"
-if exist "%STICK%CouncilKey-Os	oolsgent-zero\.venv\Scripts\python.exe" (
-pushd "%STICK%CouncilKey-Os	oolsgent-zero"
-"%STICK%CouncilKey-Os	oolsgent-zero\.venv\Scripts\python.exe" agent.py %*
-popd
+set "CODEX_HOME=%STICK%council-data\codex"
+set "CODECONFIG=%STICK%council-data\codex\config.toml"
+if not exist "%CODEX_HOME%" mkdir "%CODEX_HOME%"
+
+rem 1. point Codex at the provider key stored in the encrypted vault
+call "%~dp0CouncilKey-Os\councilkey.bat" agents configure codex
+if errorlevel 1 (
+  echo [error] no API key configured yet.
+  echo   Run once:  councilkey.bat setup   (choose OpenAI or OpenRouter)
+  pause
+  exit /b 1
+)
+for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show OPENROUTER_API_KEY 2^>nul') do set "OPENROUTER_API_KEY=%%K"
+for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show OPENAI_API_KEY 2^>nul') do set "OPENAI_API_KEY=%%K"
+
+rem 2. run codex (from the stick if installed there, else the PC install)
+if exist "%STICK%CouncilKey-Os\tools\codex\node_modules\.bin\codex.cmd" (
+  "%STICK%CouncilKey-Os\tools\codex\node_modules\.bin\codex.cmd" %*
 ) else (
-echo [error] agent-zero not set up on the stick.
-echo   On a PC with Python 3.12+:  cd toolsgent-zero ^&^& python -m venv .venv
-echo   then: .venv\Scripts\pip install -r requirements.txt
-pause
+  codex %*
 )
 endlocal
 EOF
 
-cat > "$USB/run-agent-zero.sh" <<'EOF'
+cat > "$USB/run-codex.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 STICK="$(cd "$(dirname "$0")" && pwd)"
-if [ -x "$STICK/CouncilKey-Os/tools/agent-zero/.venv/bin/python" ]; then
-cd "$STICK/CouncilKey-Os/tools/agent-zero"
-exec .venv/bin/python agent.py "$@"
-else
-echo "[error] agent-zero not set up on the stick." >&2
-echo "  On a PC with Python 3.12+: cd tools/agent-zero && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt" >&2
-exit 1
-fi
+export CODEX_HOME="$STICK/council-data/codex"
+export CODECONFIG="$STICK/council-data/codex/config.toml"
+mkdir -p "$CODEX_HOME"
+"$STICK/CouncilKey-Os/councilkey" agents configure codex
+export OPENROUTER_API_KEY="$("$STICK/CouncilKey-Os/councilkey" key show OPENROUTER_API_KEY 2>/dev/null || true)"
+export OPENAI_API_KEY="$("$STICK/CouncilKey-Os/councilkey" key show OPENAI_API_KEY 2>/dev/null || true)"
+exec codex "$@"
 EOF
 
 chmod +x "$USB"/run-*.sh
-echo "      ok (launchers: RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-AGENT-ZERO)"
+echo "      ok (launchers: RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-CODEX)"
 
 
 # 7. session mode + agent menu + launch-all + stick README
@@ -435,7 +446,7 @@ echo   2) OpenClaw
 echo   3) Hermes
 echo   4) CrewAI
 echo   5) Aider
-echo   6) Agent Zero   (needs Python 3.12+ setup on the stick)
+echo   6) Codex  (local agent - no Docker)
 echo   0) Quit
 echo ==============================================
 set /p choice="Choose (A/1-6/0): "
@@ -445,7 +456,7 @@ if "%choice%"=="2" goto oc
 if "%choice%"=="3" goto hermes
 if "%choice%"=="4" goto crewai
 if "%choice%"=="5" goto aider
-if "%choice%"=="6" goto az
+if "%choice%"=="6" goto codex
 if "%choice%"=="0" exit /b 0
 goto menu
 :all
@@ -454,6 +465,7 @@ start "OpenClaw" cmd /c "%~dp0RUN-OPENCLAW.bat"
 start "Hermes" cmd /c "%~dp0RUN-HERMES.bat"
 start "CrewAI" cmd /c "%~dp0RUN-CREWAI.bat"
 start "Aider" cmd /c "%~dp0RUN-AIDER.bat"
+start "Codex" cmd /c "%~dp0RUN-CODEX.bat"
 goto done
 :dash
 call "%~dp0START.bat"
@@ -470,8 +482,8 @@ goto done
 :aider
 call "%~dp0RUN-AIDER.bat"
 goto done
-:az
-call "%~dp0RUN-AGENT-ZERO.bat"
+:codex
+call "%~dp0RUN-CODEX.bat"
 goto done
 :done
 echo.
@@ -493,7 +505,7 @@ echo "  2) OpenClaw"
 echo "  3) Hermes"
 echo "  4) CrewAI"
 echo "  5) Aider"
-echo "  6) Agent Zero   (needs Python 3.12+ setup on the stick)"
+echo "  6) Codex  (local agent - no Docker)"
 echo "  0) Quit"
 echo "=============================================="
 read -rp "Choose (A/1-6/0): " choice
@@ -504,13 +516,14 @@ case "$choice" in
     bash "$STICK/run-hermes.sh" &
     bash "$STICK/run-crewai.sh" &
     bash "$STICK/run-aider.sh" &
+    bash "$STICK/run-codex.sh" &
     ;;
   1) bash "$STICK/start.sh" ;;
   2) bash "$STICK/run-openclaw.sh" ;;
   3) bash "$STICK/run-hermes.sh" ;;
   4) bash "$STICK/run-crewai.sh" ;;
   5) bash "$STICK/run-aider.sh" ;;
-  6) bash "$STICK/run-agent-zero.sh" ;;
+  6) bash "$STICK/run-codex.sh" ;;
   0) exit 0 ;;
   *) echo "try again"; bash "$0" ;;
 esac
@@ -524,7 +537,7 @@ cat > "$USB/launch-all.sh" <<'EOF'
 STICK="$(cd "$(dirname "$0")" && pwd)"
 bash "$STICK/start.sh" &
 sleep 2
-for launcher in run-openclaw.sh run-hermes.sh run-crewai.sh run-aider.sh; do
+for launcher in run-openclaw.sh run-hermes.sh run-crewai.sh run-aider.sh run-codex.sh; do
   [ -x "$STICK/$launcher" ] && bash "$STICK/$launcher" &
 done
 echo "all agents launched - dashboard at http://localhost:8443"
@@ -540,8 +553,10 @@ cat > "$USB/PENDRIVE-README.txt" <<EOF
 
 WHAT YOU HAVE
   This stick contains the whole CouncilKey-Os: the app, a portable
-  Python environment, and all 5 agents (Hermes, OpenClaw, CrewAI,
-  Aider, Agent Zero). ALL data - journal, memory, API keys, agent
+  Python environment, and all 5 agents (Hermes, OpenClaw, Codex,
+  CrewAI, Aider). Codex replaced Agent Zero - same builder/review
+  powers (terminal, file editing, web) but runs locally, NO Docker.
+  ALL data - journal, memory, API keys, agent
   workspaces - lives on this stick in the "council-data" folder.
 
 START ANY AGENT OR EVERYTHING AT ONCE
@@ -551,7 +566,7 @@ START ANY AGENT OR EVERYTHING AT ONCE
     START.bat          dashboard (council chat: 3 agents + vote)
     RUN-OPENCLAW.bat   OpenClaw      RUN-HERMES.bat   Hermes
     RUN-CREWAI.bat     CrewAI        RUN-AIDER.bat    Aider
-    RUN-AGENT-ZERO.bat Agent Zero    LAUNCH-ALL.bat   everything
+    RUN-CODEX.bat      Codex (local)     LAUNCH-ALL.bat   everything
 
 SESSION MODE (clone to PC, memory on stick, no traces)
   The stick runs everything by itself. Want it FASTER on this PC?
@@ -592,7 +607,7 @@ echo "   On any PC:"
 echo "     Windows  -> plug in, click 'Start CouncilKey-Os' (or double-click START.bat)"
 echo "     Linux    -> bash $USB/start.sh"
 echo "   Dashboard:  http://localhost:8443"
-echo "   Agents:     RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-AGENT-ZERO (.bat)"
+echo "   Agents:     RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-CODEX (.bat)"
 echo "               or run-*.sh on Linux - ALL on the stick, data stays on the stick"
 echo "   Data stays on the stick: $USB/council-data"
 echo "=============================================="

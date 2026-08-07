@@ -28,7 +28,7 @@ def _walk_keep_cache() -> dict[str, Any]:
     keep_dirs = {
         "hermes": COUNCIL_HOME / "hermes" / "keep",
         "openclaw": COUNCIL_HOME / "openclaw" / "keep",
-        "agent-zero": COUNCIL_HOME / "agent-zero" / "keep",
+        "codex": COUNCIL_HOME / "codex" / "keep",
         "shared": COUNCIL_HOME / "shared",
         "journal": COUNCIL_HOME / "journal",
         "council": COUNCIL_HOME / "council",
@@ -37,7 +37,7 @@ def _walk_keep_cache() -> dict[str, Any]:
     cache_dirs = {
         "hermes": COUNCIL_HOME / "hermes" / "cache",
         "openclaw": COUNCIL_HOME / "openclaw" / "cache",
-        "agent-zero": COUNCIL_HOME / "agent-zero" / "cache",
+        "codex": COUNCIL_HOME / "codex" / "cache",
     }
     agents: dict[str, Any] = {}
     for name, root in keep_dirs.items():
@@ -87,7 +87,7 @@ def what_if_delete() -> dict[str, Any]:
     cache_dirs = {
         "hermes": COUNCIL_HOME / "hermes" / "cache",
         "openclaw": COUNCIL_HOME / "openclaw" / "cache",
-        "agent-zero": COUNCIL_HOME / "agent-zero" / "cache",
+        "codex": COUNCIL_HOME / "codex" / "cache",
     }
     files = []
     total = 0
@@ -144,8 +144,8 @@ def setup_persist_structure() -> dict[str, Any]:
         COUNCIL_HOME / "hermes" / "cache",
         COUNCIL_HOME / "openclaw" / "keep",
         COUNCIL_HOME / "openclaw" / "cache",
-        COUNCIL_HOME / "agent-zero" / "keep",
-        COUNCIL_HOME / "agent-zero" / "cache",
+        COUNCIL_HOME / "codex" / "keep",
+        COUNCIL_HOME / "codex" / "cache",
         COUNCIL_HOME / "shared",
         COUNCIL_HOME / "journal",
         COUNCIL_HOME / "council",

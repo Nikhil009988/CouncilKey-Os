@@ -6,15 +6,17 @@ Each agent is installed the way its own project documents:
               -> `hermes` CLI + messaging gateway. Interactive chat agent.
 - OpenClaw    `npm install -g openclaw@latest` -> `openclaw` CLI.
               Multi-channel personal assistant. Interactive chat agent.
-- Agent Zero  Docker-based desktop agent. Recommended: the A0 Launcher.
-              Detect Docker and give clear instructions.
+- Codex       `npm install -g @openai/codex` -> `codex` CLI (OpenHands/OpenAI).
+              Local coding agent with terminal, file and web tools - runs on
+              your PC, NO Docker needed. Replaces Agent Zero, whose special
+              abilities (terminal/browser/sub-agents) required Docker.
 
 All three are interactive agents with their own UIs - they are NOT HTTP
-services. The council's always-working brains are the local-LLM role agents
-(council.llm.agents, powered by Ollama); the external agents are optional
-add-ons you use through their own interfaces. When an external agent DOES
-expose an HTTP endpoint (e.g. a custom gateway bridge), point the council at
-it via COUNCIL_HERMES_URL / COUNCIL_OPENCLAW_URL / COUNCIL_AGENTZERO_URL.
+services. The council's always-working brains are the provider role agents
+(council.llm.provider); the external agents are optional add-ons you use
+through their own interfaces. When an external agent DOES expose an HTTP
+endpoint (e.g. a custom gateway bridge), point the council at it via
+COUNCIL_HERMES_URL / COUNCIL_OPENCLAW_URL / COUNCIL_CODEX_URL.
 """
 from __future__ import annotations
 
@@ -45,17 +47,21 @@ AGENTS: dict[str, dict[str, Any]] = {
         "install": "npm",
         "package": "openclaw@latest",
         "bin": "openclaw",
+        "_npm_name": "openclaw",
+        "_next": "openclaw onboard --install-daemon   # first-run onboarding",
         "role": "action & execution (external, optional)",
         "runtime": "node/npm",
         "start_hint": "openclaw                     # interactive chat\nopenclaw onboard --install-daemon   # guided onboarding",
     },
-    "agent-zero": {
-        "install": "source-venv",
-        "repo": "https://github.com/agent0ai/agent-zero.git",
-        "bin": "agent-zero",
+    "codex": {
+        "install": "npm",
+        "package": "@openai/codex",
+        "bin": "codex",
+        "_npm_name": "codex",
+        "_next": "councilkey agents configure codex   # point it at your API key (OpenAI/OpenRouter)",
         "role": "builder & review (external, optional)",
-        "runtime": "python/venv (no Docker needed for chat; Docker optional for terminal/browser tools)",
-        "start_hint": "cd tools/linux/agent-zero && .venv/bin/python agent.py   # interactive chat (needs Python 3.12+)\n# Docker optional: enables the built-in terminal/browser (docker compose up)",
+        "runtime": "node/npm - local execution, NO Docker (terminal/file/web tools built in)",
+        "start_hint": "codex                     # interactive chat in any folder\ncodex exec \"your task\"      # one-shot task\ncouncilkey agents configure codex   # point it at your API key",
     },
     "crewai": {
         "install": "pip",
@@ -112,10 +118,10 @@ def status(names: list[str] | None = None) -> dict[str, dict[str, Any]]:
             home_bin = Path.home() / ".local" / "bin" / "hermes"
             win_bin = Path(os.environ.get("LOCALAPPDATA", "")) / "hermes" / "hermes.exe"
             installed = installed or home_bin.exists() or win_bin.exists()
-        if name == "agent-zero":
-            az_dir = AGENTS_DIR / "agent-zero"
-            venv_py = az_dir / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-            installed = installed or (az_dir.exists() and venv_py.exists())
+        # codex can also live on the pendrive: CouncilKey-Os/tools/codex
+        if name == "codex":
+            stick_bin = AGENTS_DIR.parent / "codex" / "node_modules" / ".bin" / ("codex.cmd" if os.name == "nt" else "codex")
+            installed = installed or stick_bin.exists()
         # crewai/aider install into the project venv
         if name in ("crewai", "aider"):
             venv_bin = REPO_ROOT / ".venv" / ("Scripts" if os.name == "nt" else "bin") / binary
@@ -137,7 +143,7 @@ def install(name: str) -> dict[str, Any]:
         return {"ok": False, "error": f"unknown agent {name!r} - choose from {sorted(AGENTS)}"}
     info = AGENTS[name]
 
-    if _on_path(info["bin"]) or (name == "agent-zero" and _on_path("docker")):
+    if _on_path(info["bin"]):
         return {"ok": True, "name": name, "already_installed": True,
                 "steps": [{"step": "check", "ok": True, "detail": f"{info['bin']} already on PATH"}]}
 
@@ -147,32 +153,33 @@ def install(name: str) -> dict[str, Any]:
         return _install_pip(info)
     if info["install"] == "official-installer":
         return _install_official(info)
-    if info["install"] == "source-venv":
-        return _install_source_venv(info)
     return {"ok": False, "error": "no installer defined"}
 
 
 def _install_npm(info: dict[str, Any]) -> dict[str, Any]:
-    """Install openclaw via npm with Windows-proof command resolution."""
+    """Install an npm-based agent (openclaw / codex) with Windows-proof
+    command resolution."""
     from council.agents.proc import resolve_cmd, which_resolved
 
+    name = info.get("_npm_name", "openclaw")
     npm_exe = which_resolved("npm")
     if npm_exe is None:
-        return {"ok": False, "name": "openclaw",
-                "error": "npm not found - install Node.js 18+ first (https://nodejs.org)",
+        return {"ok": False, "name": name,
+                "error": "npm not found - install Node.js first (https://nodejs.org)",
                 "hint": "Windows: winget install OpenJS.NodeJS.LTS   then open a NEW terminal"}
     # Windows: use the resolved npm.cmd path explicitly (avoids WinError 2)
     cmd = [npm_exe, "install", "-g", info["package"]]
     print(f"  installing {info['package']} globally (npm via {npm_exe})...")
     ok, tail = _run(cmd, Path.home(), timeout=1800)
     if not ok:
-        return {"ok": False, "name": "openclaw",
+        return {"ok": False, "name": name,
                 "error": f"npm install failed: {tail[:300]}",
                 "hint": f"npm path: {npm_exe}\nrun it manually in a NEW terminal:\n  npm install -g {info['package']}"}
     ver = _run([resolve_cmd(info["bin"]), "--version"], Path.home(), timeout=30)
-    return {"ok": True, "name": "openclaw",
+    next_hint = info.get("_next", "openclaw onboard --install-daemon   # first-run onboarding")
+    return {"ok": True, "name": name,
             "steps": [{"step": "npm install -g", "ok": True, "detail": ver[1][:80] or "installed"}],
-            "next": "openclaw onboard --install-daemon   # first-run onboarding"}
+            "next": next_hint}
 
 
 def _install_pip(info: dict[str, Any]) -> dict[str, Any]:
@@ -248,79 +255,12 @@ def _install_official(info: dict[str, Any]) -> dict[str, Any]:
             "next": "hermes setup   # guided configuration"}
 
 
-def _install_source_venv(info: dict[str, Any]) -> dict[str, Any]:
-    """Install agent-zero like hermes/openclaw: clone the source + create a
-    Python venv + install requirements. NO Docker needed for basic use -
-    the agent framework runs on the host; Docker only adds the optional
-    terminal/browser tools (their hybrid dev approach).
-
-    Note: agent-zero's code uses Python 3.12+ syntax - check before the
-    multi-GB dependency install."""
-    name = "agent-zero"
-    if sys.version_info < (3, 12):
-        return {"ok": False, "name": name,
-                "error": "agent-zero needs Python 3.12+ (its code uses 3.12 syntax)",
-                "hint": "install Python 3.12+ from https://python.org, then re-run: councilkey agents install agent-zero"}
-    src = AGENTS_DIR / "agent-zero"
-    steps: list[dict[str, Any]] = []
-
-    # 1. clone
-    if src.exists() and not (src / ".git").exists():
-        shutil.rmtree(src, ignore_errors=True)
-    if not src.exists():
-        print("  cloning the agent-zero source...")
-        AGENTS_DIR.mkdir(parents=True, exist_ok=True)
-        ok, tail = _run(
-            ["git", "clone", "--depth", "1", info["repo"], str(src)],
-            AGENTS_DIR,
-            timeout=900,
-        )
-        steps.append({"step": "clone", "ok": ok, "detail": tail or "source ready"})
-        if not ok:
-            return {"ok": False, "name": name,
-                    "error": f"clone failed (no internet?): {tail[:200]}",
-                    "hint": "retry later with: councilkey agents install agent-zero"}
-
-    # 2. venv + deps (heavy: includes torch - several GB)
-    venv = src / ".venv"
-    venv_py = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-    if not venv_py.exists():
-        print("  creating the Python environment (one-time, a few GB)...")
-        ok, tail = _run([sys.executable, "-m", "venv", str(venv)], src, timeout=600)
-        steps.append({"step": "venv", "ok": ok, "detail": tail or "venv ready"})
-        if not ok:
-            return {"ok": False, "name": name, "error": f"venv failed: {tail[:200]}"}
-    else:
-        steps.append({"step": "venv", "ok": True, "detail": "already present"})
-
-    pip = venv / ("Scripts/pip.exe" if os.name == "nt" else "bin/pip")
-    _run([str(pip), "install", "-q", "--upgrade", "pip", "setuptools", "wheel"], src, timeout=300)
-    print("  installing agent-zero dependencies (can take several minutes, please wait)...")
-    ok, tail = _run([str(pip), "install", "-q", "-r", str(src / "requirements.txt")], src, timeout=1800)
-    steps.append({"step": "deps", "ok": ok, "detail": tail[:120] or "deps installed"})
-    if not ok:
-        return {"ok": False, "name": name,
-                "error": f"dependency install failed: {tail[:300]}",
-                "hint": "retry: councilkey agents install agent-zero   (partial state is reused)"}
-
-    return {"ok": True, "name": name, "steps": steps,
-            "next": "cd tools/linux/agent-zero && .venv/bin/python agent.py   # interactive chat"}
-
-
 def start(name: str, wait: int = 30) -> dict[str, Any]:
     """Best-effort: launch an installed agent's interactive CLI is NOT safe to
     daemonize - these are interactive tools. Tell the user how to run them."""
     info = AGENTS.get(name)
     if not info:
         return {"ok": False, "error": f"unknown agent {name!r}"}
-    if name == "agent-zero":
-        az_dir = AGENTS_DIR / "agent-zero"
-        venv_py = az_dir / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-        if not (az_dir.exists() and venv_py.exists()):
-            return {"ok": False, "name": name, "error": "agent-zero is not installed",
-                    "hint": "councilkey agents install agent-zero"}
-        return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"],
-                "first_run": "python agent.py runs an interactive chat - it will ask for a model provider"}
     if not _on_path(info["bin"]):
         return {"ok": False, "name": name, "error": f"{name} is not installed",
                 "hint": f"councilkey agents install {name}"}
@@ -336,7 +276,81 @@ def start(name: str, wait: int = 30) -> dict[str, Any]:
     if name == "hermes":
         return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"],
                 "first_run": "hermes setup   (interactive wizard - configure model provider)"}
+    if name == "codex":
+        return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"],
+                "diagnose": "councilkey agents configure codex",
+                "one_shot": 'codex exec "your question"',
+                "first_run": "councilkey agents configure codex   (points Codex at your API key)"}
     return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"]}
+
+
+# ------------------------------------------------------------- codex config
+def configure(name: str = "codex") -> dict[str, Any]:
+    """Write the config that points an external agent at the user's provider.
+
+    Codex CLI speaks the OpenAI "Responses" protocol, so it works with the
+    OpenAI and OpenRouter providers out of the box (OpenRouter officially
+    documents this setup). Gemini/Anthropic keys can't be used by Codex
+    directly - we say so clearly instead of writing a broken config.
+
+    The config file goes to $CODECONFIG when set (pendrive mode keeps it on
+    the stick), otherwise to ~/.codex/config.toml.
+    """
+    if name != "codex":
+        return {"ok": False, "error": f"configure is only implemented for 'codex' (got {name!r})"}
+
+    from council.llm.provider import active_provider
+
+    provider = active_provider()
+    if not provider:
+        return {"ok": False, "name": "codex",
+                "error": "no API key configured yet - run: councilkey setup",
+                "hint": "councilkey setup   (choose OpenAI or OpenRouter, paste the key - stored encrypted)"}
+
+    if provider == "anthropic":
+        return {"ok": False, "name": "codex",
+                "error": "Codex CLI speaks the OpenAI protocol - it cannot use an Anthropic key directly",
+                "hint": "choose OpenAI or OpenRouter in 'councilkey setup', or use Claude Code for Anthropic"}
+    if provider == "gemini":
+        return {"ok": False, "name": "codex",
+                "error": "Codex CLI needs an OpenAI-compatible endpoint - Gemini's API is not compatible",
+                "hint": "choose OpenAI or OpenRouter in 'councilkey setup', or use the Gemini CLI for Gemini keys"}
+
+    config_path = Path(os.environ.get("CODECONFIG", Path.home() / ".codex" / "config.toml"))
+    try:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        if provider == "openai":
+            # Codex's built-in default provider IS OpenAI - only the key env
+            # var is needed. Write a minimal config so nothing is ambiguous.
+            content = (
+                "# written by councilkey - provider: openai (Codex's default)\n"
+                'model_reasoning_effort = "high"\n'
+            )
+            config_path.write_text(content, encoding="utf-8")
+            return {"ok": True, "name": "codex",
+                    "detail": f"config written: {config_path} (provider: openai - no base URL needed)",
+                    "next": "run: codex   (OPENAI_API_KEY is loaded from the vault when you launch)"}
+        # provider == "openrouter" (officially documented by OpenRouter)
+        content = (
+            "# written by councilkey - provider: openrouter\n"
+            '# change the model anytime (any OpenRouter model that supports the Responses API)\n'
+            'model = "openai/gpt-5.3-codex"\n'
+            'model_provider = "openrouter"\n'
+            'model_reasoning_effort = "high"\n\n'
+            "[model_providers.openrouter]\n"
+            'name = "OpenRouter"\n'
+            'base_url = "https://openrouter.ai/api/v1"\n'
+            'env_key = "OPENROUTER_API_KEY"\n'
+            'wire_api = "responses"\n'
+        )
+        config_path.write_text(content, encoding="utf-8")
+        return {"ok": True, "name": "codex",
+                "detail": f"config written: {config_path} (provider: openrouter, model: openai/gpt-5.3-codex)",
+                "next": "run: codex   (OPENROUTER_API_KEY is loaded from the vault when you launch)"}
+    except Exception as exc:
+        return {"ok": False, "name": "codex",
+                "error": f"could not write the Codex config at {config_path}: {exc}",
+                "hint": "make sure the folder is writable, then re-run: councilkey agents configure codex"}
 
 
 def openclaw_local_command() -> str:

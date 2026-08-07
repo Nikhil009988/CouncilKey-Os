@@ -65,7 +65,7 @@ def test_provider_catalog():
     from council.llm.provider import PROVIDERS, ROLE_SYSTEMS
 
     assert set(PROVIDERS) == {"openai", "openrouter", "gemini", "anthropic"}
-    assert set(ROLE_SYSTEMS) == {"hermes", "openclaw", "agent-zero"}
+    assert set(ROLE_SYSTEMS) == {"hermes", "openclaw", "codex"}
     assert PROVIDERS["openai"]["protocol"] == "openai"
     assert PROVIDERS["anthropic"]["protocol"] == "anthropic"
 
@@ -196,7 +196,7 @@ def test_cli_ask_together():
     )
     assert r.returncode == 0, r.stdout[-300:]
     assert "votes:" in r.stdout
-    assert "hermes" in r.stdout and "openclaw" in r.stdout and "agent-zero" in r.stdout
+    assert "hermes" in r.stdout and "openclaw" in r.stdout and "codex" in r.stdout
 
 
 def test_cli_ask_alone():
@@ -221,14 +221,99 @@ def test_agents_include_crewai_aider():
     assert AGENTS["aider"]["package"] == "aider-chat"
 
 
-def test_agent_zero_no_docker_install():
-    """Agent Zero installs like hermes/openclaw: source + venv, no Docker."""
+def test_codex_no_docker_install():
+    """Codex replaces Agent Zero: npm install, local execution, NO Docker."""
     from council.agents.installer import AGENTS
 
-    assert AGENTS["agent-zero"]["install"] == "source-venv"
-    # runtime note says docker is optional, not required
-    assert "no Docker needed" in AGENTS["agent-zero"]["runtime"]
-    assert "required" not in AGENTS["agent-zero"]["runtime"]
+    assert AGENTS["codex"]["install"] == "npm"
+    assert AGENTS["codex"]["package"] == "@openai/codex"
+    # runtime note says explicitly no Docker
+    assert "NO Docker" in AGENTS["codex"]["runtime"]
+
+
+def test_codex_configure_openrouter_writes_config(monkeypatch, tmp_path):
+    """configure(codex) writes a working config for the OpenRouter provider."""
+    from council.agents.installer import configure
+    from council.llm import provider as lp
+
+    monkeypatch.setattr(lp, "active_provider", lambda: "openrouter")
+    monkeypatch.setenv("CODECONFIG", str(tmp_path / "config.toml"))
+    res = configure("codex")
+    assert res["ok"] is True
+    cfg = (tmp_path / "config.toml").read_text(encoding="utf-8")
+    assert "openrouter" in cfg
+    assert "https://openrouter.ai/api/v1" in cfg
+    assert 'env_key = "OPENROUTER_API_KEY"' in cfg
+    assert 'wire_api = "responses"' in cfg
+    assert "openai/gpt-5.3-codex" in cfg
+
+
+def test_codex_configure_needs_provider(monkeypatch, tmp_path):
+    """No provider configured -> clear error with the exact fix command."""
+    from council.agents.installer import configure
+    from council.llm import provider as lp
+
+    monkeypatch.setattr(lp, "active_provider", lambda: None)
+    monkeypatch.setenv("CODECONFIG", str(tmp_path / "config.toml"))
+    res = configure("codex")
+    assert res["ok"] is False
+    assert "councilkey setup" in res["hint"]
+    # nothing written
+    assert not (tmp_path / "config.toml").exists()
+
+
+def test_codex_configure_anthropic_clear_error(monkeypatch, tmp_path):
+    """Anthropic keys can't drive Codex - the message says so plainly."""
+    from council.agents.installer import configure
+    from council.llm import provider as lp
+
+    monkeypatch.setattr(lp, "active_provider", lambda: "anthropic")
+    monkeypatch.setenv("CODECONFIG", str(tmp_path / "config.toml"))
+    res = configure("codex")
+    assert res["ok"] is False
+    assert "cannot use an Anthropic key" in res["error"]
+
+
+def test_cli_key_show_and_list(tmp_path):
+    """`councilkey key show NAME` prints the raw key (for launchers),
+    `key list` only shows a masked hint."""
+    import subprocess
+
+    from council.secrets.vault import set_secret
+
+    set_secret("OPENROUTER_API_KEY", "sk-or-test-1234567890")
+
+    r = subprocess.run(
+        [str(cli_path()), "key", "show", "OPENROUTER_API_KEY"],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == "sk-or-test-1234567890"
+
+    r = subprocess.run([str(cli_path()), "key", "list"], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0
+    assert "OPENROUTER_API_KEY" in r.stdout
+    assert "sk-or-test-1234567890" not in r.stdout  # masked
+
+    r = subprocess.run([str(cli_path()), "key", "show", "NOPE_KEY"], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 1
+    assert "no key named" in r.stderr
+
+
+def test_pendrive_run_codex_launcher():
+    """The stick launcher keeps Codex state+config on the stick and loads
+    the provider key from the encrypted vault at launch time."""
+    sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    for token in ("RUN-CODEX.bat", "run-codex.sh", "CODEX_HOME", "CODECONFIG",
+                  "council-data/codex", "key show OPENROUTER_API_KEY",
+                  "agents configure codex", r"tools\codex\node_modules\.bin\codex.cmd"):
+        assert token in sh, token
+
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    for token in ("RUN-CODEX.bat", "CODEX_HOME", "CODECONFIG",
+                  "council-data\\codex", "key show OPENROUTER_API_KEY",
+                  "agents configure codex", "tools\\codex\\node_modules\\.bin\\codex.cmd"):
+        assert token in ps, token
 
 
 def test_pendrive_script_exists_and_syntax():
@@ -283,8 +368,8 @@ def test_verify_only_checks_council_roles(monkeypatch):
     modes = client_modes()
     clients = build_default_clients()
     # invariant: clients and modes are exactly the 3 council roles
-    assert set(clients) == {"hermes", "openclaw", "agent-zero"}
-    assert set(modes) == {"hermes", "openclaw", "agent-zero"}
+    assert set(clients) == {"hermes", "openclaw", "codex"}
+    assert set(modes) == {"hermes", "openclaw", "codex"}
 
 
 def test_configure_openclaw_success_with_nonzero_exit(monkeypatch):
@@ -460,7 +545,7 @@ def test_pendrive_installs_all_agents_onto_stick():
     assert "hermes-agent crewai aider-chat" in sh
     assert "npm install --prefix" in sh
     # launchers for every agent
-    for name in ("RUN-OPENCLAW", "RUN-HERMES", "RUN-CREWAI", "RUN-AIDER", "RUN-AGENT-ZERO"):
+    for name in ("RUN-OPENCLAW", "RUN-HERMES", "RUN-CREWAI", "RUN-AIDER", "RUN-CODEX"):
         assert name in sh
     # launchers are outside the --no-agents branch (always written)
     launcher_pos = sh.find("# --- launchers")
@@ -471,7 +556,7 @@ def test_pendrive_installs_all_agents_onto_stick():
     assert "council-data/agents" in sh
 
     ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
-    for name in ("RUN-OPENCLAW", "RUN-HERMES", "RUN-CREWAI", "RUN-AIDER", "RUN-AGENT-ZERO"):
+    for name in ("RUN-OPENCLAW", "RUN-HERMES", "RUN-CREWAI", "RUN-AIDER", "RUN-CODEX"):
         assert name in ps
 
 

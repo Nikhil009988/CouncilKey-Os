@@ -28,7 +28,7 @@ What the script does:
 - Installs:
   - OpenClaw: npm install -g openclaw@latest to tools/linux/openclaw
   - Hermes: git clone NousResearch/hermes-agent + uv venv to tools/linux/hermes
-  - Agent-zero: git clone agent0ai/agent-zero to tools/linux/agent-zero
+  - Codex: npm install --prefix tools/codex @openai/codex (no Docker)
   - Council Core: our orchestrator to tools/linux/council-core
 - Creates config/ templates for API keys
 - Copies launcher scripts start.sh / start.bat
@@ -40,7 +40,7 @@ bash /media/$USER/COUNCIL/start.sh
 # Then:
 council status
 council ask "hello council, introduce yourselves"
-# Type 'hermes' for Hermes TUI, 'openclaw' for OpenClaw, 'agent-zero' for Agent Zero
+# Type 'hermes' for Hermes TUI, 'openclaw' for OpenClaw, 'codex' for Codex
 
 # Windows
 Double-click start.bat
@@ -85,13 +85,13 @@ sudo ./scripts/build-live-iso.sh noble
      ```bash
      /opt/council/hermes - uv + hermes-agent
      /opt/council/openclaw - npm install -g openclaw
-     /opt/council/agent-zero - clone + pip install -r requirements.txt
+     /opt/council/codex - npm install -g @openai/codex
      /opt/council/council-core - pip install fastapi uvicorn
      ```
 4. Setup systemd units from council/systemd/*.service to /etc/systemd/system/
    - council-hermes.service -> ExecStart=/opt/council/hermes/.venv/bin/hermes gateway start
    - council-openclaw.service -> ExecStart=/usr/bin/openclaw gateway start
-   - council-agentzero.service -> ExecStart=python3 /opt/council/agent-zero/run_ui.py --host 0.0.0.0 --port 50001
+   - codex runs locally (CLI) - no service container needed
    - council-core.service -> ExecStart=python3 /opt/council/council-core/main.py
 5. Create council user (UID 1000), hermes 1001, openclaw 1002, agent0 1003, set linger, subuid/subgid
 6. Cleanup chroot: truncate /etc/machine-id, apt clean, rm /tmp/*, umount
@@ -196,7 +196,7 @@ qemu-system-x86_64 \
 # In another terminal
 ssh -p 2222 council@localhost
 # Inside VM
-podman ps  # should show 4 containers: hermes, openclaw, agent-zero, council-core
+podman ps  # should show 3 containers: hermes, openclaw, council-core (codex runs locally, no container)
 council status
 journalctl -u council-core -f
 ```

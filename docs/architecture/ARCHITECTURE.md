@@ -1,7 +1,7 @@
 # CouncilKey-Os - Architecture: Live Council of 3 Agents on One Pendrive
 
 ## Vision
-> A bootable pen drive that turns ANY PC into a secure council of AI agents: Hermes, OpenClaw, and Agent Zero - working together, debating, voting, never leaving traces on host.
+> A bootable pen drive that turns ANY PC into a secure council of AI agents: Hermes, OpenClaw, and Codex - working together, debating, voting, never leaving traces on host.
 
 Plug in → Boot → Council is alive → Unplug → Host untouched.
 
@@ -71,13 +71,13 @@ Plug in → Boot → Council is alive → Unplug → Host untouched.
 - **Storage:** /var/lib/council/openclaw/.openclaw/
 - **Backend:** Node.js 24, rootless Podman container `ghcr.io/openclaw/openclaw:latest` + openshell
 
-### Agent Zero (Agent of Code & Transparency)
-- **Role:** The Builder - writes code, uses computer as tool, transparent
-- **Strengths:** Minimal prompt-based framework, full Linux desktop in Canvas, plugin hub, host-machine bridge via A0 CLI, writes own tools
-- **In Council:** When council needs code, tool creation, file manipulation, it delegates to Agent Zero
-- **Port:** 50001 (WebUI), 50002 (API)
-- **Storage:** /var/lib/council/agent-zero/ (knowledge/, work_dir/)
-- **Backend:** Python + Docker `frdel/agent-zero-exe`
+### Codex (Agent of Code & Review)
+- **Role:** The Builder - writes code, edits files, runs terminal commands, transparent
+- **Strengths:** Local execution (no Docker), terminal + file editing + web tools built in, works with OpenAI/OpenRouter keys
+- **In Council:** When the council needs code, tool creation or file manipulation, it delegates to Codex
+- **Port:** none (interactive CLI; gateway bridge via `COUNCIL_CODEX_URL` if you expose one)
+- **Storage:** /var/lib/council/codex/ (CODEX_HOME; on the pendrive: council-data/codex)
+- **Backend:** Codex CLI - npm `@openai/codex`, runs locally
 
 ---
 
@@ -152,7 +152,7 @@ USB (exFAT)
   /bin/linux/python-3.11/            (portable Python + uv)
   /tools/linux/openclaw/             (npm global)
   /tools/linux/hermes/               (venv)
-  /tools/linux/agent-zero/           (venv)
+  /tools/codex/                     (npm @openai/codex)
   /tools/linux/council-core/         (orchestrator)
   /config/                           (all configs)
   /temp/                             (all caches)
@@ -182,7 +182,7 @@ Based on `live-custom-ubuntu-from-scratch` path:
      /opt/council/
        hermes/ (uv venv + git clone NousResearch/hermes-agent)
        openclaw/ (npm install -g openclaw)
-       agent-zero/ (git clone agent0ai/agent-zero + pip install)
+       codex/ (npm install @openai/codex)
        council-core/ (our orchestrator)
      ```
    - chroot: setup systemd units in /etc/systemd/system/council-*.service
@@ -223,13 +223,13 @@ Based on Tank-OS:
   # /etc/containers/systemd/users/1000/council-core.container
   # /etc/containers/systemd/users/1001/hermes.container
   # /etc/containers/systemd/users/1002/openclaw.container
-  # /etc/containers/systemd/users/1003/agent-zero.container
+  # codex runs as a local CLI (no container - no Docker)
   # /usr/local/bin/council
   ```
 - Each .container is Quadlet unit pointing to:
   - `ghcr.io/openclaw/openclaw:latest`
   - `ghcr.io/nousresearch/hermes-agent:latest` (or custom)
-  - `frdel/agent-zero-exe:latest`
+  - codex CLI (npm @openai/codex)
   - `localhost/council-core:latest`
 - Secrets via `podman secret`, not baked
 - Build QCOW2/ISO/RAW via bootc-image-builder
@@ -254,7 +254,7 @@ Inside LUKS:
   /var/lib/council/
     hermes/ -> MEMORY.md, skills, SQLite FTS5 DB
     openclaw/ -> .openclaw/ soul.md, skills, memory DB
-    agent-zero/ -> knowledge/, work_dir/, extensions
+    codex/ -> CODEX_HOME state (history, config)
     shared/ -> shared memory.md, council journal git repo
     secrets/ -> podman secrets mount, 0600
     journal/ -> git repo of all council decisions: 2026-08-04-build-website.md etc

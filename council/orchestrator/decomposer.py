@@ -3,7 +3,7 @@
 Each subtask is executed by the agent whose role fits it best:
 - Analysis & Research  -> Hermes (memory)
 - Execution Plan       -> OpenClaw (action)
-- Review & Polish      -> Agent Zero (builder)
+- Review & Polish      -> Codex (builder)
 
 The three subtask outputs are then voted on as a council.
 """
@@ -31,7 +31,7 @@ SUBTASKS: list[dict[str, str]] = [
     {
         "id": "review",
         "title": "Review & Polish",
-        "agent": "agent-zero",
+        "agent": "codex",
         "focus": "Review the analysis and the plan for safety, correctness, and completeness. Write the final polished answer.",
     },
 ]

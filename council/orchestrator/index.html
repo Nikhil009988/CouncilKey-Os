@@ -142,7 +142,7 @@
         <div class="glass rounded-xl p-4 space-y-1">
           <div class="text-xs text-slate-400">Council roles</div>
           <div id="ov-roles" class="text-lg font-bold text-emerald-300">—</div>
-          <div class="text-xs text-slate-500">hermes · openclaw · agent-zero</div>
+          <div class="text-xs text-slate-500">hermes · openclaw · codex</div>
         </div>
         <div class="glass rounded-xl p-4 space-y-1">
           <div class="text-xs text-slate-400">Decisions saved</div>
@@ -193,7 +193,7 @@
             <select id="agent-select" class="bg-council-800 border border-council-700 rounded-lg px-3 py-2 text-sm hidden">
               <option value="hermes">Hermes</option>
               <option value="openclaw">OpenClaw</option>
-              <option value="agent-zero">Agent Zero</option>
+              <option value="codex">Codex</option>
             </select>
           </div>
           <textarea id="prompt" rows="3" placeholder="Ask council..." class="w-full bg-council-800 border border-council-700 rounded-xl p-3 text-sm focus:outline-none focus:border-council-600"></textarea>
@@ -213,8 +213,8 @@
             <div class="h-2 rounded-full bg-council-800 overflow-hidden"><div id="bar-hermes" class="h-full vote-bar bg-council-400 w-0"></div></div>
             <div class="flex items-center justify-between text-sm"><span>OpenClaw</span><span id="vote-openclaw" class="text-slate-400">-</span></div>
             <div class="h-2 rounded-full bg-council-800 overflow-hidden"><div id="bar-openclaw" class="h-full vote-bar bg-council-400 w-0"></div></div>
-            <div class="flex items-center justify-between text-sm"><span>Agent Zero</span><span id="vote-agent-zero" class="text-slate-400">-</span></div>
-            <div class="h-2 rounded-full bg-council-800 overflow-hidden"><div id="bar-agent-zero" class="h-full vote-bar bg-council-400 w-0"></div></div>
+            <div class="flex items-center justify-between text-sm"><span>Codex</span><span id="vote-codex" class="text-slate-400">-</span></div>
+            <div class="h-2 rounded-full bg-council-800 overflow-hidden"><div id="bar-codex" class="h-full vote-bar bg-council-400 w-0"></div></div>
           </div>
         </div>
       </div>
@@ -267,7 +267,7 @@
         <div class="text-xs text-slate-400 space-y-1">
           <div>Hermes: 45MB keep</div>
           <div>OpenClaw: 30MB keep</div>
-          <div>Agent Zero: 20MB keep</div>
+          <div>Codex: 20MB keep</div>
           <div>Shared: 5MB keep</div>
           <div>Secrets: 1KB</div>
           <div class="pt-2 text-slate-500">Cache RAM 1.2GB will be deleted on unplug</div>
@@ -285,7 +285,7 @@
     <div id="tab-terminal" class="tab-panel hidden glass rounded-2xl p-4 space-y-3">
       <div class="xterm-container rounded-xl p-2"><div id="terminal" class="xterm-container"></div></div>
       <div class="flex gap-2">
-        <select id="terminal-agent" class="bg-council-800 border border-council-700 rounded-lg px-3 py-2 text-sm"><option value="council">council</option><option value="hermes">hermes</option><option value="openclaw">openclaw</option><option value="agent-zero">agent-zero</option></select>
+        <select id="terminal-agent" class="bg-council-800 border border-council-700 rounded-lg px-3 py-2 text-sm"><option value="council">council</option><option value="hermes">hermes</option><option value="openclaw">openclaw</option><option value="codex">codex</option></select>
         <button id="terminal-connect" class="px-4 py-2 rounded-xl bg-council-700 hover:bg-council-600 text-sm">Connect</button>
       </div>
     </div>
@@ -464,7 +464,7 @@
     }
 
     function renderVotes(votes) {
-      for (const agent of ['hermes','openclaw','agent-zero']) {
+      for (const agent of ['hermes','openclaw','codex']) {
         const v = votes[agent] || '-';
         const pct = v === 'approve' ? '100%' : '0%';
         document.getElementById('vote-' + agent).textContent = v;
@@ -801,7 +801,7 @@
       const latency = info.latency != null ? info.latency.toFixed(2) + 's' : '-';
       return `<div class="glass rounded-xl p-4 space-y-2">
         <div class="flex items-center justify-between">
-          <div class="font-semibold">${name === 'hermes' ? '🧙 Hermes' : name === 'openclaw' ? '🦞 OpenClaw' : '🔧 Agent Zero'}</div>
+          <div class="font-semibold">${name === 'hermes' ? '🧙 Hermes' : name === 'openclaw' ? '🦞 OpenClaw' : '🔧 Codex'}</div>
           <span class="text-xs px-2 py-1 rounded border ${meta.cls}">${meta.dot} ${meta.label}</span>
         </div>
         <div class="text-xs text-slate-400">Role: ${info.role || '-'} · latency ${latency}</div>

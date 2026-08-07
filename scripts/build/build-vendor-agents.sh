@@ -52,30 +52,24 @@ clone_openclaw() {
     fi
 }
 
-clone_agent_zero() {
-    local dest="$VENDOR_DIR/agent-zero"
-    echo "--- Agent Zero ---"
-    if [ -d "$dest/.git" ]; then
-        echo "Updating Agent Zero..."
-        cd "$dest"
-        git fetch origin
-        git checkout main
-        git pull origin main
-    else
-        echo "Cloning Agent Zero..."
-        git clone --depth=1 --branch main https://github.com/agent0ai/agent-zero.git "$dest"
-    fi
+vendor_codex() {
+    local dest="$VENDOR_DIR/codex"
+    echo "--- Codex CLI (npm) ---"
+    mkdir -p "$dest"
+    # Codex replaces Agent Zero: same builder/review abilities but runs
+    # locally (terminal/file/web tools) - no Docker, no source clone.
+    npm install --prefix "$dest" --no-audit --no-fund @openai/codex
 }
 
 # Run cloning
 clone_hermes
 clone_openclaw
-clone_agent_zero
+vendor_codex
 
 # Verify
 echo ""
 echo "=== Verification ==="
-for agent in hermes openclaw agent-zero; do
+for agent in hermes openclaw codex; do
     if [ -d "$VENDOR_DIR/$agent" ]; then
         size=$(du -sh "$VENDOR_DIR/$agent" 2>/dev/null | cut -f1)
         echo "✅ $agent: $size"
@@ -99,10 +93,9 @@ Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 - Commit: $(cd "$VENDOR_DIR/openclaw" && git rev-parse HEAD 2>/dev/null || echo "unknown")
 - Branch: $(cd "$VENDOR_DIR/openclaw" && git branch --show-current 2>/dev/null || echo "unknown")
 
-## Agent Zero
-- Repo: https://github.com/agent0ai/agent-zero
-- Commit: $(cd "$VENDOR_DIR/agent-zero" && git rev-parse HEAD 2>/dev/null || echo "unknown")
-- Branch: $(cd "$VENDOR_DIR/agent-zero" && git branch --show-current 2>/dev/null || echo "unknown")
+## Codex CLI (npm - replaces Agent Zero)
+- Package: @openai/codex
+- Version: $(npm view @openai/codex version 2>/dev/null || echo "unknown")
 EOF
 
 echo ""

@@ -20,7 +20,7 @@ def _defaults() -> dict[str, object]:
             "agents": {
                 "hermes": {"weight": 1, "timeout": 60},
                 "openclaw": {"weight": 1, "timeout": 60},
-                "agent-zero": {"weight": 1, "timeout": 120},
+                "codex": {"weight": 1, "timeout": 120},
             },
             "consensus": {"strategy": "majority", "min_agreement": 2},
             # --- v1.2 advanced orchestration settings ---

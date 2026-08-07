@@ -72,10 +72,10 @@ if [ -f "$VENDOR_DIR/hermes/pyproject.toml" ] || [ -f "$VENDOR_DIR/hermes/requir
     "$PYTHON_VENV" -m pip install -e "$WIN_HERMES" || true
 fi
 
-# Agent Zero deps
-if [ -f "$VENDOR_DIR/agent-zero/requirements.txt" ]; then
-    echo "Installing Agent Zero deps..."
-    "$PYTHON_VENV" -m pip install -r "$VENDOR_DIR/agent-zero/requirements.txt" || true
+# Codex CLI (npm - replaces Agent Zero: local execution, no Docker)
+if [ -d "$VENDOR_DIR/codex" ]; then
+    echo "Installing Codex CLI..."
+    npm install --prefix "$VENDOR_DIR/codex" --no-audit --no-fund @openai/codex || true
 fi
 
 # 4. Install common runtime deps
@@ -137,7 +137,7 @@ def setup_env(usb_root: Path) -> dict:
     env["XDG_DATA_HOME"] = str(config_dir / "data")
     env["HERMES_HOME"] = str(council_home / "hermes" / "real_home")
     env["OPENCLAW_HOME"] = str(council_home / "openclaw")
-    env["AGENT_ZERO_HOME"] = str(council_home / "agent-zero")
+    env["CODEX_HOME"] = str(council_home / "codex")
     python_path = str(usb_root)
     if "PYTHONPATH" in env:
         env["PYTHONPATH"] = python_path + os.pathsep + env["PYTHONPATH"]
@@ -190,8 +190,8 @@ export XDG_CONFIG_HOME="$USB_ROOT/config"
 export XDG_DATA_HOME="$USB_ROOT/config/data"
 export HERMES_HOME="$COUNCIL_HOME/hermes/real_home"
 export OPENCLAW_HOME="$COUNCIL_HOME/openclaw"
-export AGENT_ZERO_HOME="$COUNCIL_HOME/agent-zero"
-mkdir -p "$COUNCIL_HOME"/{hermes/{keep,cache},openclaw/{keep,cache},agent-zero/{keep,cache},shared,journal,secrets,council,lance}
+export CODEX_HOME="$COUNCIL_HOME/codex"
+mkdir -p "$COUNCIL_HOME"/{hermes/{keep,cache},openclaw/{keep,cache},codex/{keep,cache},shared,journal,secrets,council,lance}
 mkdir -p "$USB_ROOT/temp"
 if [ ! -d "$USB_ROOT/.venv" ]; then
     echo "ERROR: .venv not found. Run build script first."
@@ -220,14 +220,14 @@ set XDG_CONFIG_HOME=%USB_ROOT%\config
 set XDG_DATA_HOME=%USB_ROOT%\config\data
 set HERMES_HOME=%COUNCIL_HOME%\hermes\real_home
 set OPENCLAW_HOME=%COUNCIL_HOME%\openclaw
-set AGENT_ZERO_HOME=%COUNCIL_HOME%\agent-zero
+set CODEX_HOME=%COUNCIL_HOME%\codex
 if not exist "%COUNCIL_HOME%" mkdir "%COUNCIL_HOME%"
 if not exist "%COUNCIL_HOME%\hermes\keep" mkdir "%COUNCIL_HOME%\hermes\keep"
 if not exist "%COUNCIL_HOME%\hermes\cache" mkdir "%COUNCIL_HOME%\hermes\cache"
 if not exist "%COUNCIL_HOME%\openclaw\keep" mkdir "%COUNCIL_HOME%\openclaw\keep"
 if not exist "%COUNCIL_HOME%\openclaw\cache" mkdir "%COUNCIL_HOME%\openclaw\cache"
-if not exist "%COUNCIL_HOME%\agent-zero\keep" mkdir "%COUNCIL_HOME%\agent-zero\keep"
-if not exist "%COUNCIL_HOME%\agent-zero\cache" mkdir "%COUNCIL_HOME%\agent-zero\cache"
+if not exist "%COUNCIL_HOME%\codex\keep" mkdir "%COUNCIL_HOME%\codex\keep"
+if not exist "%COUNCIL_HOME%\codex\cache" mkdir "%COUNCIL_HOME%\codex\cache"
 if not exist "%COUNCIL_HOME%\shared" mkdir "%COUNCIL_HOME%\shared"
 if not exist "%COUNCIL_HOME%\journal" mkdir "%COUNCIL_HOME%\journal"
 if not exist "%COUNCIL_HOME%\secrets" mkdir "%COUNCIL_HOME%\secrets"

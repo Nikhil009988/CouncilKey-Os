@@ -13,7 +13,7 @@ Based on deep scan of Hermes SECURITY.md + Tank-OS CVE-2026-27002 + Reefy securi
 - **Rootless Podman Quadlet**: No docker daemon running as root continuously. Each agent UID 1000-1003 maps to host 100000+ via subuid/subgid. Container root is unprivileged user on host.
 - **Read-only root**: Squashfs live + bootc immutable A/B, OS layer read-only, agents cannot modify system files, rollback on failure via `bootc rollback`.
 - **Approval gates**: Hermes command approval, OpenClaw pairing approval, ClawOS policyd gates every tool call, sensitive actions require 2/3 council vote (prevents OpenClaw email deletion incident from Tank-OS docs).
-- **Supply chain**: Pinned versions (OPENCLAW_REF=2026.7.1 fixes CVE-2026-27002 sandbox bind-mount escape chain, HERMES_REF pinned, AGENTZERO_REF pinned), SBOM CycloneDX/SPDX, cosign signing, Trivy scanning.
+- **Supply chain**: Pinned versions (OPENCLAW_REF=2026.7.1 fixes CVE-2026-27002 sandbox bind-mount escape chain, HERMES_REF pinned, CODEX_REF pinned (npm @openai/codex)), SBOM CycloneDX/SPDX, cosign signing, Trivy scanning.
 
 ### What we DON'T protect (in-process heuristics not boundary):
 
@@ -49,9 +49,9 @@ council secrets list  # shows which keys set, not values
 
 ### 3. Isolation
 
-- Quadlet: `openclaw.container`, `hermes.container`, `agent-zero.container`, `council-core.container` each rootless, separate UID, no shared credentials, cannot access other programs on host.
+- Quadlet: `openclaw.container`, `hermes.container`, `council-core.container` each rootless (codex runs as a local CLI - no container, no Docker), separate UID, no shared credentials, cannot access other programs on host.
 - User namespace isolation: subuid 100000-165535 for council, 165536-231071 for hermes, etc.
-- Firewall: UFW or firewalld, only allow 8443 (dashboard), 18789 (openclaw gateway loopback only), 18790 (hermes loopback only), 50001 (agent-zero loopback). Dashboard binds 0.0.0.0 for LAN like Reefy (LAN access when internet down), but gateway binds 127.0.0.1 only unless behind Tailscale.
+- Firewall: UFW or firewalld, only allow 8443 (dashboard), 18789 (openclaw gateway loopback only), 18790 (hermes loopback only). Dashboard binds 0.0.0.0 for LAN like Reefy (LAN access when internet down), but gateway binds 127.0.0.1 only unless behind Tailscale.
 
 ### 4. Pinned Versions (CVE fix)
 
@@ -60,7 +60,7 @@ From Tank-OS commit: Pinned to tagged release, not main/latest, because specific
 ```dockerfile
 ARG OPENCLAW_REF=2026.7.1
 ARG HERMES_REF=v1.2.3  # pinned
-ARG AGENTZERO_REF=v0.8.1 # pinned
+ARG CODEX_PACKAGE=@openai/codex # pinned via npm
 ```
 
 ### 5. SBOM + Signing
@@ -76,7 +76,7 @@ GitHub Actions (see `.github/workflows/`) runs Trivy weekly, uploads SARIF to Gi
 ### 6. Dashboard Auth
 
 - v1: No auth (LAN only, like Reefy)
-- Production: Add BasicAuth via `auth_login` `auth_password` from Agent Zero settings pattern, or OAuth via Tailscale (Tailscale is BR2_PACKAGE_TAILSCALE_REEFY in Reefy defconfig, we include it)
+- Production: Add BasicAuth via `auth_login` `auth_password`, or OAuth via Tailscale (Tailscale is BR2_PACKAGE_TAILSCALE_REEFY in Reefy defconfig, we include it)
 - Secrets edit via GPG in dashboard requires master password (LUKS passphrase)
 
 ### 7. Audit Logging

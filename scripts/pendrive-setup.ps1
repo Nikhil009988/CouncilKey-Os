@@ -130,6 +130,16 @@ if ($NoAgents) {
   } else {
     Write-Host "      ⚠ npm not found - openclaw will use the host install"
   }
+
+  # Codex CLI via npm into the stick (local agent - no Docker)
+  Write-Host "      installing codex onto the stick (npm)..."
+  New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\codex") | Out-Null
+  if (Get-Command npm -ErrorAction SilentlyContinue) {
+    & npm install --prefix (Join-Path $Dest "tools\codex") --no-audit --no-fund @openai/codex | Out-Null
+    Write-Host "      ok (codex CLI on the stick)"
+  } else {
+    Write-Host "      ⚠ npm not found - codex will use the host install"
+  }
 }
 
 # launchers - always written
@@ -198,27 +208,39 @@ endlocal
 "@
 Set-Content -Encoding ASCII (Join-Path $Path "RUN-AIDER.bat") $AIDER_BAT
 
-$AZ_BAT = @"
+$CODEX_BAT = @"
 @echo off
-rem RUN-AGENT-ZERO.bat - Agent Zero from the pendrive (Windows)
-rem Needs Python 3.12+. State stays on the stick.
+rem RUN-CODEX.bat - Codex CLI from the pendrive (Windows) - NO Docker needed
+rem Codex runs locally: terminal, file editing and web tools on this PC.
+rem State and config stay on the stick (council-data\codex).
 setlocal
 set "STICK=%~dp0"
-if exist "%STICK%CouncilKey-Os\tools\agent-zero\.venv\Scripts\python.exe" (
-  pushd "%STICK%CouncilKey-Os\tools\agent-zero"
-  "%STICK%CouncilKey-Os\tools\agent-zero\.venv\Scripts\python.exe" agent.py %*
-  popd
-) else (
-  echo [error] agent-zero not set up on the stick.
-  echo   On a PC with Python 3.12+:  cd tools\agent-zero ^&^& python -m venv .venv
-  echo   then: .venv\Scripts\pip install -r requirements.txt
+set "CODEX_HOME=%STICK%council-data\codex"
+set "CODECONFIG=%STICK%council-data\codex\config.toml"
+if not exist "%CODEX_HOME%" mkdir "%CODEX_HOME%"
+
+rem 1. point Codex at the provider key stored in the encrypted vault
+call "%~dp0CouncilKey-Os\councilkey.bat" agents configure codex
+if errorlevel 1 (
+  echo [error] no API key configured yet.
+  echo   Run once:  councilkey.bat setup   (choose OpenAI or OpenRouter)
   pause
+  exit /b 1
+)
+for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show OPENROUTER_API_KEY 2^>nul') do set "OPENROUTER_API_KEY=%%K"
+for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show OPENAI_API_KEY 2^>nul') do set "OPENAI_API_KEY=%%K"
+
+rem 2. run codex (from the stick if installed there, else the PC install)
+if exist "%STICK%CouncilKey-Os\tools\codex\node_modules\.bin\codex.cmd" (
+  "%STICK%CouncilKey-Os\tools\codex\node_modules\.bin\codex.cmd" %*
+) else (
+  codex %*
 )
 endlocal
 "@
-Set-Content -Encoding ASCII (Join-Path $Path "RUN-AGENT-ZERO.bat") $AZ_BAT
+Set-Content -Encoding ASCII (Join-Path $Path "RUN-CODEX.bat") $CODEX_BAT
 
-Write-Host "      ok (launchers: RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-AGENT-ZERO)"
+Write-Host "      ok (launchers: RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-CODEX)"
 
 # 6. autorun.inf + optional wizard
 
@@ -282,7 +304,7 @@ echo   2) OpenClaw
 echo   3) Hermes
 echo   4) CrewAI
 echo   5) Aider
-echo   6) Agent Zero   (needs Python 3.12+ setup on the stick)
+echo   6) Codex  (local agent - no Docker)
 echo   0) Quit
 echo ==============================================
 set /p choice="Choose (A/1-6/0): "
@@ -292,7 +314,7 @@ if "%choice%"=="2" goto oc
 if "%choice%"=="3" goto hermes
 if "%choice%"=="4" goto crewai
 if "%choice%"=="5" goto aider
-if "%choice%"=="6" goto az
+if "%choice%"=="6" goto codex
 if "%choice%"=="0" exit /b 0
 goto menu
 :all
@@ -301,6 +323,7 @@ start "OpenClaw" cmd /c "%~dp0RUN-OPENCLAW.bat"
 start "Hermes" cmd /c "%~dp0RUN-HERMES.bat"
 start "CrewAI" cmd /c "%~dp0RUN-CREWAI.bat"
 start "Aider" cmd /c "%~dp0RUN-AIDER.bat"
+start "Codex" cmd /c "%~dp0RUN-CODEX.bat"
 goto done
 :dash
 call "%~dp0START.bat"
@@ -317,8 +340,8 @@ goto done
 :aider
 call "%~dp0RUN-AIDER.bat"
 goto done
-:az
-call "%~dp0RUN-AGENT-ZERO.bat"
+:codex
+call "%~dp0RUN-CODEX.bat"
 goto done
 :done
 echo.
@@ -335,9 +358,12 @@ goto menu
 
 WHAT YOU HAVE
   This stick contains the whole CouncilKey-Os: the app, a portable
-  Python environment, and all 5 agents (Hermes, OpenClaw, CrewAI,
-  Aider, Agent Zero). ALL data - journal, memory, API keys, agent
-  workspaces - lives on this stick in the "council-data" folder.
+  Python environment, and all 5 agents (Hermes, OpenClaw, Codex,
+  CrewAI, Aider). Codex replaced Agent Zero - it gives you the same
+  builder/review powers (terminal, file editing, web) but runs
+  locally on your PC: NO Docker needed.
+  ALL data - journal, memory, API keys, agent workspaces - lives on
+  this stick in the "council-data" folder.
 
 START ANY AGENT OR EVERYTHING AT ONCE
   Windows:  double-click AGENTS.bat  -> menu: A = ALL, 1-6 = one agent
@@ -346,7 +372,7 @@ START ANY AGENT OR EVERYTHING AT ONCE
     START.bat          dashboard (council chat: 3 agents + vote)
     RUN-OPENCLAW.bat   OpenClaw      RUN-HERMES.bat   Hermes
     RUN-CREWAI.bat     CrewAI        RUN-AIDER.bat    Aider
-    RUN-AGENT-ZERO.bat Agent Zero
+    RUN-CODEX.bat      Codex (local, no Docker)
 
 SESSION MODE (clone to PC, memory on stick, no traces)
   start-session.bat  -> copies the code to this PC temporarily,
@@ -394,6 +420,6 @@ Write-Host " ✅ Pendrive ready!"
 Write-Host ""
 Write-Host "   On any Windows PC: plug in -> double-click START.bat"
 Write-Host "   Dashboard:         http://localhost:8443"
-Write-Host "   Agents:            RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-AGENT-ZERO (.bat)"
+Write-Host "   Agents:            RUN-OPENCLAW / RUN-HERMES / RUN-CREWAI / RUN-AIDER / RUN-CODEX (.bat)"
 Write-Host "   Data stays on the stick: $Path\council-data"
 Write-Host "=============================================="

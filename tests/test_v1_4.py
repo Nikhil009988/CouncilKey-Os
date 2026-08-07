@@ -91,7 +91,7 @@ def test_client_modes_without_backends_is_mock(monkeypatch):
 
     monkeypatch.setattr("council.llm.agents.ollama_available", lambda: False)
     modes = oa.client_modes()
-    assert set(modes) == {"hermes", "openclaw", "agent-zero"}
+    assert set(modes) == {"hermes", "openclaw", "codex"}
     assert all(m["mode"] == "mock" for m in modes.values())
 
 
@@ -131,7 +131,7 @@ def test_api_status_has_modes():
 
     client = TestClient(app)
     data = client.get("/api/status").json()
-    for name in ("hermes", "openclaw", "agent-zero"):
+    for name in ("hermes", "openclaw", "codex"):
         assert name in data["agents"]
         assert data["agents"][name]["mode"] in ("gateway", "local-llm", "mock")
     assert "models" in data["ollama"]
