@@ -309,7 +309,7 @@ def start(name: str, wait: int = 30) -> dict[str, Any]:
     if name == "opencode":
         return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"],
                 "diagnose": "councilkey agents configure opencode",
-                "one_shot": 'opencode exec "your question"',
+                "one_shot": 'opencode run "your question"',
                 "first_run": "councilkey agents configure opencode   (points OpenCode at your API key)"}
     return {"ok": True, "name": name, "interactive": True, "hint": info["start_hint"]}
 

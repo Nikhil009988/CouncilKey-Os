@@ -193,7 +193,7 @@ Two layers, both started from the same terminal session:
 |---|---|---|
 | Hermes | `hermes` | interactive chat (config first: `hermes setup`) |
 | OpenClaw | `openclaw` | interactive chat (first run: `openclaw onboard`) |
-| OpenCode | `opencode` (or `opencode exec "your task"`) | local agent: terminal, file editing, web tools - runs on your PC, no Docker |
+| OpenCode | `opencode` (or `opencode run "your task"`) | local agent: terminal, file editing, web tools - runs on your PC, no Docker |
 | CrewAI | `crewai create crew my_crew && cd my_crew && crewai run` | a crew of role agents working together |
 | Aider | `aider` (in a repo) | pair-programming chat — uses the same API key |
 
@@ -286,7 +286,7 @@ interfaces. Each is installed with its **official installer**:
 |---|---|---|
 | Hermes | `curl -fsSL https://hermes-agent.nousresearch.com/install.sh \| bash` (Linux/macOS) · `iex (irm https://hermes-agent.nousresearch.com/install.ps1)` (Windows) | `hermes` → interactive chat · `hermes gateway` → messaging |
 | OpenClaw | `npm install -g openclaw@latest` | `openclaw onboard --install-daemon` → guided onboarding |
-| OpenCode | `npm install -g opencode-ai` (official package) | `opencode` - interactive; `opencode exec "task"` - one-shot. Terminal, file and web tools run **locally - no Docker**. Works with your OpenAI or OpenRouter key (`councilkey agents configure opencode`) |
+| OpenCode | `npm install -g opencode-ai` (official package) | `opencode` - interactive; `opencode run "task"` - one-shot. Terminal, file and web tools run **locally - no Docker**. Works with your OpenAI or OpenRouter key (`councilkey agents configure opencode`) |
 | **CrewAI** (4th) | `pip install crewai` (official package) | `crewai create crew my_crew && cd my_crew && crewai run` — role-based teams work **together** natively |
 | **Aider** (5th) | `pip install aider-chat` (official package) | `aider` — chat with your repo; uses the **same API keys** as our setup (OpenAI/Anthropic/Gemini/OpenRouter) |
 
@@ -423,7 +423,7 @@ is kept.
 | `provider error: TLS/SSL` | No internet to the provider, or a custom `*_BASE_URL` is unreachable |
 | Wizard looks stuck (blinking cursor after an install) | It's working - installs/tests/API calls print a message first and run silently after. Watch for the next ✅ line; long steps show timing. Tests are skippable (answer **n**) |
 | Hermes installer won't download | Run it manually: `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash` |
-| OpenCode won't answer | Run `councilkey agents configure opencode` - it needs an **OpenAI or OpenRouter** key (OpenCode speaks the OpenAI protocol; Gemini/Anthropic keys can't drive it). Check the model in the config: `councilkey agents configure opencode` shows where it was written |
+| OpenCode won't answer | Run `councilkey agents configure opencode` - it supports **all 4 providers** (OpenAI / OpenRouter / Gemini / Anthropic). Check the written config (`councilkey agents configure opencode` prints its path) and make sure the key is valid: `councilkey agents verify` |
 | `llm pull` fails | Check internet; try a smaller model: `councilkey llm pull qwen2.5:1.5b` |
 | Ollama installed but "not running" | Start it: `ollama serve` (Linux/macOS) or the Ollama app (Windows) |
 | Port 8443 busy | `COUNCIL_PORT=9000 ./scripts/start.sh` |
