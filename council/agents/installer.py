@@ -138,11 +138,13 @@ def status(names: list[str] | None = None) -> dict[str, dict[str, Any]]:
             continue
         binary = info["bin"]
         installed = _on_path(binary)
-        # hermes installs under ~/.local/bin (or %LOCALAPPDATA%/hermes)
+        # hermes installs under ~/.local/bin (or %LOCALAPPDATA%/hermes),
+        # or into the project venv via pip (hermes-agent)
         if name == "hermes":
             home_bin = Path.home() / ".local" / "bin" / "hermes"
             win_bin = Path(os.environ.get("LOCALAPPDATA", "")) / "hermes" / "hermes.exe"
-            installed = installed or home_bin.exists() or win_bin.exists()
+            venv_bin = REPO_ROOT / ".venv" / ("Scripts" if os.name == "nt" else "bin") / binary
+            installed = installed or home_bin.exists() or win_bin.exists() or venv_bin.exists()
         # opencode can also live on the pendrive: CouncilKey-Os/tools/opencode
         if name == "opencode":
             stick_bin = AGENTS_DIR.parent / "opencode" / "node_modules" / ".bin" / ("opencode.cmd" if os.name == "nt" else "opencode")
