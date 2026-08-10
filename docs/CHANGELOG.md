@@ -1,5 +1,36 @@
 # Changelog
 
+## v1.19.0 (2026-08-10) - new CLI commands: demo, status, backup, journal, pendrive-check
+
+### Added
+- **`councilkey demo [--port] [--open]`** - try the whole council instantly with
+  NO API key: starts a local demo AI server + the dashboard, so the 3 agents
+  answer (with demo voices) and vote 3/3. Perfect first-run experience; real
+  answers come from `councilkey setup`.
+- **`councilkey status`** - one-screen overview: version, provider, agents
+  installed (with data location), storage sizes, journal entries, vault keys
+  and backups - plus quick-action hints.
+- **`councilkey backup list | create | restore <name>`** - manage tar.gz
+  backups of your council data (journal, memory, secrets) from the CLI.
+- **`councilkey journal list | stats [--limit N]`** - browse what the council
+  decided: prompts, answers, strategies used, consensus yes/no counts.
+- **`councilkey pendrive-check <path>`** - health-check a USB stick: required
+  launchers, portable venv, council-data size/parts, and a clear
+  READY / NOT READY verdict with the rebuild command.
+- **`councilkey ask --voice`** - speak the final answer (edge-tts, optional -
+  gracefully skipped if not installed; opens the audio file on Windows).
+- **`councilkey serve --open`** - open the dashboard in your browser
+  automatically.
+
+### Fixed
+- `councilkey demo` now applies the demo environment (demo server URL + key +
+  temp council home) to the dashboard process too - previously the dashboard
+  started against the real COUNCIL_HOME and could fail on unwritable paths.
+
+### Verified
+- Demo mode end-to-end: `councilkey demo` -> dashboard answers 3/3 with no
+  API key. All new commands tested (129 tests passing, ruff clean).
+
 ## v1.18.0 (2026-08-07) - OpenCode joins the council (works with OpenRouter)
 
 ### Changed

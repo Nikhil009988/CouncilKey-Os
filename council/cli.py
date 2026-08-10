@@ -175,13 +175,21 @@ def cmd_storage(dry_run: bool) -> int:
     return 0
 
 
-def cmd_serve(host: str, port: int) -> int:
+def cmd_serve(host: str, port: int, open_browser: bool = False) -> int:
     import uvicorn
 
     os.environ.setdefault("COUNCIL_HOME", "/var/lib/council")
     from council.orchestrator.main import app
 
+    if open_browser:
+        import threading
+        import webbrowser
+
+        url = f"http://localhost:{port}"
+        print(f"  opening your browser at {url} ...")
+        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
     uvicorn.run(app, host=host, port=port)
+    return 0
     return 0
 
 
@@ -489,6 +497,7 @@ def cmd_ask(
     decompose: bool = False,
     debate: bool = False,
     rounds: int = 3,
+    voice: bool = False,
 ) -> int:
     """Ask the council - ALL THREE agents at once, then the vote.
 
@@ -498,6 +507,7 @@ def cmd_ask(
       councilkey ask "..." --alone hermes          # single agent
       councilkey ask "..." --decompose             # split into subtasks
       councilkey ask "..." --debate --rounds 3     # iterative debate
+      councilkey ask "..." --voice                 # also speak the answer
     """
     import asyncio
 
@@ -534,6 +544,293 @@ def cmd_ask(
         print(f"   consensus: {mark} {approve}/{total}")
     print()
     print(result.get("final", ""))
+    if voice:
+        _speak(result.get("final", ""))
+    return 0
+
+
+def _speak(text: str) -> None:
+    """Best-effort TTS of the final answer (Windows: also opens the file)."""
+    text = (text or "").strip()
+    if not text:
+        return
+    try:
+        from council.voice.chat import chat as vc
+
+        res = vc.tts(text, provider="edge")
+        if res.get("ok") and res.get("file"):
+            print(f"\n🔊 spoken answer saved: {res['file']}")
+            if os.name == "nt" and hasattr(os, "startfile"):
+                try:
+                    os.startfile(res["file"])  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+        else:
+            print(f"\n🔇 could not synthesize speech: {res.get('error', 'unknown')}")
+    except Exception as exc:
+        print(f"\n🔇 voice skipped ({exc}) - install with: pip install edge-tts")
+
+
+def cmd_demo(port: int = 8443, open_browser: bool = False) -> int:
+    """Run the council in DEMO mode - no API key needed.
+
+    Starts a local demo AI server (deterministic replies) and the dashboard,
+    so you can try the 3-agent council immediately. For real answers run:
+      councilkey setup   (paste your API key, stored encrypted)
+      councilkey serve
+    """
+    import subprocess as sp
+    import tempfile
+    import time
+
+    import httpx
+
+    demo_script = ROOT / "scripts" / "dev" / "llm-demo-server.py"
+    if not demo_script.exists():
+        print("❌ demo server script missing - reinstall the project:  pip install -e .")
+        return 1
+
+    demo_port = int(os.environ.get("COUNCIL_DEMO_PORT", "11434"))
+    print("== CouncilKey-Os DEMO mode ==")
+    print(f"  starting the demo AI server on port {demo_port} (no API key needed)...")
+
+    demo_home = Path(tempfile.mkdtemp(prefix="council-demo-"))
+    # the dashboard runs in THIS process - the demo env must apply here too
+    os.environ["OPENAI_BASE_URL"] = f"http://127.0.0.1:{demo_port}/v1"
+    os.environ["OPENAI_API_KEY"] = "demo-key"
+    os.environ["COUNCIL_HOME"] = str(demo_home)
+
+    proc = sp.Popen([sys.executable, str(demo_script), str(demo_port)], env=os.environ.copy())
+    try:
+        deadline = time.time() + 20
+        ok = False
+        while time.time() < deadline:
+            try:
+                r = httpx.get(f"http://127.0.0.1:{demo_port}/v1/models", timeout=1.0)
+                if r.status_code == 200:
+                    ok = True
+                    break
+            except Exception:
+                time.sleep(0.3)
+        if not ok:
+            print("❌ demo AI server did not start. Port busy? Set COUNCIL_DEMO_PORT=11435")
+            return 1
+        print("  ✅ demo AI server is up")
+        print("  starting the dashboard - the 3 agents answer with demo voices.")
+        print("  NOTE: DEMO replies are simulated. For real answers:")
+        print("        councilkey setup   (paste your API key, stored encrypted)")
+        print()
+        return cmd_serve(host=os.environ.get("COUNCIL_HOST", "0.0.0.0"), port=port, open_browser=open_browser)
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except Exception:
+            proc.kill()
+        try:
+            import shutil
+
+            shutil.rmtree(demo_home, ignore_errors=True)
+        except Exception:
+            pass
+
+
+def cmd_status() -> int:
+    """One-screen overview: version, provider, agents, storage, journal."""
+    from council.agents.installer import status as agents_status
+    from council.backup.manager import list_backups
+    from council.journal.analyzer import history as journal_history
+    from council.llm.provider import active_provider
+    from council.secrets.vault import vault_status
+
+    print("============================================================")
+    print(f" CouncilKey-Os {cmd_version()}")
+    print("============================================================")
+
+    # provider
+    provider = active_provider()
+    print(f"\nmodel provider : {provider or 'none (run: councilkey setup)'}")
+
+    # agents
+    data = agents_status()
+    installed = [n for n, i in data.items() if i["state"] == "installed"]
+    print(f"agents         : {len(installed)}/{len(data)} installed"
+          + (f" ({', '.join(sorted(installed))})" if installed else ""))
+    for name, info in data.items():
+        if info["state"] != "installed":
+            continue
+        stick = " ✔ stick" if info.get("on_stick") else ""
+        print(f"    {name:<10} {info['runtime'][:44]}{stick}")
+
+    # storage
+    try:
+        from council.storage.optimizer import audit
+
+        report = audit()
+        keep = report.get("keep", {})
+        cache = report.get("cache", {})
+        total_keep = sum(v.get("size", 0) for v in keep.values()) if isinstance(keep, dict) else 0
+        total_cache = sum(v.get("size", 0) for v in cache.values()) if isinstance(cache, dict) else 0
+        print(f"\nstorage        : keep {_human_bytes(total_keep)} | cache {_human_bytes(total_cache)}"
+              " (run 'councilkey storage' to clean)")
+    except Exception:
+        pass
+
+    # journal
+    try:
+        entries = journal_history(limit=5)
+        print(f"journal        : {len(entries)} recent entries"
+              + (f" - last: {entries[0]['file']}" if entries else ""))
+    except Exception:
+        pass
+
+    # vault + backups
+    try:
+        vs = vault_status()
+        print(f"vault          : {vs.get('entries', 0)} keys stored (encrypted, {vs.get('backend', '?')})")
+    except Exception:
+        pass
+    try:
+        backups = list_backups().get("backups", [])
+        print(f"backups        : {len(backups)} available (run 'councilkey backup create')")
+    except Exception:
+        pass
+
+    print("\nquick actions:")
+    print("  councilkey ask \"your question\"   # 3 agents + vote")
+    print("  councilkey serve                 # dashboard")
+    print("  councilkey demo                  # try without an API key")
+    print("  councilkey setup                 # add/change your API key")
+    print("  councilkey doctor                # full health check")
+    return 0
+
+
+def _human_bytes(n: int) -> str:
+    n = int(n or 0)
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024 or unit == "GB":
+            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+        n /= 1024
+    return f"{n:.1f} GB"
+
+
+def cmd_backup(action: str, name: str | None = None) -> int:
+    """Create / list / restore encrypted-data backups."""
+    from council.backup.manager import create_backup, list_backups, restore_backup
+
+    if action == "create":
+        res = create_backup()
+        if res.get("ok"):
+            print(f"✅ backup created: {res.get('path')} ({_human_bytes(res.get('size', 0))})")
+            return 0
+        print(f"❌ backup failed: {res.get('error', 'unknown')}")
+        return 1
+    if action == "list":
+        backups = list_backups().get("backups", [])
+        if not backups:
+            print("(no backups yet - run: councilkey backup create)")
+            return 0
+        for b in backups:
+            print(f"  {b}")
+        return 0
+    if action == "restore":
+        if not name:
+            print("usage: councilkey backup restore <name>   (see 'councilkey backup list')", file=sys.stderr)
+            return 2
+        res = restore_backup(name)
+        if res.get("ok"):
+            print(f"✅ restored from {name}")
+            return 0
+        print(f"❌ restore failed: {res.get('error', 'unknown')}", file=sys.stderr)
+        return 1
+    print(f"unknown backup action {action!r}", file=sys.stderr)
+    return 2
+
+
+def cmd_journal(action: str, limit: int) -> int:
+    """Browse the council journal (what the council decided, and when)."""
+    from council.journal.analyzer import analyze, history
+
+    if action == "stats":
+        stats = analyze()
+        total = stats.get("total_entries", 0)
+        print(f"journal entries : {total}")
+        strategies = stats.get("strategies", {})
+        if strategies:
+            print("strategies      : " + ", ".join(f"{k} x{v}" for k, v in strategies.items()))
+        best = stats.get("best_agents", {})
+        if best:
+            print("best agents     : " + ", ".join(f"{k} x{v}" for k, v in best.items()))
+        print(f"consensus       : {stats.get('consensus_reached', 0)} yes / {stats.get('consensus_missed', 0)} no")
+        return 0
+    # action == "list"
+    entries = history(limit)
+    if not entries:
+        print("(journal is empty - ask the council something first: councilkey ask \"...\")")
+        return 0
+    for e in entries:
+        ts = e.get("timestamp", "?")
+        if isinstance(ts, list):
+            ts = "-".join(str(t) for t in ts)
+        print(f"\n[{ts}] {e.get('file')}")
+        print(f"  Q: {e.get('prompt', '')}")
+        final = e.get("final", "")
+        print(f"  A: {final[:120]}{'...' if len(final) > 120 else ''}")
+    return 0
+
+
+def cmd_pendrive_check(path: str) -> int:
+    """Health-check a CouncilKey-Os pendrive: files, venv, data, version."""
+    p = Path(path)
+    if not p.is_dir():
+        print(f"❌ {path} is not a directory - plug in the pendrive first.", file=sys.stderr)
+        return 1
+
+    required = [
+        "START.bat", "AGENTS.bat", "PENDRIVE-README.txt", "autorun.inf",
+        "RUN-OPENCLAW.bat", "RUN-HERMES.bat", "RUN-OPENCODE.bat",
+        "RUN-CREWAI.bat", "RUN-AIDER.bat",
+        "START-SESSION.bat", "END-SESSION.bat",
+    ]
+    missing = [f for f in required if not (p / f).exists()]
+
+    stick_venv = p / "CouncilKey-Os" / ".venv"
+    venv_py = stick_venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    if not venv_py.exists():
+        missing.append("CouncilKey-Os/.venv (portable python)")
+
+    data_dir = p / "council-data"
+    data_size = 0
+    data_parts: list[str] = []
+    if data_dir.is_dir():
+        for child in sorted(data_dir.iterdir()):
+            if child.is_dir():
+                data_parts.append(child.name)
+                for f in child.rglob("*"):
+                    if f.is_file():
+                        try:
+                            data_size += f.stat().st_size
+                        except OSError:
+                            pass
+    else:
+        missing.append("council-data (data dir)")
+
+    print("==============================================")
+    print(f" CouncilKey-Os pendrive check: {path}")
+    print("==============================================")
+    for f in required:
+        mark = "✅" if (p / f).exists() else "❌"
+        print(f"  {mark} {f}")
+    print(f"  {'✅' if venv_py.exists() else '❌'} CouncilKey-Os/.venv (portable python)")
+    if data_dir.is_dir():
+        print(f"  ✅ council-data/  ({_human_bytes(data_size)}): {', '.join(data_parts) if data_parts else 'empty'}")
+    else:
+        print("  ❌ council-data/")
+    if missing:
+        print("\n❌ NOT READY - missing:", ", ".join(missing))
+        print("   rebuild the stick:  councilkey pendrive <path>   (or pendrive-setup.ps1)")
+        return 1
+    print("\n✅ Pendrive ready - plug it into any PC and double-click START.bat")
     return 0
 
 
@@ -545,6 +842,13 @@ def main(argv: list[str] | None = None) -> None:
     p_serve = sub.add_parser("serve", help="run the dashboard + API server")
     p_serve.add_argument("--host", default=os.environ.get("COUNCIL_HOST", "0.0.0.0"))
     p_serve.add_argument("--port", type=int, default=int(os.environ.get("COUNCIL_PORT", "8443")))
+    p_serve.add_argument("--open", action="store_true", help="open the browser automatically")
+
+    p_demo = sub.add_parser("demo", help="try the council NOW - no API key needed (demo voices)")
+    p_demo.add_argument("--port", type=int, default=int(os.environ.get("COUNCIL_PORT", "8443")))
+    p_demo.add_argument("--open", action="store_true", help="open the browser automatically")
+
+    sub.add_parser("status", help="one-screen overview of the whole council")
 
     sub.add_parser("doctor", help="environment health check")
     sub.add_parser("update", help="pull the latest code + reinstall (git pull)")
@@ -576,6 +880,7 @@ def main(argv: list[str] | None = None) -> None:
     p_ask.add_argument("--decompose", action="store_true", help="split into role-based subtasks")
     p_ask.add_argument("--debate", action="store_true", help="iterative multi-round debate")
     p_ask.add_argument("--rounds", type=int, default=3, help="debate rounds (default 3)")
+    p_ask.add_argument("--voice", action="store_true", help="also speak the final answer (edge-tts)")
 
     p_pendrive = sub.add_parser("pendrive", help="one-command setup of everything onto a USB stick")
     p_pendrive.add_argument("path", help="mount point of the pendrive (e.g. /media/USB)")
@@ -593,6 +898,17 @@ def main(argv: list[str] | None = None) -> None:
     p_setup.add_argument("--skip-tests", action="store_true", help="don't run pytest at the end")
     p_setup.add_argument("--skip-verify", action="store_true", help="don't run the council verification at the end")
 
+    p_backup = sub.add_parser("backup", help="create/list/restore backups of your council data")
+    p_backup.add_argument("action", nargs="?", default="list", choices=["list", "create", "restore"])
+    p_backup.add_argument("name", nargs="?", help="backup name (for restore)")
+
+    p_journal = sub.add_parser("journal", help="browse the council journal (what was decided)")
+    p_journal.add_argument("action", nargs="?", default="list", choices=["list", "stats"])
+    p_journal.add_argument("--limit", type=int, default=10, help="how many entries to show (default 10)")
+
+    p_pcheck = sub.add_parser("pendrive-check", help="health-check a CouncilKey-Os pendrive")
+    p_pcheck.add_argument("path", help="mount point of the pendrive (e.g. E:\\ or /media/USB)")
+
     args = parser.parse_args(argv)
 
     if args.version:
@@ -600,7 +916,17 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     if args.command == "serve":
-        sys.exit(cmd_serve(args.host, args.port))
+        sys.exit(cmd_serve(args.host, args.port, open_browser=args.open))
+    elif args.command == "demo":
+        sys.exit(cmd_demo(port=args.port, open_browser=args.open))
+    elif args.command == "status":
+        sys.exit(cmd_status())
+    elif args.command == "backup":
+        sys.exit(cmd_backup(args.action, args.name))
+    elif args.command == "journal":
+        sys.exit(cmd_journal(args.action, args.limit))
+    elif args.command == "pendrive-check":
+        sys.exit(cmd_pendrive_check(args.path))
     elif args.command == "ask":
         sys.exit(cmd_ask(
             prompt=args.prompt,
@@ -610,6 +936,7 @@ def main(argv: list[str] | None = None) -> None:
             decompose=args.decompose,
             debate=args.debate,
             rounds=args.rounds,
+            voice=args.voice,
         ))
     elif args.command == "doctor":
         sys.exit(cmd_doctor())

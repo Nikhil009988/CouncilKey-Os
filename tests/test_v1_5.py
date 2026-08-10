@@ -824,3 +824,83 @@ def test_agents_status_shows_data_location(monkeypatch):
     data = status(["openclaw", "opencode"])
     assert data["openclaw"]["on_stick"] is True
     assert data["opencode"]["on_stick"] is True
+
+
+# ------------------------------------------------------------- v1.19 CLI commands
+def test_cli_status_command():
+    """councilkey status - one-screen overview, exit 0."""
+    import subprocess
+
+    r = subprocess.run([str(cli_path()), "status"], capture_output=True, text=True, timeout=90)
+    assert r.returncode == 0, r.stdout[-300:]
+    assert "CouncilKey-Os" in r.stdout
+    assert "model provider" in r.stdout
+    assert "agents" in r.stdout
+
+
+def test_cli_backup_create_and_list():
+    """councilkey backup create + list work and exit 0."""
+    import subprocess
+
+    r = subprocess.run([str(cli_path()), "backup", "create"], capture_output=True, text=True, timeout=90)
+    assert r.returncode == 0, r.stdout[-300:]
+    assert "backup created" in r.stdout
+
+    r = subprocess.run([str(cli_path()), "backup", "list"], capture_output=True, text=True, timeout=90)
+    assert r.returncode == 0
+    assert "council-" in r.stdout
+
+
+def test_cli_journal_commands():
+    """councilkey journal list + stats work and exit 0 (empty journal ok)."""
+    import subprocess
+
+    for args in (["journal", "list"], ["journal", "stats"]):
+        r = subprocess.run([str(cli_path()), *args], capture_output=True, text=True, timeout=90)
+        assert r.returncode == 0, r.stdout[-300:]
+
+
+def test_cli_pendrive_check_missing_dir():
+    """pendrive-check on a non-stick dir reports NOT READY and exits 1."""
+    import subprocess
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        r = subprocess.run([str(cli_path()), "pendrive-check", tmp], capture_output=True, text=True, timeout=90)
+        assert r.returncode == 1
+        assert "NOT READY" in r.stdout
+        assert "START.bat" in r.stdout
+
+
+def test_cli_pendrive_check_ready_stick():
+    """pendrive-check on a complete stick says READY and exits 0."""
+    import subprocess
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp)
+        for name in ("START.bat", "AGENTS.bat", "PENDRIVE-README.txt", "autorun.inf",
+                     "RUN-OPENCLAW.bat", "RUN-HERMES.bat", "RUN-OPENCODE.bat",
+                     "RUN-CREWAI.bat", "RUN-AIDER.bat", "START-SESSION.bat", "END-SESSION.bat"):
+            (p / name).write_text("", encoding="utf-8")
+        (p / "CouncilKey-Os" / ".venv" / "bin").mkdir(parents=True)
+        (p / "CouncilKey-Os" / ".venv" / "bin" / "python").write_text("", encoding="utf-8")
+        (p / "council-data").mkdir()
+        r = subprocess.run([str(cli_path()), "pendrive-check", tmp], capture_output=True, text=True, timeout=90)
+        assert r.returncode == 0, r.stdout[-300:]
+        assert "Pendrive ready" in r.stdout
+
+
+def test_cli_new_commands_in_help():
+    """demo / status / backup / journal / pendrive-check / serve --open / ask --voice
+    are all registered subcommands."""
+    import subprocess
+
+    r = subprocess.run([str(cli_path()), "--help"], capture_output=True, text=True, timeout=60)
+    for token in ("demo", "status", "backup", "journal", "pendrive-check"):
+        assert token in r.stdout, token
+    r = subprocess.run([str(cli_path()), "ask", "--help"], capture_output=True, text=True, timeout=60)
+    assert "--voice" in r.stdout
+    r = subprocess.run([str(cli_path()), "serve", "--help"], capture_output=True, text=True, timeout=60)
+    assert "--open" in r.stdout
