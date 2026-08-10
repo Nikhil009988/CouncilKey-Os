@@ -148,6 +148,11 @@ Ends with the **total time**: `✅ Setup finished in 6m 12s`.
 
 Flags for automation: `councilkey setup --provider openai --api-key sk-... --no-agents --skip-tests`
 
+> **Want to see it before adding a key?** Run `councilkey demo` — it starts a
+> local demo AI server + the dashboard, and the 3 agents answer with demo
+> voices and vote 3/3. Zero setup, zero cost. Real answers start after
+> `councilkey setup`.
+
 ### How long does the full setup take?
 
 | Step | Typical time |
