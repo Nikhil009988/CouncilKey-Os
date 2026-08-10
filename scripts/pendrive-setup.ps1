@@ -33,6 +33,42 @@ Write-Host " CouncilKey-Os pendrive setup (Windows)"
 Write-Host " Target: $Path"
 Write-Host "=============================================="
 
+function Test-Net([string]$HostName) {
+  try {
+    $c = New-Object System.Net.Sockets.TcpClient
+    $t = $c.ConnectAsync($HostName, 443)
+    if ($t.Wait(3000) -and $c.Connected) { $c.Close(); return $true }
+  } catch {}
+  return $false
+}
+
+
+$Dest = Join-Path $Path "CouncilKey-Os"
+  $StickPip = Join-Path $Dest ".venv\Scripts\pip.exe"
+
+# ---- CHECK MODE: see everything first, install NOTHING ----
+if ($Check) {
+  Write-Host ""
+  Write-Host "  == Pre-install check (nothing installed) =="
+  Write-Host "  stick venv      : $(if (Test-Path $StickPip) { 'ready' } else { 'MISSING - run without -Check first to build' })"
+  Write-Host "  python (PC)     : $(if (Get-Command python -ErrorAction SilentlyContinue) { 'ok' } else { 'missing (install Python 3.11+)' })"
+  Write-Host "  npm (PC)        : $(if (Get-Command npm -ErrorAction SilentlyContinue) { 'ok' } else { 'missing (OpenClaw/OpenCode need it)' })"
+  Write-Host "  internet PyPI   : $(if (Test-Net 'pypi.org') { 'reachable' } else { 'NOT reachable - pip agents will fail' })"
+  Write-Host "  internet npmjs  : $(if (Test-Net 'registry.npmjs.org') { 'reachable' } else { 'NOT reachable - npm agents will fail' })"
+  if (Test-Path $StickPip) {
+    $have = @(& $StickPip list 2>$null | Select-String -Pattern 'hermes-agent|crewai|aider-chat' | ForEach-Object { $_.Line.Split(' ')[0] })
+    foreach ($n in @('openclaw', 'opencode')) {
+      if (Test-Path (Join-Path $Dest "tools\$n\node_modules\.bin")) { $have += $n }
+    }
+    Write-Host "  already on stick: $(if ($have) { $have -join ', ' } else { 'none yet' })"
+  }
+  Write-Host ""
+  Write-Host "  Choose what to install, then re-run:"
+  Write-Host "    .\scripts\pendrive-setup.ps1 -Path $Path -Agents 1,3,5   (or run without -Agents to pick interactively)"
+  return 0
+}
+
+
 # 1. copy the project (no git history / heavy junk)
 Write-Host ""
 Write-Host "[1/5] Copying CouncilKey-Os to the pendrive..."
@@ -102,49 +138,8 @@ endlocal
 "@ | Set-Content -Encoding ASCII (Join-Path $Path "START.bat")
 Write-Host "      ok"
 
-# 5. agents ON the stick - YOU CHOOSE what to install (nothing automatic)
-Write-Host "[5/7] Agents ONTO the stick (you choose - nothing is installed without asking)..."
-New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\agents") | Out-Null
-$StickPip = Join-Path $Dest ".venv\Scripts\pip.exe"
-$AgentNames = @('hermes', 'openclaw', 'opencode', 'crewai', 'aider')
-$AgentMap = @{
-  '1' = 'hermes'; '2' = 'openclaw'; '3' = 'opencode'; '4' = 'crewai'; '5' = 'aider'
-  'hermes' = 'hermes'; 'openclaw' = 'openclaw'; 'opencode' = 'opencode'
-  'crewai' = 'crewai'; 'aider' = 'aider'
-}
-
-function Test-Net([string]$HostName) {
-  try {
-    $c = New-Object System.Net.Sockets.TcpClient
-    $t = $c.ConnectAsync($HostName, 443)
-    if ($t.Wait(3000) -and $c.Connected) { $c.Close(); return $true }
-  } catch {}
-  return $false
-}
-
-# ---- CHECK MODE: see everything first, install NOTHING ----
-if ($Check) {
-  Write-Host ""
-  Write-Host "  == Pre-install check (nothing installed) =="
-  Write-Host "  stick venv      : $(if (Test-Path $StickPip) { 'ready' } else { 'MISSING - run without -Check first to build' })"
-  Write-Host "  python (PC)     : $(if (Get-Command python -ErrorAction SilentlyContinue) { 'ok' } else { 'missing (install Python 3.11+)' })"
-  Write-Host "  npm (PC)        : $(if (Get-Command npm -ErrorAction SilentlyContinue) { 'ok' } else { 'missing (OpenClaw/OpenCode need it)' })"
-  Write-Host "  internet PyPI   : $(if (Test-Net 'pypi.org') { 'reachable' } else { 'NOT reachable - pip agents will fail' })"
-  Write-Host "  internet npmjs  : $(if (Test-Net 'registry.npmjs.org') { 'reachable' } else { 'NOT reachable - npm agents will fail' })"
-  if (Test-Path $StickPip) {
-    $have = @(& $StickPip list 2>$null | Select-String -Pattern 'hermes-agent|crewai|aider-chat' | ForEach-Object { $_.Line.Split(' ')[0] })
-    foreach ($n in @('openclaw', 'opencode')) {
-      if (Test-Path (Join-Path $Dest "tools\$n\node_modules\.bin")) { $have += $n }
-    }
-    Write-Host "  already on stick: $(if ($have) { $have -join ', ' } else { 'none yet' })"
-  }
-  Write-Host ""
-  Write-Host "  Choose what to install, then re-run:"
-  Write-Host "    .\scripts\pendrive-setup.ps1 -Path $Path -Agents 1,3,5   (or run without -Agents to pick interactively)"
-  return 0
-}
-
 # ---- choose agents ----
+New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\agents") | Out-Null
 $Selected = @()
 if ($NoAgents) {
   Write-Host "      skipped agent installs (-NoAgents) - launchers are still written"
