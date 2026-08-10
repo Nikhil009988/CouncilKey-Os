@@ -1054,8 +1054,6 @@ def test_cli_which_shows_pc_vs_pendrive(tmp_path, monkeypatch):
     folder sits next to the install (stick layout), else PC copy."""
     import subprocess
 
-    from council.cli import ROOT as cli_root
-
     # 1. PC layout (normal) -> says PC copy + gives the pendrive steps
     r = subprocess.run([str(cli_path()), "which"], capture_output=True, text=True, timeout=60)
     assert r.returncode == 0
