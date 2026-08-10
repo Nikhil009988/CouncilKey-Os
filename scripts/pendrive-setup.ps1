@@ -29,7 +29,9 @@ if (-not (Test-Path $Path)) {
 }
 
 Write-Host "=============================================="
-Write-Host " CouncilKey-Os pendrive setup (Windows)"
+Write-Host " CouncilKey-Os pendrive setup v1.22.2"
+Write-Host "  - ASKS which agents to install (nothing automatic)"
+Write-Host "  - use -Check first to inspect everything"
 Write-Host " Target: $Path"
 Write-Host "=============================================="
 
@@ -179,7 +181,7 @@ if ($NoAgents) {
       if ('aider' -in $PipSel)  { $PipPkgs += 'aider-chat' }
       if (Test-Path $StickPip) {
         Write-Host "      installing $($PipPkgs -join ', ') into the stick venv (can take 5-15 min)..."
-        & $StickPip install --retries 10 --timeout 60 @PipPkgs | Out-Null
+        & $StickPip install --retries 20 --timeout 90 --prefer-binary @PipPkgs | Out-Null
         if ($LASTEXITCODE -eq 0) { Write-Host "      ok ($($PipSel -join ' + ') on the stick)" }
         else { Write-Host "      ⚠ pip install failed (network?) - re-run when internet is stable" }
       } else {

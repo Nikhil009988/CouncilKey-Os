@@ -55,7 +55,9 @@ if [ ! -d "$USB" ]; then
 fi
 
 echo "=============================================="
-echo " CouncilKey-Os pendrive setup"
+echo " CouncilKey-Os pendrive setup v1.22.2"
+echo "  - ASKS which agents to install (nothing automatic)"
+echo "  - use --check first to inspect everything"
 echo " Target: $USB"
 echo "=============================================="
 
@@ -404,7 +406,7 @@ else
     if [ -n "$pip_list" ]; then
       if [ -x "$PIP" ]; then
         echo "      installing:$pip_list into the stick venv (can take 5-15 min)..."
-        "$PIP" install --retries 10 --timeout 60 $pip_list 2>/dev/null && \
+        "$PIP" install --retries 20 --timeout 90 --prefer-binary $pip_list 2>/dev/null && \
           echo "      ok (pip agents on the stick)" || \
           echo "      ⚠ pip install failed (network?) - re-run when internet is stable"
       else
