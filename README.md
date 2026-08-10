@@ -162,15 +162,17 @@ You ask ──► 3 agents answer ──► council votes ──► journal + me
 ```
 councilkey demo [--port 8443] [--open]             try the council NOW - no API key (demo voices)
 councilkey serve [--host 0.0.0.0] [--port 8443] [--open]   start the dashboard + API
-councilkey status                                  one-screen overview (provider, agents, storage, journal)
-councilkey ask "..." [--strategy X] [--debate] [--decompose] [--alone A] [--voice]
+councilkey status [--json]                         one-screen overview (provider, agents, storage, journal)
+councilkey wiki [topic]                            quick-start guide right from the CLI
+councilkey ask "..." [--strategy X] [--debate] [--decompose] [--alone A] [--voice [VOICE]]
 councilkey setup [--provider X] [--api-key K] [--no-agents] [--skip-tests]
 councilkey agents status | install | start | env | configure | verify
 councilkey key list | show NAME                    encrypted vault (masked / raw for launchers)
-councilkey backup list | create | restore NAME     backups of your council data
-councilkey journal list | stats [--limit N]        browse the council journal
+councilkey backup list | create | restore NAME [--json]   backups of your council data
+councilkey journal list | stats [--limit N] [--json]      browse the council journal
+councilkey init <path>                             initialize an empty council data folder
 councilkey pendrive /media/USB [--wizard]          build a USB stick
-councilkey pendrive-check /media/USB               health-check a stick (files, venv, data, version)
+councilkey pendrive-check /media/USB [--json]      health-check a stick (files, venv, data, version)
 councilkey pendrive-push /media/USB [--data-only]   build stick AND copy this PC's data (keys/journal/memory)
 councilkey llm status | install | pull             optional local LLM (Ollama)
 councilkey doctor                                  environment health report

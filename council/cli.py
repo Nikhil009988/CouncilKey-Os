@@ -15,6 +15,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 from council import __version__
 
@@ -497,7 +498,7 @@ def cmd_ask(
     decompose: bool = False,
     debate: bool = False,
     rounds: int = 3,
-    voice: bool = False,
+    voice: str | None = None,
 ) -> int:
     """Ask the council - ALL THREE agents at once, then the vote.
 
@@ -508,6 +509,7 @@ def cmd_ask(
       councilkey ask "..." --decompose             # split into subtasks
       councilkey ask "..." --debate --rounds 3     # iterative debate
       councilkey ask "..." --voice                 # also speak the answer
+      councilkey ask "..." --voice en-US-JennyNeural   # pick the voice
     """
     import asyncio
 
@@ -545,19 +547,22 @@ def cmd_ask(
     print()
     print(result.get("final", ""))
     if voice:
-        _speak(result.get("final", ""))
+        _speak(result.get("final", ""), voice=voice if voice is not True else None)
     return 0
 
 
-def _speak(text: str) -> None:
-    """Best-effort TTS of the final answer (Windows: also opens the file)."""
+def _speak(text: str, voice: str | None = None) -> None:
+    """Best-effort TTS of the final answer (Windows: also opens the file).
+
+    `voice` picks a specific edge-tts voice (e.g. en-US-JennyNeural).
+    """
     text = (text or "").strip()
     if not text:
         return
     try:
         from council.voice.chat import chat as vc
 
-        res = vc.tts(text, provider="edge")
+        res = vc.tts(text, voice=voice, provider="edge")
         if res.get("ok") and res.get("file"):
             print(f"\n🔊 spoken answer saved: {res['file']}")
             if os.name == "nt" and hasattr(os, "startfile"):
@@ -635,34 +640,36 @@ def cmd_demo(port: int = 8443, open_browser: bool = False) -> int:
             pass
 
 
-def cmd_status() -> int:
-    """One-screen overview: version, provider, agents, storage, journal."""
+def cmd_status(json_out: bool = False) -> int:
+    """One-screen overview: version, provider, agents, storage, journal.
+
+    With --json, prints a machine-readable summary instead.
+    """
     from council.agents.installer import status as agents_status
     from council.backup.manager import list_backups
     from council.journal.analyzer import history as journal_history
     from council.llm.provider import active_provider
     from council.secrets.vault import vault_status
 
-    print("============================================================")
-    print(f" CouncilKey-Os {cmd_version()}")
-    print("============================================================")
-
-    # provider
-    provider = active_provider()
-    print(f"\nmodel provider : {provider or 'none (run: councilkey setup)'}")
-
-    # agents
     data = agents_status()
-    installed = [n for n, i in data.items() if i["state"] == "installed"]
-    print(f"agents         : {len(installed)}/{len(data)} installed"
-          + (f" ({', '.join(sorted(installed))})" if installed else ""))
-    for name, info in data.items():
-        if info["state"] != "installed":
-            continue
-        stick = " ✔ stick" if info.get("on_stick") else ""
-        print(f"    {name:<10} {info['runtime'][:44]}{stick}")
-
-    # storage
+    summary: dict[str, Any] = {
+        "version": cmd_version(),
+        "provider": active_provider(),
+        "agents": {
+            name: {
+                "state": info["state"],
+                "install": info["install"],
+                "runtime": info["runtime"],
+                "data": info.get("data"),
+                "on_stick": info.get("on_stick", False),
+            }
+            for name, info in data.items()
+        },
+        "storage": {},
+        "journal": {},
+        "vault": {},
+        "backups": [],
+    }
     try:
         from council.storage.optimizer import audit
 
@@ -671,30 +678,62 @@ def cmd_status() -> int:
         cache = report.get("cache", {})
         total_keep = sum(v.get("size", 0) for v in keep.values()) if isinstance(keep, dict) else 0
         total_cache = sum(v.get("size", 0) for v in cache.values()) if isinstance(cache, dict) else 0
-        print(f"\nstorage        : keep {_human_bytes(total_keep)} | cache {_human_bytes(total_cache)}"
-              " (run 'councilkey storage' to clean)")
+        summary["storage"] = {"keep_bytes": total_keep, "cache_bytes": total_cache}
     except Exception:
         pass
-
-    # journal
     try:
         entries = journal_history(limit=5)
-        print(f"journal        : {len(entries)} recent entries"
-              + (f" - last: {entries[0]['file']}" if entries else ""))
+        summary["journal"] = {"recent": len(entries), "last": entries[0]["file"] if entries else None}
+    except Exception:
+        pass
+    try:
+        vs = vault_status()
+        summary["vault"] = {"keys": vs.get("entries", 0), "backend": vs.get("backend")}
+    except Exception:
+        pass
+    try:
+        summary["backups"] = list_backups().get("backups", [])
     except Exception:
         pass
 
+    if json_out:
+        print(json.dumps(summary, indent=2, default=str))
+        return 0
+
+    print("============================================================")
+    print(f" CouncilKey-Os {cmd_version()}")
+    print("============================================================")
+
+    # provider
+    provider = summary["provider"]
+    print(f"\nmodel provider : {provider or 'none (run: councilkey setup)'}")
+
+    # agents
+    installed = [n for n, i in summary["agents"].items() if i["state"] == "installed"]
+    print(f"agents         : {len(installed)}/{len(summary['agents'])} installed"
+          + (f" ({', '.join(sorted(installed))})" if installed else ""))
+    for name, info in summary["agents"].items():
+        if info["state"] != "installed":
+            continue
+        stick = " ✔ stick" if info.get("on_stick") else ""
+        print(f"    {name:<10} {info['runtime'][:44]}{stick}")
+
+    # storage
+    if summary["storage"]:
+        print(f"\nstorage        : keep {_human_bytes(summary['storage']['keep_bytes'])}"
+              f" | cache {_human_bytes(summary['storage']['cache_bytes'])}"
+              " (run 'councilkey storage' to clean)")
+
+    # journal
+    if summary["journal"].get("recent"):
+        print(f"journal        : {summary['journal']['recent']} recent entries"
+              f" - last: {summary['journal']['last']}")
+
     # vault + backups
-    try:
-        vs = vault_status()
-        print(f"vault          : {vs.get('entries', 0)} keys stored (encrypted, {vs.get('backend', '?')})")
-    except Exception:
-        pass
-    try:
-        backups = list_backups().get("backups", [])
-        print(f"backups        : {len(backups)} available (run 'councilkey backup create')")
-    except Exception:
-        pass
+    if summary["vault"]:
+        print(f"vault          : {summary['vault']['keys']} keys stored"
+              f" (encrypted, {summary['vault']['backend']})")
+    print(f"backups        : {len(summary['backups'])} available (run 'councilkey backup create')")
 
     print("\nquick actions:")
     print("  councilkey ask \"your question\"   # 3 agents + vote")
@@ -714,12 +753,15 @@ def _human_bytes(n: int) -> str:
     return f"{n:.1f} GB"
 
 
-def cmd_backup(action: str, name: str | None = None) -> int:
+def cmd_backup(action: str, name: str | None = None, json_out: bool = False) -> int:
     """Create / list / restore encrypted-data backups."""
     from council.backup.manager import create_backup, list_backups, restore_backup
 
     if action == "create":
         res = create_backup()
+        if json_out:
+            print(json.dumps(res, indent=2, default=str))
+            return 0 if res.get("ok") else 1
         if res.get("ok"):
             print(f"✅ backup created: {res.get('path')} ({_human_bytes(res.get('size', 0))})")
             return 0
@@ -727,6 +769,9 @@ def cmd_backup(action: str, name: str | None = None) -> int:
         return 1
     if action == "list":
         backups = list_backups().get("backups", [])
+        if json_out:
+            print(json.dumps({"backups": backups}, indent=2))
+            return 0
         if not backups:
             print("(no backups yet - run: councilkey backup create)")
             return 0
@@ -747,12 +792,15 @@ def cmd_backup(action: str, name: str | None = None) -> int:
     return 2
 
 
-def cmd_journal(action: str, limit: int) -> int:
+def cmd_journal(action: str, limit: int, json_out: bool = False) -> int:
     """Browse the council journal (what the council decided, and when)."""
     from council.journal.analyzer import analyze, history
 
     if action == "stats":
         stats = analyze()
+        if json_out:
+            print(json.dumps(stats, indent=2, default=str))
+            return 0
         total = stats.get("total_entries", 0)
         print(f"journal entries : {total}")
         strategies = stats.get("strategies", {})
@@ -765,6 +813,9 @@ def cmd_journal(action: str, limit: int) -> int:
         return 0
     # action == "list"
     entries = history(limit)
+    if json_out:
+        print(json.dumps({"entries": entries}, indent=2, default=str))
+        return 0
     if not entries:
         print("(journal is empty - ask the council something first: councilkey ask \"...\")")
         return 0
@@ -779,10 +830,13 @@ def cmd_journal(action: str, limit: int) -> int:
     return 0
 
 
-def cmd_pendrive_check(path: str) -> int:
+def cmd_pendrive_check(path: str, json_out: bool = False) -> int:
     """Health-check a CouncilKey-Os pendrive: files, venv, data, version."""
     p = Path(path)
     if not p.is_dir():
+        if json_out:
+            print(json.dumps({"ok": False, "error": "not a directory"}))
+            return 1
         print(f"❌ {path} is not a directory - plug in the pendrive first.", file=sys.stderr)
         return 1
 
@@ -815,6 +869,18 @@ def cmd_pendrive_check(path: str) -> int:
     else:
         missing.append("council-data (data dir)")
 
+    result = {
+        "ok": not missing,
+        "path": str(p),
+        "missing": missing,
+        "launchers": {f: (p / f).exists() for f in required},
+        "venv": venv_py.exists(),
+        "data": {"size_bytes": data_size, "parts": data_parts},
+    }
+    if json_out:
+        print(json.dumps(result, indent=2))
+        return 0 if result["ok"] else 1
+
     print("==============================================")
     print(f" CouncilKey-Os pendrive check: {path}")
     print("==============================================")
@@ -834,6 +900,136 @@ def cmd_pendrive_check(path: str) -> int:
     return 0
 
 
+QUICKSTART = """\
+CouncilKey-Os - quick start
+===========================
+1. TRY IT (no key needed):
+     councilkey demo                -> dashboard + 3 demo agents, vote 3/3
+
+2. ADD YOUR API KEY (one key powers the whole council):
+     councilkey setup               -> wizard: OpenAI / Anthropic / Gemini / OpenRouter
+   the key is stored ENCRYPTED in the vault (councilkey key list)
+
+3. ASK THE COUNCIL:
+     councilkey ask "your question"             -> 3 agents + vote
+     councilkey ask "..." --alone hermes        -> one agent
+     councilkey ask "..." --debate --rounds 3   -> debate then vote
+     councilkey ask "..." --voice               -> also speak the answer
+
+4. DASHBOARD:
+     councilkey serve [--open]      -> http://localhost:8443
+
+5. USB PENDRIVE (the main event):
+     councilkey pendrive E:\\ --wizard      -> build the whole stick
+     councilkey pendrive-check E:\\         -> is the stick ready?
+     councilkey pendrive-push E:\\          -> mirror your keys/memory onto it
+   plug into any PC -> double-click START.bat (or AGENTS.bat for a menu)
+
+6. EVERYTHING ELSE:
+     councilkey status             one-screen overview
+     councilkey journal list       what the council decided
+     councilkey backup create      backup your data
+     councilkey agents verify      real check of all agents
+     councilkey update             pull the latest version
+
+Need help on any step?  councilkey doctor   (health check + hints)
+"""
+
+
+def cmd_wiki(topic: str | None = None) -> int:
+    """Print the quick-start guide (or a specific topic) from the CLI."""
+    if topic:
+        topics = {
+            "setup": "councilkey setup    # wizard: provider + encrypted API key\n"
+                     "  --provider openai|anthropic|gemini|openrouter|none\n"
+                     "  --api-key sk-...   # non-interactive\n"
+                     "  --no-agents --skip-tests --skip-verify\n",
+            "pendrive": "councilkey pendrive E:\\ --wizard     # build the stick (Windows)\n"
+                        "councilkey pendrive /media/USB --wizard   # Linux\n"
+                        "councilkey pendrive-push E:\\        # mirror keys/journal/memory\n"
+                        "councilkey pendrive-check E:\\       # health-check the stick\n"
+                        "On the stick: START.bat (dashboard) / AGENTS.bat (menu)\n"
+                        "Session mode: START-SESSION.bat clones to PC, END-SESSION.bat wipes it.\n",
+            "agents": "councilkey agents status     # 5 agents + where their data lives\n"
+                      "councilkey agents install    # install all (or: install opencode)\n"
+                      "councilkey agents configure opencode   # point it at your API key\n"
+                      "councilkey agents verify     # real smoke test (roles + binaries)\n"
+                      "councilkey agents env        # export keys for external agents\n",
+            "ask": "councilkey ask \"...\"                  # together (majority)\n"
+                   "  --strategy weighted|llm_judge|hermes_decides\n"
+                   "  --alone hermes|openclaw|opencode\n"
+                   "  --decompose   # split into role subtasks\n"
+                   "  --debate --rounds N\n"
+                   "  --voice       # speak the final answer\n",
+            "backup": "councilkey backup create            # tar.gz of journal/memory/secrets\n"
+                      "councilkey backup list\n"
+                      "councilkey backup restore <name>\n",
+            "journal": "councilkey journal list [--limit N]   # recent decisions\n"
+                       "councilkey journal stats              # strategies + consensus counts\n",
+            "update": "councilkey update   # git pull + reinstall\n"
+                      "then:  git checkout main && git pull   # if on a leftover branch\n",
+        }
+        if topic not in topics:
+            print(f"unknown topic {topic!r} - try: {', '.join(sorted(topics))}", file=sys.stderr)
+            return 2
+        print(topics[topic])
+        return 0
+    print(QUICKSTART)
+    return 0
+
+
+def cmd_init(path: str) -> int:
+    """Initialize an empty council home / data folder on any path.
+
+    Creates the full council-data structure (journal, secrets, memory,
+    agent workspaces, backups) so you can point COUNCIL_HOME at it and
+    start fresh - or prepare an empty stick for 'councilkey pendrive-push'.
+    """
+    p = Path(path).expanduser()
+    if p.exists() and not p.is_dir():
+        print(f"❌ {path} exists and is not a directory", file=sys.stderr)
+        return 1
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        print(f"❌ cannot create {path}: {exc}", file=sys.stderr)
+        return 1
+
+    # canonical storage layout (same as the app creates on startup):
+    # journal/secrets/shared/council + per-agent keep/cache + backups
+    for rel in (
+        "journal", "secrets", "shared", "council", "backups",
+        "hermes/keep", "hermes/cache",
+        "openclaw/keep", "openclaw/cache",
+        "opencode/keep", "opencode/cache",
+        "crewai/keep", "aider/keep",
+    ):
+        try:
+            (p / rel).mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            print(f"⚠ could not create {rel}: {exc}", file=sys.stderr)
+
+    readme = p / "README.txt"
+    if not readme.exists():
+        readme.write_text(
+            "CouncilKey-Os data folder\n"
+            "=========================\n"
+            "This folder holds the council's data: journal, memory, API keys\n"
+            "(encrypted), agent workspaces and backups.\n\n"
+            "Point the council at it with:\n"
+            "  set COUNCIL_HOME=<this path>     (Windows)\n"
+            "  export COUNCIL_HOME=<this path>  (Linux/macOS)\n\n"
+            "Then run: councilkey setup   and   councilkey serve\n",
+            encoding="utf-8",
+        )
+
+    dirs = sorted(d.name for d in p.iterdir() if d.is_dir()) if p.is_dir() else []
+    print(f"✅ initialized council home at {p}")
+    print(f"   folders: {', '.join(dirs) if dirs else '(empty)'}")
+    print("   point COUNCIL_HOME here, then run: councilkey setup")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="councilkey", description="CouncilKey-Os control tool")
     parser.add_argument("--version", action="store_true", help="print version and exit")
@@ -848,7 +1044,14 @@ def main(argv: list[str] | None = None) -> None:
     p_demo.add_argument("--port", type=int, default=int(os.environ.get("COUNCIL_PORT", "8443")))
     p_demo.add_argument("--open", action="store_true", help="open the browser automatically")
 
-    sub.add_parser("status", help="one-screen overview of the whole council")
+    p_status = sub.add_parser("status", help="one-screen overview of the whole council")
+    p_status.add_argument("--json", action="store_true", help="machine-readable output")
+
+    p_wiki = sub.add_parser("wiki", help="print the quick-start guide (or a topic)")
+    p_wiki.add_argument("topic", nargs="?", help="setup|pendrive|agents|ask|backup|journal|update")
+
+    p_init = sub.add_parser("init", help="initialize an empty council data folder on any path")
+    p_init.add_argument("path", help="folder to initialize (e.g. E:\\council-data or ~/council)")
 
     sub.add_parser("doctor", help="environment health check")
     sub.add_parser("update", help="pull the latest code + reinstall (git pull)")
@@ -880,7 +1083,8 @@ def main(argv: list[str] | None = None) -> None:
     p_ask.add_argument("--decompose", action="store_true", help="split into role-based subtasks")
     p_ask.add_argument("--debate", action="store_true", help="iterative multi-round debate")
     p_ask.add_argument("--rounds", type=int, default=3, help="debate rounds (default 3)")
-    p_ask.add_argument("--voice", action="store_true", help="also speak the final answer (edge-tts)")
+    p_ask.add_argument("--voice", nargs="?", const=True, metavar="VOICE",
+                       help="also speak the final answer (edge-tts); optionally pick a voice, e.g. en-US-JennyNeural")
 
     p_pendrive = sub.add_parser("pendrive", help="one-command setup of everything onto a USB stick")
     p_pendrive.add_argument("path", help="mount point of the pendrive (e.g. /media/USB)")
@@ -901,13 +1105,16 @@ def main(argv: list[str] | None = None) -> None:
     p_backup = sub.add_parser("backup", help="create/list/restore backups of your council data")
     p_backup.add_argument("action", nargs="?", default="list", choices=["list", "create", "restore"])
     p_backup.add_argument("name", nargs="?", help="backup name (for restore)")
+    p_backup.add_argument("--json", action="store_true", help="machine-readable output")
 
     p_journal = sub.add_parser("journal", help="browse the council journal (what was decided)")
     p_journal.add_argument("action", nargs="?", default="list", choices=["list", "stats"])
     p_journal.add_argument("--limit", type=int, default=10, help="how many entries to show (default 10)")
+    p_journal.add_argument("--json", action="store_true", help="machine-readable output")
 
     p_pcheck = sub.add_parser("pendrive-check", help="health-check a CouncilKey-Os pendrive")
     p_pcheck.add_argument("path", help="mount point of the pendrive (e.g. E:\\ or /media/USB)")
+    p_pcheck.add_argument("--json", action="store_true", help="machine-readable output")
 
     args = parser.parse_args(argv)
 
@@ -920,13 +1127,17 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "demo":
         sys.exit(cmd_demo(port=args.port, open_browser=args.open))
     elif args.command == "status":
-        sys.exit(cmd_status())
+        sys.exit(cmd_status(json_out=args.json))
+    elif args.command == "wiki":
+        sys.exit(cmd_wiki(args.topic))
+    elif args.command == "init":
+        sys.exit(cmd_init(args.path))
     elif args.command == "backup":
-        sys.exit(cmd_backup(args.action, args.name))
+        sys.exit(cmd_backup(args.action, args.name, json_out=args.json))
     elif args.command == "journal":
-        sys.exit(cmd_journal(args.action, args.limit))
+        sys.exit(cmd_journal(args.action, args.limit, json_out=args.json))
     elif args.command == "pendrive-check":
-        sys.exit(cmd_pendrive_check(args.path))
+        sys.exit(cmd_pendrive_check(args.path, json_out=args.json))
     elif args.command == "ask":
         sys.exit(cmd_ask(
             prompt=args.prompt,

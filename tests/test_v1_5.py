@@ -904,3 +904,94 @@ def test_cli_new_commands_in_help():
     assert "--voice" in r.stdout
     r = subprocess.run([str(cli_path()), "serve", "--help"], capture_output=True, text=True, timeout=60)
     assert "--open" in r.stdout
+
+
+# ------------------------------------------------------------- v1.20 CLI additions
+def test_cli_wiki():
+    """councilkey wiki prints the quick-start and topic pages."""
+    import subprocess
+
+    r = subprocess.run([str(cli_path()), "wiki"], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0
+    assert "quick start" in r.stdout.lower()
+    assert "councilkey demo" in r.stdout
+
+    for topic in ("setup", "pendrive", "agents", "ask", "backup", "journal", "update"):
+        r = subprocess.run([str(cli_path()), "wiki", topic], capture_output=True, text=True, timeout=60)
+        assert r.returncode == 0, topic
+        assert "councilkey" in r.stdout
+
+    r = subprocess.run([str(cli_path()), "wiki", "nope"], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 2
+
+
+def test_cli_init_creates_structure():
+    """councilkey init creates the canonical data folders + README."""
+    import subprocess
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "my-council"
+        r = subprocess.run([str(cli_path()), "init", str(target)], capture_output=True, text=True, timeout=90)
+        assert r.returncode == 0, r.stdout[-300:]
+        assert "initialized" in r.stdout
+        for rel in ("journal", "secrets", "shared", "hermes/keep", "openclaw/keep",
+                    "opencode/keep", "backups", "README.txt"):
+            assert (target / rel).exists(), rel
+
+
+def test_cli_status_json():
+    """councilkey status --json emits valid JSON with the key fields."""
+    import json
+    import subprocess
+
+    r = subprocess.run([str(cli_path()), "status", "--json"], capture_output=True, text=True, timeout=90)
+    assert r.returncode == 0, r.stdout[-300:]
+    d = json.loads(r.stdout)
+    assert "version" in d
+    assert set(d["agents"]) == {"hermes", "openclaw", "opencode", "crewai", "aider"}
+    assert "backups" in d
+
+
+def test_cli_backup_journal_json():
+    """backup list --json and journal --json emit valid JSON."""
+    import json
+    import subprocess
+
+    r = subprocess.run([str(cli_path()), "backup", "list", "--json"], capture_output=True, text=True, timeout=90)
+    assert r.returncode == 0
+    assert "backups" in json.loads(r.stdout)
+
+    r = subprocess.run([str(cli_path()), "journal", "stats", "--json"], capture_output=True, text=True, timeout=90)
+    assert r.returncode == 0
+    d = json.loads(r.stdout)
+    assert "total_entries" in d
+
+
+def test_cli_pendrive_check_json():
+    """pendrive-check --json emits valid JSON with ok/missing fields."""
+    import json
+    import subprocess
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        r = subprocess.run([str(cli_path()), "pendrive-check", tmp, "--json"],
+                           capture_output=True, text=True, timeout=90)
+        assert r.returncode == 1
+        d = json.loads(r.stdout)
+        assert d["ok"] is False
+        assert "START.bat" in d["missing"]
+
+
+def test_cli_ask_voice_flag_parses():
+    """ask --voice and --voice <name> both parse."""
+    import subprocess
+
+    for extra in (["--voice"], ["--voice", "en-US-JennyNeural"]):
+        r = subprocess.run(
+            [str(cli_path()), "ask", "ping", *extra],
+            capture_output=True, text=True, timeout=120,
+        )
+        assert r.returncode == 0, r.stdout[-300:]
+        assert "votes:" in r.stdout

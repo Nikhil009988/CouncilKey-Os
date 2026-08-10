@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.20.0 (2026-08-10) - wiki, init, --json everywhere, ask --voice polish
+
+### Added
+- **`councilkey wiki [topic]`** - print the quick-start guide right from the
+  CLI (`wiki setup|pendrive|agents|ask|backup|journal|update` for one page).
+- **`councilkey init <path>`** - initialize an empty council data folder on
+  any path (journal, secrets, shared, per-agent keep/cache, backups +
+  README.txt), so you can point `COUNCIL_HOME` at it or prep an empty stick
+  for `pendrive-push`.
+- **`--json` everywhere** - `status --json`, `backup list|create --json`,
+  `journal list|stats --json`, `pendrive-check --json` for scripting/CI.
+- **`councilkey ask --voice [VOICE]`** - now accepts an optional voice name
+  (e.g. `en-US-JennyNeural`); graceful degradation stays (says exactly what
+  to install if edge-tts is missing, never a traceback).
+
+### Verified
+- All new commands tested live: wiki pages, init folder tree, JSON outputs
+  parse clean, voice flag parsing (135 tests passing, ruff clean).
+
 ## v1.19.0 (2026-08-10) - new CLI commands: demo, status, backup, journal, pendrive-check
 
 ### Added
