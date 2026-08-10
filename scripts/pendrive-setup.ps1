@@ -65,7 +65,7 @@ if (-not (Test-Path $Path)) {
 }
 
 Write-Host "=============================================="
-Write-Host " CouncilKey-Os pendrive setup v1.23.0"
+Write-Host " CouncilKey-Os pendrive setup v1.23.1"
 Write-Host "  - ASKS which agents to install (nothing automatic)"
 Write-Host "  - use -Check first to inspect everything"
 Write-Host " Target: $Path"
@@ -93,11 +93,13 @@ if ($Check) {
   Write-Host "  npm (PC)        : $(if (Get-Command npm -ErrorAction SilentlyContinue) { 'ok' } else { 'missing (OpenClaw/OpenCode need it)' })"
   Write-Host "  internet PyPI   : $(if (Test-Net 'pypi.org') { 'reachable' } else { 'NOT reachable - pip agents will fail' })"
   Write-Host "  internet npmjs  : $(if (Test-Net 'registry.npmjs.org') { 'reachable' } else { 'NOT reachable - npm agents will fail' })"
+  # NOTE: never run 'pip list' here - on a FAT stick with a corrupted venv
+  # it can hang for a very long time. Binary-existence checks are instant.
   if (Test-Path $StickPip) {
     $have = @()
-    try {
-      $have = @(& $StickPip list --format=freeze 2>&1 | Select-String -Pattern '^hermes-agent|^crewai|^aider-chat' | ForEach-Object { ($_ -split '==')[0] })
-    } catch {}
+    foreach ($n in @('hermes', 'crewai', 'aider')) {
+      if (Test-Path (Join-Path $Dest ".venv\Scripts\$n.exe")) { $have += $n }
+    }
     foreach ($n in @('openclaw', 'opencode')) {
       if (Test-Path (Join-Path $Dest "tools\$n\node_modules\.bin")) { $have += $n }
     }

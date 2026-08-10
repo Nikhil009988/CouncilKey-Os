@@ -1123,10 +1123,10 @@ def test_pendrive_scripts_have_version_banner_and_tough_pip():
     pip flags (--retries 20 --timeout 90 --prefer-binary) so flaky
     internet retries instead of hanging."""
     sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
-    assert "v1.23.0" in sh
+    assert "v1.23.1" in sh
     assert "--retries 20" in sh and "--timeout 90" in sh and "--prefer-binary" in sh
     ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
-    assert "v1.23.0" in ps
+    assert "v1.23.1" in ps
     assert "--retries 20" in ps and "--timeout 90" in ps and "--prefer-binary" in ps
 
 
@@ -1218,3 +1218,14 @@ def test_pendrive_check_reports_filesystem_and_corruption():
         d = json.loads(buf.getvalue())
         assert "filesystem" in d
         assert "venv_stale_dirs" in d
+
+
+def test_pendrive_check_never_runs_pip_list():
+    """-Check / --check must NEVER run 'pip list' (it hangs for minutes on a
+    corrupted FAT stick venv) - it uses instant binary-existence checks."""
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    assert "pip list" not in ps.replace("never run 'pip list'", "")
+    assert "Test-Path (Join-Path $Dest \".venv\\Scripts\\$n.exe\")" in ps
+    sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    assert "pip list" not in sh.replace("never run 'pip list'", "")
+    assert '.venv/Scripts/$n.exe' in sh

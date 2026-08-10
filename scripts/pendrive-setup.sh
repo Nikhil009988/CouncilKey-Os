@@ -55,7 +55,7 @@ if [ ! -d "$USB" ]; then
 fi
 
 echo "=============================================="
-echo " CouncilKey-Os pendrive setup v1.23.0"
+echo " CouncilKey-Os pendrive setup v1.23.1"
 echo "  - ASKS which agents to install (nothing automatic)"
 echo "  - use --check first to inspect everything"
 echo " Target: $USB"
@@ -81,9 +81,14 @@ if [ "$CHECK" -eq 1 ]; then
   echo "  internet PyPI   : $(net_ok pypi.org)"
   echo "  internet npmjs  : $(net_ok registry.npmjs.org)"
   if [ -x "$PIP" ]; then
-    have=$("$PIP" list 2>/dev/null | grep -E 'hermes-agent|crewai|aider-chat' | awk '{print $1}' | tr '\n' ' ' || true)
+    # NOTE: never run 'pip list' here - on a FAT stick with a corrupted venv
+    # it can hang for a very long time. Binary-existence checks are instant.
+    have=""
+    for n in hermes crewai aider; do
+      if [ -x "$USB/CouncilKey-Os/.venv/bin/$n" ] || [ -x "$USB/CouncilKey-Os/.venv/Scripts/$n.exe" ]; then have="$have $n"; fi
+    done
     for n in openclaw opencode; do
-      [ -d "$USB/CouncilKey-Os/tools/$n/node_modules/.bin" ] && have="$have $n"
+      if [ -d "$USB/CouncilKey-Os/tools/$n/node_modules/.bin" ]; then have="$have $n"; fi
     done
     echo "  already on stick: ${have:-none yet}"
   fi
