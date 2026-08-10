@@ -995,3 +995,54 @@ def test_cli_ask_voice_flag_parses():
         )
         assert r.returncode == 0, r.stdout[-300:]
         assert "votes:" in r.stdout
+
+
+# ------------------------------------------------------------- v1.21 dashboard
+def test_dashboard_has_system_and_backups_tabs():
+    """The real dashboard now has System (live CPU/RAM/disk) and Backups
+    (create/list/restore) tabs, plus install/start buttons on agent cards."""
+    html = (ROOT / "council" / "orchestrator" / "index.html").read_text(encoding="utf-8")
+    for token in ("tab-system", "tab-backups", "loadSystem", "loadBackups",
+                  "system-cards", "backup-list", "backup-create",
+                  "agent-install", "agent-start", "wireAgentActions"):
+        assert token in html, token
+
+
+def test_system_info_includes_cpu_and_ram():
+    """system_info() reports live CPU% + RAM (psutil or /proc fallback)."""
+    from council.system.info import collect
+
+    info = collect("/tmp")
+    assert "cpu_percent" in info
+    assert "ram" in info
+    assert "disk" in info
+    assert "used_percent" in info["disk"]
+
+
+def test_api_system_live_metrics():
+    """GET /api/system returns cpu_percent + ram for the dashboard."""
+    from fastapi.testclient import TestClient
+
+    from council.orchestrator.main import app
+
+    client = TestClient(app)
+    data = client.get("/api/system").json()
+    assert "cpu_percent" in data
+    assert "ram" in data
+    assert "disk" in data
+
+
+def test_api_backup_roundtrip():
+    """Backup create -> list -> restore all work via the API."""
+    from fastapi.testclient import TestClient
+
+    from council.orchestrator.main import app
+
+    client = TestClient(app)
+    r = client.post("/api/backup/create")
+    assert r.json()["ok"] is True
+    name = r.json()["path"].split("/")[-1]
+    backups = client.get("/api/backup/list").json()["backups"]
+    assert name in backups
+    r = client.post("/api/backup/restore", json={"name": name})
+    assert r.json()["ok"] is True

@@ -74,6 +74,13 @@ councilkey serve        # dashboard + API on http://localhost:8443
 councilkey ask "plan a 3-day trip to Goa"   # ALL 3 agents answer + vote
 ```
 
+The dashboard is fully live, not a mockup: **Overview** (provider status,
+roles x/3, decisions, storage, live refresh), **Council chat** (streaming
+3-agent answers + votes), **Agents** (live mode + Install/Start buttons),
+**Storage**, **Journal**, **Backups** (create/list/restore), **System**
+(live CPU/RAM/disk), **Terminal** (guarded), **Secrets**, **3D**, **Vision
++ Voice**, **Tasks** and **Intelligence**.
+
 ### Pendrive mode (optional)
 
 Put everything on a USB stick with one command — plug into any PC, click **START.bat**, done:

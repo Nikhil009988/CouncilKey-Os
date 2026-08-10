@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.21.0 (2026-08-10) - real working dashboard: System + Backups tabs, agent actions
+
+### Added
+- **System tab** (dashboard): live **CPU %**, **RAM used/total**, **disk
+  used %** and uptime cards, auto-refresh every 5s. Backed by an upgraded
+  `/api/system` that reports real-time metrics (psutil, with a `/proc`
+  fallback so it works everywhere).
+- **Backups tab** (dashboard): list backups, **Create backup** and
+  **Restore** buttons wired to the real `/api/backup/*` endpoints.
+- **Agents tab is now actionable**: every agent card has **Install** and
+  **Start** buttons that enqueue real `install_agent` tasks via the task
+  queue - the dashboard can install agents without a terminal.
+- Agents help text now leads with the real primary path: `councilkey setup`
+  (one API key -> all 3 council roles answer via the provider).
+
+### Verified
+- All dashboard endpoints exercised live: 200s across status/setup/agents/
+  chat/journal/storage/tasks/search/cache/audit/metrics/system/backup +
+  SSE streaming chat. Backup create -> list -> restore roundtrip works.
+  Dashboard HTML served with the new tabs (139 tests passing, ruff clean).
+
 ## v1.20.0 (2026-08-10) - wiki, init, --json everywhere, ask --voice polish
 
 ### Added
