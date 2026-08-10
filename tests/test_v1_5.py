@@ -1053,7 +1053,6 @@ def test_cli_which_shows_pc_vs_pendrive(tmp_path, monkeypatch):
     """councilkey which must label itself as PENDRIVE when a council-data
     folder sits next to the install (stick layout), else PC copy."""
     import subprocess
-    from pathlib import Path
 
     from council.cli import ROOT as cli_root
 
