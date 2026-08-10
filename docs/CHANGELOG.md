@@ -1,5 +1,30 @@
 # Changelog
 
+## v1.22.0 (2026-08-10) - you choose what goes on the stick + check mode
+
+### Changed
+- **The pendrive setup no longer installs everything automatically.**
+  `pendrive-setup.ps1/.sh` now ASKS which agents you want on the stick
+  (1 Hermes · 2 OpenClaw · 3 OpenCode · 4 CrewAI · 5 Aider · A all · 0 none)
+  and installs only your choice. Launchers are still written for all agents
+  (a skipped agent just shows a clear "not installed" message).
+- Non-interactive selection: `-Agents 1,3,5` / `--agents 1,3,5`
+  (numbers or names). `councilkey pendrive <path> --agents 1,3,5` passes it
+  through.
+- **New `--check` / `-Check` mode**: checks the stick venv, PC python/npm,
+  internet reachability to PyPI and npmjs, and what's already on the stick -
+  installs NOTHING. `councilkey pendrive E:\ --check`.
+- `councilkey pendrive-push` now builds the stick non-interactively
+  (passes `--no-agents`) - agents are your separate choice; data push
+  unaffected.
+- Fixed duplicated echo line and wrong `$Path` variable in
+  `pendrive-setup.sh` (was printing an undefined var in the error hint).
+
+### Verified
+- Live: `--check` prints the full pre-install report; `--agents 3` installs
+  ONLY opencode on a fresh stick (openclaw absent - confirmed); answering
+  `0` at the prompt installs nothing (144 tests passing, ruff clean).
+
 ## v1.21.0 (2026-08-10) - real working dashboard: System + Backups tabs, agent actions
 
 ### Added

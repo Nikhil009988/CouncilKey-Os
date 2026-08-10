@@ -12,8 +12,10 @@
 #   - autorun.inf (Windows) so the stick offers "Start CouncilKey-Os" on plug-in
 #
 # Usage:
-#   ./scripts/pendrive-setup.sh /media/USB          # build the stick
+#   ./scripts/pendrive-setup.sh /media/USB          # build the stick (asks which agents)
 #   ./scripts/pendrive-setup.sh /media/USB --wizard # also run the API-key wizard
+#   ./scripts/pendrive-setup.sh /media/USB --check  # check everything first, install nothing
+#   ./scripts/pendrive-setup.sh /media/USB --agents 1,3,5   # install only those
 #
 # On any PC afterwards:
 #   Windows:  double-click START.bat on the stick (or the autoplay prompt)
@@ -24,17 +26,26 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 USB="${1:-}"
 WIZARD=0
 NO_AGENTS=0
-for arg in "${@:2}"; do
-  case "$arg" in
+CHECK=0
+AGENTS=""
+_args=("${@:2}")
+_i=0
+while [ $_i -lt ${#_args[@]} ]; do
+  case "${_args[$_i]}" in
     --wizard) WIZARD=1 ;;
     --no-agents) NO_AGENTS=1 ;;
-    *) ;;
+    --check) CHECK=1 ;;
+    --agents) AGENTS="${_args[$((_i + 1))]:-}"; _i=$((_i + 1)) ;;
   esac
+  _i=$((_i + 1))
 done
 
 if [ -z "$USB" ]; then
-  echo "usage: $0 /path/to/usb [--wizard] [--no-agents]"
-  echo "  --wizard   also run the interactive setup (API key + agents) into the stick"
+  echo "usage: $0 /path/to/usb [--wizard] [--no-agents] [--check] [--agents 1,3,5]"
+  echo "  --wizard     also run the interactive setup (API key + agents) into the stick"
+  echo "  --check      check prerequisites + internet first, install NOTHING"
+  echo "  --agents N   only install the listed agents (numbers/names, e.g. 1,3,5 or hermes,opencode)"
+  echo "  (default: asks you which agents to install)"
   exit 1
 fi
 
@@ -148,44 +159,110 @@ shell\start\command=START.bat
 EOF
 echo "      ok (note: Windows shows a 'Start CouncilKey-Os' prompt on plug-in)"
 
-# 6. ALL agents on the stick - nothing runs from the host PC
-echo "[6/8] Installing the agents ONTO the stick (everything stays on the stick)..."
+# 6. agents ON the stick - YOU CHOOSE what to install (nothing automatic)
+echo "[6/8] Agents ONTO the stick (you choose - nothing is installed without asking)..."
+mkdir -p "$USB/council-data/agents"
+STICK_VENV="$USB/CouncilKey-Os/.venv"
+PIP="$STICK_VENV/bin/pip"; [ -x "$STICK_VENV/Scripts/pip.exe" ] && PIP="$STICK_VENV/Scripts/pip.exe"
+
+net_ok() { # $1 = hostname
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 4 bash -c "echo > /dev/tcp/$1/443" 2>/dev/null && echo "reachable" || echo "NOT reachable"
+  else
+    echo "? (no timeout tool)"
+  fi
+}
+
+# ---- CHECK MODE: see everything first, install NOTHING ----
+if [ "$CHECK" -eq 1 ]; then
+  echo ""
+  echo "  == Pre-install check (nothing installed) =="
+  echo "  stick venv      : $([ -x "$PIP" ] && echo ready || echo 'MISSING - run without --check first to build')"
+  echo "  python (PC)     : $(command -v python3 >/dev/null 2>&1 && echo ok || echo 'missing (install Python 3.11+)')"
+  echo "  npm (PC)        : $(command -v npm >/dev/null 2>&1 && echo ok || echo 'missing (OpenClaw/OpenCode need it)')"
+  echo "  internet PyPI   : $(net_ok pypi.org)"
+  echo "  internet npmjs  : $(net_ok registry.npmjs.org)"
+  if [ -x "$PIP" ]; then
+    have=$("$PIP" list 2>/dev/null | grep -E 'hermes-agent|crewai|aider-chat' | awk '{print $1}' | tr '\n' ' ')
+    for n in openclaw opencode; do
+      [ -d "$USB/CouncilKey-Os/tools/$n/node_modules/.bin" ] && have="$have $n"
+    done
+    echo "  already on stick: ${have:-none yet}"
+  fi
+  echo ""
+  echo "  Choose what to install, then re-run:"
+  echo "    ./scripts/pendrive-setup.sh $USB --agents 1,3,5   (or run without --agents to pick interactively)"
+  exit 0
+fi
+
+# ---- choose agents ----
 if [ "$NO_AGENTS" -eq 1 ]; then
   echo "      skipped agent installs (--no-agents) - launchers are still written"
 else
-  STICK_VENV="$USB/CouncilKey-Os/.venv"
-  mkdir -p "$USB/council-data/agents"
-
-  # --- Python agents into the stick venv (hermes, crewai, aider) ---
-  PIP="$STICK_VENV/bin/pip"; [ -x "$STICK_VENV/Scripts/pip.exe" ] && PIP="$STICK_VENV/Scripts/pip.exe"
-  if [ -x "$PIP" ]; then
-    echo "      installing hermes-agent, crewai, aider-chat into the stick venv (one command, can take a few minutes)..."
-    echo "      installing hermes-agent, crewai, aider-chat into the stick venv..."
-    echo "      ⏳ this is the LONGEST step: 5-15 minutes on a normal connection."
-    echo "         (crewai is big; 'WARNING: Retrying...' means your internet dropped"
-    echo "          a connection and pip is retrying automatically - that's normal.)"
-    "$PIP" install --retries 10 --timeout 60 hermes-agent crewai aider-chat 2>/dev/null && \
-      echo "      ok (hermes + crewai + aider on the stick)" || \
-      echo "      ⚠ pip install of agents failed (network error)."
-      echo "        DON'T panic - the stick still works (launchers fall back to your"
-      echo "        PC installs). When your internet is stable, just re-run:"
-      echo "        ./scripts/pendrive-setup.sh $Path  (it resumes - skips what's done)"
-  else
-    echo "      ⚠ stick venv not found - agents skipped"
+  SELECTED="$AGENTS"
+  if [ -z "$SELECTED" ]; then
+    echo ""
+    echo "  Which agents do you want ON the stick? (nothing is installed without your choice)"
+    echo "    1) Hermes    (pip)     2) OpenClaw  (npm)     3) OpenCode (npm)"
+    echo "    4) CrewAI    (pip)     5) Aider     (pip)"
+    echo "    A) All 5    0) None"
+    read -rp "    Pick (e.g. 1,3,5 or A or 0): " SELECTED
   fi
-
-  # --- OpenClaw via npm into the stick ---
-  echo "      installing openclaw onto the stick (npm)..."
-  mkdir -p "$USB/council-data/openclaw"
-  if command -v npm >/dev/null 2>&1; then
-    npm install --prefix "$USB/CouncilKey-Os/tools/openclaw" --no-audit --no-fund openclaw@latest >/dev/null 2>&1 && \
-      echo "      ok (openclaw CLI on the stick)" || \
-      echo "      ⚠ npm install failed - openclaw will use the host install; state still goes to the stick"
-  else
-    echo "      ⚠ npm not found - openclaw will use the host install"
+  SELECTED="$(echo "$SELECTED" | tr 'A-Z' 'a-z' | tr ',' ' ')"
+  if [ "$SELECTED" = "a" ] || [ "$SELECTED" = "all" ]; then
+    SELECTED="1 2 3 4 5"
   fi
-
+  if [ -z "$SELECTED" ] || [ "$SELECTED" = "0" ] || [ "$SELECTED" = "none" ]; then
+    echo "      no agents selected - launchers are still written (install later with --agents)"
+  else
+    names=""
+    for s in $SELECTED; do
+      case "$s" in
+        1|hermes)   names="$names hermes" ;;
+        2|openclaw) names="$names openclaw" ;;
+        3|opencode) names="$names opencode" ;;
+        4|crewai)   names="$names crewai" ;;
+        5|aider)    names="$names aider" ;;
+      esac
+    done
+    echo "      installing:$names"
+    # pip agents (hermes, crewai, aider) - ONE pip command
+    pip_list=""
+    for s in $names; do
+      case "$s" in
+        hermes) pip_list="$pip_list hermes-agent" ;;
+        crewai) pip_list="$pip_list crewai" ;;
+        aider)  pip_list="$pip_list aider-chat" ;;
+      esac
+    done
+    if [ -n "$pip_list" ]; then
+      if [ -x "$PIP" ]; then
+        echo "      installing:$pip_list into the stick venv (can take 5-15 min)..."
+        "$PIP" install --retries 10 --timeout 60 $pip_list 2>/dev/null && \
+          echo "      ok (pip agents on the stick)" || \
+          echo "      ⚠ pip install failed (network?) - re-run when internet is stable"
+      else
+        echo "      ⚠ stick venv not found"
+      fi
+    fi
+    # npm agents (openclaw, opencode)
+    for n in openclaw opencode; do
+      if echo "$names" | grep -qw "$n"; then
+        pkg="openclaw@latest"; [ "$n" = "opencode" ] && pkg="opencode-ai"
+        mkdir -p "$USB/council-data/$n"
+        if command -v npm >/dev/null 2>&1; then
+          echo "      installing $n onto the stick (npm)..."
+          npm install --prefix "$USB/CouncilKey-Os/tools/$n" --no-audit --no-fund "$pkg" >/dev/null 2>&1 && \
+            echo "      ok ($n CLI on the stick)" || \
+            echo "      ⚠ npm install of $n failed"
+        else
+          echo "      ⚠ npm not found - $n will use the host install"
+        fi
+      fi
+    done
+  fi
 fi
+
 # --- launchers: every agent runs from the stick with state on the stick ---
 cat > "$USB/RUN-OPENCLAW.bat" <<'EOF'
 @echo off
@@ -566,7 +643,7 @@ cat > "$USB/PENDRIVE-README.txt" <<EOF
 
 WHAT YOU HAVE
   This stick contains the whole CouncilKey-Os: the app, a portable
-  Python environment, and all 5 agents (Hermes, OpenClaw, OpenCode,
+  Python environment, and the agents you picked (Hermes, OpenClaw, OpenCode,
   CrewAI, Aider). OpenCode is the builder/review agent - terminal, file
   editing and web tools, runs locally, NO Docker.
   ALL data - journal, memory, API keys, agent

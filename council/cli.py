@@ -1108,6 +1108,8 @@ def main(argv: list[str] | None = None) -> None:
     p_pendrive = sub.add_parser("pendrive", help="one-command setup of everything onto a USB stick")
     p_pendrive.add_argument("path", help="mount point of the pendrive (e.g. /media/USB)")
     p_pendrive.add_argument("--wizard", action="store_true", help="also run the API-key wizard into the stick")
+    p_pendrive.add_argument("--check", action="store_true", help="check prerequisites + internet first, install NOTHING")
+    p_pendrive.add_argument("--agents", metavar="LIST", help="only install these agents (e.g. 1,3,5 or hermes,opencode; default: asks you)")
 
     p_push = sub.add_parser("pendrive-push", help="build the stick AND copy this PC's data (keys, journal, memory) onto it")
     p_push.add_argument("path", help="mount point of the pendrive (e.g. /media/USB or E:\\)")
@@ -1193,11 +1195,19 @@ def main(argv: list[str] | None = None) -> None:
             cmd = ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Path", args.path]
             if args.wizard:
                 cmd.append("-Wizard")
+            if args.check:
+                cmd.append("-Check")
+            if args.agents:
+                cmd.extend(["-Agents", args.agents])
         else:
             script = ROOT / "scripts" / "pendrive-setup.sh"
             cmd = [str(script), args.path]
             if args.wizard:
                 cmd.append("--wizard")
+            if args.check:
+                cmd.append("--check")
+            if args.agents:
+                cmd.extend(["--agents", args.agents])
         sys.exit(subprocess.call(cmd))
     elif args.command == "setup":
         from council.agents.setup_wizard import run_wizard

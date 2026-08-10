@@ -8,7 +8,9 @@
 param(
   [Parameter(Mandatory = $true)][string]$Path,
   [switch]$Wizard,
-  [switch]$NoAgents
+  [switch]$NoAgents,
+  [switch]$Check,
+  [string]$Agents = ""
 )
 $ErrorActionPreference = "Stop"
 $ROOT = Split-Path -Parent $PSScriptRoot
@@ -100,51 +102,110 @@ endlocal
 "@ | Set-Content -Encoding ASCII (Join-Path $Path "START.bat")
 Write-Host "      ok"
 
-# 5. ALL agents on the stick
-Write-Host "[5/7] Installing the agents ONTO the stick (everything stays on the stick)..."
+# 5. agents ON the stick - YOU CHOOSE what to install (nothing automatic)
+Write-Host "[5/7] Agents ONTO the stick (you choose - nothing is installed without asking)..."
+New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\agents") | Out-Null
+$StickPip = Join-Path $Dest ".venv\Scripts\pip.exe"
+$AgentNames = @('hermes', 'openclaw', 'opencode', 'crewai', 'aider')
+$AgentMap = @{
+  '1' = 'hermes'; '2' = 'openclaw'; '3' = 'opencode'; '4' = 'crewai'; '5' = 'aider'
+  'hermes' = 'hermes'; 'openclaw' = 'openclaw'; 'opencode' = 'opencode'
+  'crewai' = 'crewai'; 'aider' = 'aider'
+}
+
+function Test-Net([string]$HostName) {
+  try {
+    $c = New-Object System.Net.Sockets.TcpClient
+    $t = $c.ConnectAsync($HostName, 443)
+    if ($t.Wait(3000) -and $c.Connected) { $c.Close(); return $true }
+  } catch {}
+  return $false
+}
+
+# ---- CHECK MODE: see everything first, install NOTHING ----
+if ($Check) {
+  Write-Host ""
+  Write-Host "  == Pre-install check (nothing installed) =="
+  Write-Host "  stick venv      : $(if (Test-Path $StickPip) { 'ready' } else { 'MISSING - run without -Check first to build' })"
+  Write-Host "  python (PC)     : $(if (Get-Command python -ErrorAction SilentlyContinue) { 'ok' } else { 'missing (install Python 3.11+)' })"
+  Write-Host "  npm (PC)        : $(if (Get-Command npm -ErrorAction SilentlyContinue) { 'ok' } else { 'missing (OpenClaw/OpenCode need it)' })"
+  Write-Host "  internet PyPI   : $(if (Test-Net 'pypi.org') { 'reachable' } else { 'NOT reachable - pip agents will fail' })"
+  Write-Host "  internet npmjs  : $(if (Test-Net 'registry.npmjs.org') { 'reachable' } else { 'NOT reachable - npm agents will fail' })"
+  if (Test-Path $StickPip) {
+    $have = @(& $StickPip list 2>$null | Select-String -Pattern 'hermes-agent|crewai|aider-chat' | ForEach-Object { $_.Line.Split(' ')[0] })
+    foreach ($n in @('openclaw', 'opencode')) {
+      if (Test-Path (Join-Path $Dest "tools\$n\node_modules\.bin")) { $have += $n }
+    }
+    Write-Host "  already on stick: $(if ($have) { $have -join ', ' } else { 'none yet' })"
+  }
+  Write-Host ""
+  Write-Host "  Choose what to install, then re-run:"
+  Write-Host "    .\scripts\pendrive-setup.ps1 -Path $Path -Agents 1,3,5   (or run without -Agents to pick interactively)"
+  return 0
+}
+
+# ---- choose agents ----
+$Selected = @()
 if ($NoAgents) {
   Write-Host "      skipped agent installs (-NoAgents) - launchers are still written"
 } else {
-  New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\agents") | Out-Null
-
-  # Python agents into the stick venv (hermes, crewai, aider)
-  $StickPip = Join-Path $Dest ".venv\Scripts\pip.exe"
-  if (Test-Path $StickPip) {
-    Write-Host "      installing hermes-agent, crewai, aider-chat into the stick venv..."
-    Write-Host "      ⏳ this is the LONGEST step: 5-15 minutes on a normal connection."
-    Write-Host "         (crewai is big; 'WARNING: Retrying...' means your internet dropped"
-    Write-Host "          a connection and pip is retrying automatically - that's normal.)"
-    & $StickPip install --retries 10 --timeout 60 hermes-agent crewai aider-chat | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-      Write-Host "      ok (hermes + crewai + aider on the stick)"
-    } else {
-      Write-Host "      ⚠ pip install of agents failed (network error)."
-      Write-Host "        DON'T panic - the stick still works (launchers fall back to your"
-      Write-Host "        PC installs). When your internet is stable, just re-run:"
-      Write-Host "        .\scripts\pendrive-setup.ps1 -Path $Path  (it resumes - skips what's done)"
+  if ($Agents) {
+    foreach ($part in ($Agents -split ',')) {
+      $part = $part.Trim().ToLower()
+      if ($AgentMap.ContainsKey($part)) { $Selected += $AgentMap[$part] }
     }
   } else {
-    Write-Host "      ⚠ stick venv not found - agents skipped"
+    Write-Host ""
+    Write-Host "  Which agents do you want ON the stick? (nothing is installed without your choice)"
+    Write-Host "    1) Hermes    (pip)     2) OpenClaw  (npm)     3) OpenCode (npm)"
+    Write-Host "    4) CrewAI    (pip)     5) Aider     (pip)"
+    Write-Host "    A) All 5    0) None"
+    $ans = Read-Host "    Pick (e.g. 1,3,5 or A or 0)"
+    $ans = $ans.Trim().ToLower()
+    if ($ans -in @('a', 'all')) { $Selected = $AgentNames }
+    elseif ($ans -in @('', '0', 'none')) { $Selected = @() }
+    else {
+      foreach ($part in ($ans -split ',')) {
+        $part = $part.Trim()
+        if ($AgentMap.ContainsKey($part)) { $Selected += $AgentMap[$part] }
+      }
+    }
   }
-
-  # OpenClaw via npm into the stick
-  Write-Host "      installing openclaw onto the stick (npm)..."
-  New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\openclaw") | Out-Null
-  if (Get-Command npm -ErrorAction SilentlyContinue) {
-    & npm install --prefix (Join-Path $Dest "tools\openclaw") --no-audit --no-fund openclaw@latest | Out-Null
-    Write-Host "      ok (openclaw CLI on the stick)"
+  if ($Selected.Count -eq 0) {
+    Write-Host "      no agents selected - launchers are still written (install later with -Agents)"
   } else {
-    Write-Host "      ⚠ npm not found - openclaw will use the host install"
-  }
-
-  # OpenCode via npm into the stick (local agent - no Docker)
-  Write-Host "      installing opencode onto the stick (npm)..."
-  New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\opencode") | Out-Null
-  if (Get-Command npm -ErrorAction SilentlyContinue) {
-    & npm install --prefix (Join-Path $Dest "tools\opencode") --no-audit --no-fund opencode-ai | Out-Null
-    Write-Host "      ok (opencode CLI on the stick)"
-  } else {
-    Write-Host "      ⚠ npm not found - opencode will use the host install"
+    Write-Host "      installing: $($Selected -join ', ')"
+    # pip agents (hermes, crewai, aider) - ONE pip command
+    $PipSel = @($Selected | Where-Object { $_ -in @('hermes', 'crewai', 'aider') })
+    if ($PipSel.Count -gt 0) {
+      $PipPkgs = @()
+      if ('hermes' -in $PipSel) { $PipPkgs += 'hermes-agent' }
+      if ('crewai' -in $PipSel) { $PipPkgs += 'crewai' }
+      if ('aider' -in $PipSel)  { $PipPkgs += 'aider-chat' }
+      if (Test-Path $StickPip) {
+        Write-Host "      installing $($PipPkgs -join ', ') into the stick venv (can take 5-15 min)..."
+        & $StickPip install --retries 10 --timeout 60 @PipPkgs | Out-Null
+        if ($LASTEXITCODE -eq 0) { Write-Host "      ok ($($PipSel -join ' + ') on the stick)" }
+        else { Write-Host "      ⚠ pip install failed (network?) - re-run when internet is stable" }
+      } else {
+        Write-Host "      ⚠ stick venv not found"
+      }
+    }
+    # npm agents (openclaw, opencode)
+    foreach ($n in @('openclaw', 'opencode')) {
+      if ($Selected -contains $n) {
+        $pkg = if ($n -eq 'openclaw') { 'openclaw@latest' } else { 'opencode-ai' }
+        New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\$n") | Out-Null
+        if (Get-Command npm -ErrorAction SilentlyContinue) {
+          Write-Host "      installing $n onto the stick (npm)..."
+          & npm install --prefix (Join-Path $Dest "tools\$n") --no-audit --no-fund $pkg | Out-Null
+          if ($LASTEXITCODE -eq 0) { Write-Host "      ok ($n CLI on the stick)" }
+          else { Write-Host "      ⚠ npm install of $n failed" }
+        } else {
+          Write-Host "      ⚠ npm not found - $n will use the host install"
+        }
+      }
+    }
   }
 }
 
@@ -367,7 +428,7 @@ goto menu
 
 WHAT YOU HAVE
   This stick contains the whole CouncilKey-Os: the app, a portable
-  Python environment, and all 5 agents (Hermes, OpenClaw, OpenCode,
+  Python environment, and the agents you picked (Hermes, OpenClaw, OpenCode,
   CrewAI, Aider). OpenCode is the builder/review agent - terminal, file
   editing and web tools that run locally on your PC: NO Docker needed.
   ALL data - journal, memory, API keys, agent workspaces - lives on

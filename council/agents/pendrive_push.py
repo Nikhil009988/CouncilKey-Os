@@ -58,13 +58,13 @@ def push(path: str, skip_builder: bool = False) -> int:
 
     # 1. build the stick (project + venv + agents + launchers)
     if not skip_builder:
-        print("\n[1/2] Building the stick (project + agents + launchers)...")
+        print("\n[1/2] Building the stick (project + launchers; pick agents separately)...")
         if os.name == "nt":
             script = ROOT / "scripts" / "pendrive-setup.ps1"
-            cmd = ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Path", str(stick)]
+            cmd = ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Path", str(stick), "-NoAgents"]
         else:
             script = ROOT / "scripts" / "pendrive-setup.sh"
-            cmd = [str(script), str(stick)]
+            cmd = [str(script), str(stick), "--no-agents"]
         r = subprocess.call(cmd)
         if r != 0:
             print("  ⚠ builder finished with warnings - continuing with data copy")

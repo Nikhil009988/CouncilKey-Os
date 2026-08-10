@@ -570,10 +570,12 @@ def test_dashboard_chat_ui():
 
 
 def test_pendrive_installs_all_agents_onto_stick():
-    """The pendrive build puts EVERY agent on the stick (no host installs)."""
+    """The pendrive build can install EVERY agent on the stick, and the
+    launchers for all of them are always written."""
     sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
     # pip agents into the stick venv + openclaw npm --prefix
-    assert "hermes-agent crewai aider-chat" in sh
+    for pkg in ("hermes-agent", "crewai", "aider-chat", "opencode-ai", "openclaw@latest"):
+        assert pkg in sh, pkg
     assert "npm install --prefix" in sh
     # launchers for every agent
     for name in ("RUN-OPENCLAW", "RUN-HERMES", "RUN-CREWAI", "RUN-AIDER", "RUN-OPENCODE"):
@@ -1072,3 +1074,43 @@ def test_cli_which_shows_pc_vs_pendrive(tmp_path, monkeypatch):
         assert "unplug" in out
     finally:
         cli.ROOT = orig_root
+
+
+# ------------------------------------------------------------- v1.22.0 choice
+def test_pendrive_setup_has_check_mode():
+    """The pendrive setup has a --check mode that installs NOTHING."""
+    sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    for token in ("--check", "Pre-install check", "install NOTHING", "internet PyPI", "internet npmjs"):
+        assert token in sh, token
+
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    for token in ("-Check", "Pre-install check", "install NOTHING", "internet PyPI", "internet npmjs"):
+        assert token in ps, token
+
+
+def test_pendrive_setup_asks_which_agents():
+    """The pendrive setup asks which agents to install - nothing automatic."""
+    sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    for token in ("Which agents do you want", "0) None", "--agents"):
+        assert token in sh, token
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    for token in ("Which agents do you want", "0) None", "-Agents"):
+        assert token in ps, token
+
+
+def test_pendrive_push_stays_noninteractive():
+    """pendrive-push must build the stick WITHOUT prompting (it passes
+    --no-agents / -NoAgents to the builder)."""
+    src = (ROOT / "council" / "agents" / "pendrive_push.py").read_text(encoding="utf-8")
+    assert "--no-agents" in src
+    assert "-NoAgents" in src
+
+
+def test_cli_pendrive_help_has_check_and_agents():
+    """councilkey pendrive --help advertises --check and --agents."""
+    import subprocess
+
+    r = subprocess.run([str(cli_path()), "pendrive", "--help"], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0
+    assert "--check" in r.stdout
+    assert "--agents" in r.stdout

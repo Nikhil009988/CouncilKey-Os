@@ -178,7 +178,7 @@ councilkey key list | show NAME                    encrypted vault (masked / raw
 councilkey backup list | create | restore NAME [--json]   backups of your council data
 councilkey journal list | stats [--limit N] [--json]      browse the council journal
 councilkey init <path>                             initialize an empty council data folder
-councilkey pendrive /media/USB [--wizard]          build a USB stick
+councilkey pendrive /media/USB [--wizard] [--check] [--agents 1,3,5]   build a USB stick (you choose the agents)
 councilkey pendrive-check /media/USB [--json]      health-check a stick (files, venv, data, version)
 councilkey pendrive-push /media/USB [--data-only]   build stick AND copy this PC's data (keys/journal/memory)
 councilkey llm status | install | pull             optional local LLM (Ollama)

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "councilkey-os"
-version = "1.21.0"
+version = "1.22.0"
 description = "CouncilKey-Os - 3 AI agents live on a pendrive with voting dashboard"
 license = { text = "MIT" }
 requires-python = ">=3.11"
