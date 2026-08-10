@@ -110,12 +110,18 @@ if ($NoAgents) {
   # Python agents into the stick venv (hermes, crewai, aider)
   $StickPip = Join-Path $Dest ".venv\Scripts\pip.exe"
   if (Test-Path $StickPip) {
-    Write-Host "      installing hermes-agent, crewai, aider-chat into the stick venv (one command, can take a few minutes)..."
-    & $StickPip install -q hermes-agent crewai aider-chat | Out-Null
+    Write-Host "      installing hermes-agent, crewai, aider-chat into the stick venv..."
+    Write-Host "      ⏳ this is the LONGEST step: 5-15 minutes on a normal connection."
+    Write-Host "         (crewai is big; 'WARNING: Retrying...' means your internet dropped"
+    Write-Host "          a connection and pip is retrying automatically - that's normal.)"
+    & $StickPip install --retries 10 --timeout 60 hermes-agent crewai aider-chat | Out-Null
     if ($LASTEXITCODE -eq 0) {
       Write-Host "      ok (hermes + crewai + aider on the stick)"
     } else {
-      Write-Host "      ⚠ pip install of agents failed - re-run on a machine with internet"
+      Write-Host "      ⚠ pip install of agents failed (network error)."
+      Write-Host "        DON'T panic - the stick still works (launchers fall back to your"
+      Write-Host "        PC installs). When your internet is stable, just re-run:"
+      Write-Host "        .\scripts\pendrive-setup.ps1 -Path $Path  (it resumes - skips what's done)"
     }
   } else {
     Write-Host "      ⚠ stick venv not found - agents skipped"

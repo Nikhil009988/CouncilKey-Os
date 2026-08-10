@@ -160,9 +160,16 @@ else
   PIP="$STICK_VENV/bin/pip"; [ -x "$STICK_VENV/Scripts/pip.exe" ] && PIP="$STICK_VENV/Scripts/pip.exe"
   if [ -x "$PIP" ]; then
     echo "      installing hermes-agent, crewai, aider-chat into the stick venv (one command, can take a few minutes)..."
-    "$PIP" install -q hermes-agent crewai aider-chat 2>/dev/null && \
+    echo "      installing hermes-agent, crewai, aider-chat into the stick venv..."
+    echo "      ⏳ this is the LONGEST step: 5-15 minutes on a normal connection."
+    echo "         (crewai is big; 'WARNING: Retrying...' means your internet dropped"
+    echo "          a connection and pip is retrying automatically - that's normal.)"
+    "$PIP" install --retries 10 --timeout 60 hermes-agent crewai aider-chat 2>/dev/null && \
       echo "      ok (hermes + crewai + aider on the stick)" || \
-      echo "      ⚠ pip install of agents failed - re-run on a machine with internet"
+      echo "      ⚠ pip install of agents failed (network error)."
+      echo "        DON'T panic - the stick still works (launchers fall back to your"
+      echo "        PC installs). When your internet is stable, just re-run:"
+      echo "        ./scripts/pendrive-setup.sh $Path  (it resumes - skips what's done)"
   else
     echo "      ⚠ stick venv not found - agents skipped"
   fi
