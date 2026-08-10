@@ -1121,8 +1121,24 @@ def test_pendrive_scripts_have_version_banner_and_tough_pip():
     pip flags (--retries 20 --timeout 90 --prefer-binary) so flaky
     internet retries instead of hanging."""
     sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
-    assert "v1.22.3" in sh
+    assert "v1.22.4" in sh
     assert "--retries 20" in sh and "--timeout 90" in sh and "--prefer-binary" in sh
     ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
-    assert "v1.22.3" in ps
+    assert "v1.22.4" in ps
     assert "--retries 20" in ps and "--timeout 90" in ps and "--prefer-binary" in ps
+
+
+def test_pendrive_openclaw_launcher_writes_stick_config():
+    """OpenClaw resolves its workspace from the CONFIG FILE first - so the
+    launchers must create the stick config with the stick workspace, or
+    OpenClaw keeps using the PC's ~/.openclaw workspace."""
+    sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    for token in ("CONFIG FILE first", "defaults", '"workspace"', "openclaw.json"):
+        assert token in sh, token
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    for token in ("CONFIG FILE first", "defaults", "ConvertTo-Json", "OPENCLAW_CONFIG_PATH"):
+        assert token in ps, token
+    # the workspace written must point at the stick, never the PC home
+    assert "council-data\\openclaw\\workspace" in ps
+    assert "council-data/openclaw/workspace" in sh
+    assert "nikhil" not in ps.replace("nikhil", "").lower()  # no hardcoded PC user

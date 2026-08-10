@@ -32,7 +32,7 @@ if (-not (Test-Path $Path)) {
 }
 
 Write-Host "=============================================="
-Write-Host " CouncilKey-Os pendrive setup v1.22.3"
+Write-Host " CouncilKey-Os pendrive setup v1.22.4"
 Write-Host "  - ASKS which agents to install (nothing automatic)"
 Write-Host "  - use -Check first to inspect everything"
 Write-Host " Target: $Path"
@@ -226,6 +226,11 @@ set "OPENCLAW_CONFIG_PATH=%STICK%council-data\openclaw\openclaw.json"
 set "OPENCLAW_WORKSPACE_DIR=%STICK%council-data\openclaw\workspace"
 set "OPENCLAW_HOME=%STICK%council-data\openclaw\home"
 if not exist "%STICK%council-data\openclaw\workspace" mkdir "%STICK%council-data\openclaw\workspace"
+rem OpenClaw resolves its workspace from the CONFIG FILE first (env vars are only
+rem a fallback) - so make sure the stick config exists with the stick workspace.
+if not exist "%OPENCLAW_CONFIG_PATH%" (
+  powershell -NoProfile -Command "$ws='%STICK%council-data\openclaw\workspace'; $cfg=[ordered]@{agents=@{defaults=@{workspace=$ws}}}; ($cfg|ConvertTo-Json -Depth 5) | Set-Content -Encoding ASCII '%OPENCLAW_CONFIG_PATH%'"
+)
 if exist "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" (
   "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" %*
 ) else (

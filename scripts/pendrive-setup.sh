@@ -55,7 +55,7 @@ if [ ! -d "$USB" ]; then
 fi
 
 echo "=============================================="
-echo " CouncilKey-Os pendrive setup v1.22.3"
+echo " CouncilKey-Os pendrive setup v1.22.4"
 echo "  - ASKS which agents to install (nothing automatic)"
 echo "  - use --check first to inspect everything"
 echo " Target: $USB"
@@ -445,6 +445,11 @@ set "OPENCLAW_CONFIG_PATH=%STICK%council-data\openclaw\openclaw.json"
 set "OPENCLAW_WORKSPACE_DIR=%STICK%council-data\openclaw\workspace"
 set "OPENCLAW_HOME=%STICK%council-data\openclaw\home"
 if not exist "%STICK%council-data\openclaw\workspace" mkdir "%STICK%council-data\openclaw\workspace"
+rem OpenClaw resolves its workspace from the CONFIG FILE first (env vars are only
+rem a fallback) - so make sure the stick config exists with the stick workspace.
+if not exist "%OPENCLAW_CONFIG_PATH%" (
+  powershell -NoProfile -Command "$ws='%STICK%council-data\openclaw\workspace'; $cfg=[ordered]@{agents=@{defaults=@{workspace=$ws}}}; ($cfg|ConvertTo-Json -Depth 5) | Set-Content -Encoding ASCII '%OPENCLAW_CONFIG_PATH%'"
+)
 if exist "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" (
   "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" %*
 ) else (
@@ -463,6 +468,19 @@ export OPENCLAW_CONFIG_PATH="$STICK/council-data/openclaw/openclaw.json"
 export OPENCLAW_WORKSPACE_DIR="$STICK/council-data/openclaw/workspace"
 export OPENCLAW_HOME="$STICK/council-data/openclaw/home"
 mkdir -p "$OPENCLAW_WORKSPACE_DIR" "$OPENCLAW_HOME"
+# OpenClaw resolves its workspace from the CONFIG FILE first (env vars are
+# only a fallback) - make sure the stick config exists with the stick workspace.
+if [ ! -f "$OPENCLAW_CONFIG_PATH" ]; then
+  cat > "$OPENCLAW_CONFIG_PATH" <<CFGEOF
+{
+  "agents": {
+    "defaults": {
+      "workspace": "$OPENCLAW_WORKSPACE_DIR"
+    }
+  }
+}
+CFGEOF
+fi
 echo "== OpenClaw from the pendrive =="
 echo "  Running from: $STICK"
 if [ -x "$STICK/CouncilKey-Os/tools/openclaw/node_modules/.bin/openclaw" ]; then
