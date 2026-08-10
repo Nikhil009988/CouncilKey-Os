@@ -28,7 +28,24 @@ def cmd_version() -> str:
 
 def cmd_which() -> str:
     """Show WHERE this CLI is installed (PC vs pendrive)."""
-    return str(ROOT)
+    # stick layout: <drive>:\CouncilKey-Os + <drive>:\council-data
+    on_stick = (ROOT.parent / "council-data").is_dir() or os.environ.get("COUNCIL_PENDRIVE") == "1"
+    home = os.environ.get("COUNCIL_HOME", "")
+    lines = [f"CouncilKey-Os {__version__}"]
+    lines.append(f"installed at: {ROOT}")
+    if on_stick:
+        lines.append("mode         : 📦 PENDRIVE - running from the stick")
+        lines.append(f"data lives on: {home or str(ROOT.parent / 'council-data')}  (unplug -> nothing stays on this PC)")
+    else:
+        lines.append("mode         : 💻 PC copy (the builder)")
+        lines.append("  this copy BUILDS the pendrive and is where you develop.")
+        lines.append("  to run from the pendrive instead:")
+        lines.append("    1. build the stick:  .\\scripts\\pendrive-setup.ps1 -Path E:\\ -Wizard")
+        lines.append("    2. run from it:      E:\\CouncilKey-Os\\councilkey.bat  (or double-click E:\\START.bat)")
+        lines.append("    3. verify:           E:\\CouncilKey-Os\\councilkey.bat which   -> should say PENDRIVE")
+    if home:
+        lines.append(f"COUNCIL_HOME : {home}")
+    return "\n".join(lines)
 
 
 _stale_check_cache: tuple[float, str] | None = None
@@ -944,12 +961,14 @@ def cmd_wiki(topic: str | None = None) -> int:
                      "  --provider openai|anthropic|gemini|openrouter|none\n"
                      "  --api-key sk-...   # non-interactive\n"
                      "  --no-agents --skip-tests --skip-verify\n",
-            "pendrive": "councilkey pendrive E:\\ --wizard     # build the stick (Windows)\n"
+            "pendrive": "councilkey which            # are you on the PC copy or the pendrive?\n"
+                        "councilkey pendrive E:\\ --wizard     # build the stick (Windows)\n"
                         "councilkey pendrive /media/USB --wizard   # Linux\n"
                         "councilkey pendrive-push E:\\        # mirror keys/journal/memory\n"
                         "councilkey pendrive-check E:\\       # health-check the stick\n"
                         "On the stick: START.bat (dashboard) / AGENTS.bat (menu)\n"
-                        "Session mode: START-SESSION.bat clones to PC, END-SESSION.bat wipes it.\n",
+                        "Session mode: START-SESSION.bat clones to PC, END-SESSION.bat wipes it.\n"
+                        "Run FROM the stick: E:\\CouncilKey-Os\\councilkey.bat (its 'which' says PENDRIVE)\n",
             "agents": "councilkey agents status     # 5 agents + where their data lives\n"
                       "councilkey agents install    # install all (or: install opencode)\n"
                       "councilkey agents configure opencode   # point it at your API key\n"

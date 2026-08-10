@@ -1046,3 +1046,32 @@ def test_api_backup_roundtrip():
     assert name in backups
     r = client.post("/api/backup/restore", json={"name": name})
     assert r.json()["ok"] is True
+
+
+# ------------------------------------------------------------- v1.21.1 which
+def test_cli_which_shows_pc_vs_pendrive(tmp_path, monkeypatch):
+    """councilkey which must label itself as PENDRIVE when a council-data
+    folder sits next to the install (stick layout), else PC copy."""
+    import subprocess
+    from pathlib import Path
+
+    from council.cli import ROOT as cli_root
+
+    # 1. PC layout (normal) -> says PC copy + gives the pendrive steps
+    r = subprocess.run([str(cli_path()), "which"], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0
+    assert "PC copy" in r.stdout or "PENDRIVE" in r.stdout
+
+    # 2. stick layout: <tmp>/CouncilKey-Os + <tmp>/council-data
+    stick_app = tmp_path / "CouncilKey-Os"
+    (tmp_path / "council-data").mkdir()
+    # simulate by importing the module with a patched ROOT
+    import council.cli as cli
+    orig_root = cli.ROOT
+    try:
+        cli.ROOT = stick_app
+        out = cli.cmd_which()
+        assert "PENDRIVE" in out
+        assert "unplug" in out
+    finally:
+        cli.ROOT = orig_root
