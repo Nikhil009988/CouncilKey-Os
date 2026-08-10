@@ -10,9 +10,12 @@ param(
   [switch]$Wizard,
   [switch]$NoAgents,
   [switch]$Check,
-  [string]$Agents = ""
+  [object]$Agents = ""
 )
-$ErrorActionPreference = "Stop"
+# NOTE: keep Continue, NOT Stop - PowerShell 7.3+ treats any stderr from a
+# native command (pip/npm) as a fatal error when EAP=Stop, which breaks
+# installs that print warnings to stderr. We check $LASTEXITCODE instead.
+$ErrorActionPreference = "Continue"
 $ROOT = Split-Path -Parent $PSScriptRoot
 
 if (-not (Test-Path $Path)) {
@@ -29,7 +32,7 @@ if (-not (Test-Path $Path)) {
 }
 
 Write-Host "=============================================="
-Write-Host " CouncilKey-Os pendrive setup v1.22.2"
+Write-Host " CouncilKey-Os pendrive setup v1.22.3"
 Write-Host "  - ASKS which agents to install (nothing automatic)"
 Write-Host "  - use -Check first to inspect everything"
 Write-Host " Target: $Path"
@@ -58,7 +61,10 @@ if ($Check) {
   Write-Host "  internet PyPI   : $(if (Test-Net 'pypi.org') { 'reachable' } else { 'NOT reachable - pip agents will fail' })"
   Write-Host "  internet npmjs  : $(if (Test-Net 'registry.npmjs.org') { 'reachable' } else { 'NOT reachable - npm agents will fail' })"
   if (Test-Path $StickPip) {
-    $have = @(& $StickPip list 2>$null | Select-String -Pattern 'hermes-agent|crewai|aider-chat' | ForEach-Object { $_.Line.Split(' ')[0] })
+    $have = @()
+    try {
+      $have = @(& $StickPip list --format=freeze 2>&1 | Select-String -Pattern '^hermes-agent|^crewai|^aider-chat' | ForEach-Object { ($_ -split '==')[0] })
+    } catch {}
     foreach ($n in @('openclaw', 'opencode')) {
       if (Test-Path (Join-Path $Dest "tools\$n\node_modules\.bin")) { $have += $n }
     }
@@ -147,7 +153,10 @@ if ($NoAgents) {
   Write-Host "      skipped agent installs (-NoAgents) - launchers are still written"
 } else {
   if ($Agents) {
-    foreach ($part in ($Agents -split ',')) {
+    # -Agents accepts "1,2,3" OR 1,2,3 (PowerShell parses the latter as an
+    # array) - normalize both to a comma string
+    $AgentStr = if ($Agents -is [array]) { $Agents -join ',' } else { [string]$Agents }
+    foreach ($part in ($AgentStr -split ',')) {
       $part = $part.Trim().ToLower()
       if ($AgentMap.ContainsKey($part)) { $Selected += $AgentMap[$part] }
     }

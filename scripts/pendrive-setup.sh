@@ -55,7 +55,7 @@ if [ ! -d "$USB" ]; then
 fi
 
 echo "=============================================="
-echo " CouncilKey-Os pendrive setup v1.22.2"
+echo " CouncilKey-Os pendrive setup v1.22.3"
 echo "  - ASKS which agents to install (nothing automatic)"
 echo "  - use --check first to inspect everything"
 echo " Target: $USB"

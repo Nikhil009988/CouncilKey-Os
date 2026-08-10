@@ -1121,8 +1121,8 @@ def test_pendrive_scripts_have_version_banner_and_tough_pip():
     pip flags (--retries 20 --timeout 90 --prefer-binary) so flaky
     internet retries instead of hanging."""
     sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
-    assert "v1.22.2" in sh
+    assert "v1.22.3" in sh
     assert "--retries 20" in sh and "--timeout 90" in sh and "--prefer-binary" in sh
     ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
-    assert "v1.22.2" in ps
+    assert "v1.22.3" in ps
     assert "--retries 20" in ps and "--timeout 90" in ps and "--prefer-binary" in ps
