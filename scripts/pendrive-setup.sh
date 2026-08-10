@@ -55,7 +55,7 @@ if [ ! -d "$USB" ]; then
 fi
 
 echo "=============================================="
-echo " CouncilKey-Os pendrive setup v1.22.4"
+echo " CouncilKey-Os pendrive setup v1.22.5"
 echo "  - ASKS which agents to install (nothing automatic)"
 echo "  - use --check first to inspect everything"
 echo " Target: $USB"
@@ -140,176 +140,62 @@ setlocal
 set "ROOT=%~dp0CouncilKey-Os"
 set "COUNCIL_HOME=%~dp0council-data"
 set "COUNCIL_PENDRIVE=1"
+set "LOG=%COUNCIL_HOME%\startup.log"
+if not exist "%COUNCIL_HOME%" mkdir "%COUNCIL_HOME%"
 
 echo == CouncilKey-Os portable start ==
 echo   Running from: %~dp0  (all data on the stick)
+echo.
 
-rem 1. make sure the python environment exists on the stick
-if not exist "%ROOT%\.venv\Scripts\python.exe" (
-  echo [setup] creating portable environment (first run, one time)...
-  where python >nul 2>nul
-  if errorlevel 1 (
-    echo [error] python not found on this PC.
-    echo   Install Python 3.11+ from https://python.org, or run setup first on any PC.
-    pause
-    exit /b 1
-  )
-  python -m venv "%ROOT%\.venv"
-  "%ROOT%\.venv\Scripts\pip.exe" install -q -e "%ROOT%"
+rem 1. portable python + app must be complete on the stick
+if not exist "%ROOT%\.venv\Scripts\python.exe" goto repair
+"%ROOT%\.venv\Scripts\python.exe" -c "import council, uvicorn" >nul 2>&1
+if not errorlevel 1 goto portpick
+:repair
+echo [setup] finishing the portable environment (first run, one time - can take a few minutes)...
+where python >nul 2>nul
+if errorlevel 1 goto nopython
+python -m venv "%ROOT%\.venv"
+if errorlevel 1 goto die
+"%ROOT%\.venv\Scripts\pip.exe" install -q -e "%ROOT%"
+if errorlevel 1 goto die
+"%ROOT%\.venv\Scripts\python.exe" -c "import council, uvicorn" >nul 2>&1
+if errorlevel 1 goto broken
+:portpick
+rem 2. pick a free port (8443-8463) - never fail just because 8443 is busy
+set "PORT=8443"
+:portloop
+netstat -ano 2>nul | findstr /r /c:":%PORT% .*LISTENING" >nul 2>&1
+if errorlevel 1 goto portok
+set /a PORT+=1
+if %PORT% gtr 8463 goto noports
+goto portloop
+:portok
+echo   Dashboard: http://localhost:%PORT%   (Ctrl+C to stop)
+echo.
+rem 3. start the dashboard - all output is also written to the stick log
+>"%LOG%" 2>&1 "%ROOT%\.venv\Scripts\python.exe" -m uvicorn council.orchestrator.main:app --host 0.0.0.0 --port %PORT%
+if errorlevel 1 (
+  echo [error] the dashboard stopped. Full log:
+  echo   %LOG%
+  echo   Paste the last lines to the CouncilKey-Os team for a fix.
 )
-
-rem 2. start the dashboard (all data lives on the stick: %COUNCIL_HOME%)
-if "%COUNCIL_PORT%"=="" set COUNCIL_PORT=8443
-if "%COUNCIL_HOST%"=="" set COUNCIL_HOST=0.0.0.0
+goto die
+:nopython
+echo [error] Python is not installed on this PC.
+echo   Install Python 3.11+ from https://python.org, then re-run START.bat
+goto die
+:broken
+echo [error] the app on the stick is incomplete (interrupted build).
+echo   Rebuild the stick on a PC with internet:
+echo     scripts\pendrive-setup.ps1 -Path %~d0 -Agents 1,2,3
+goto die
+:noports
+echo [error] no free port between 8443 and 8463 on this PC.
+:die
 echo.
-echo   Dashboard: http://localhost:%COUNCIL_PORT%   (Ctrl+C to stop)
-echo.
-"%ROOT%\.venv\Scripts\python.exe" -m uvicorn council.orchestrator.main:app --host "%COUNCIL_HOST%" --port "%COUNCIL_PORT%"
-pause
-endlocal
-EOF
-cat > "$USB/start.sh" <<'EOF'
-#!/usr/bin/env bash
-# start.sh - CouncilKey-Os portable launcher (Linux/macOS)
-# Plug in the stick and run:  bash /path/to/start.sh
-set -euo pipefail
-STICK="$(cd "$(dirname "$0")" && pwd)"
-ROOT="$STICK/CouncilKey-Os"
-export COUNCIL_HOME="$STICK/council-data"
-export COUNCIL_PENDRIVE=1
-
-if [ ! -x "$ROOT/.venv/bin/python" ]; then
-  echo "[setup] creating portable environment (first run, one time)..."
-  python3 -m venv "$ROOT/.venv"
-  "$ROOT/.venv/bin/pip" install -q -e "$ROOT"
-fi
-
-PORT="${COUNCIL_PORT:-8443}"
-HOST="${COUNCIL_HOST:-0.0.0.0}"
-echo "  Dashboard: http://localhost:$PORT   (Ctrl+C to stop)"
-exec "$ROOT/.venv/bin/python" -m uvicorn council.orchestrator.main:app --host "$HOST" --port "$PORT"
-EOF
-chmod +x "$USB/start.sh"
-echo "      ok"
-
-# 5. autorun hint (Windows blocks real autorun - this offers the shortcut)
-echo "[5/6] Writing autorun.inf (Windows autoplay prompt)..."
-cat > "$USB/autorun.inf" <<EOF
-[autorun]
-open=START.bat
-label=CouncilKey-Os
-action=Start CouncilKey-Os
-icon=CouncilKey-Os\images\banner.png
-shell\start=Start CouncilKey-Os
-shell\start\command=START.bat
-EOF
-echo "      ok (note: Windows shows a 'Start CouncilKey-Os' prompt on plug-in)"
-
-
-# ---- CHECK MODE: see everything first, install NOTHING ----
-if [ "$CHECK" -eq 1 ]; then
-  STICK_VENV="$USB/CouncilKey-Os/.venv"
-  PIP="$STICK_VENV/bin/pip"; [ -x "$STICK_VENV/Scripts/pip.exe" ] && PIP="$STICK_VENV/Scripts/pip.exe"
-  net_ok() { # $1 = hostname
-    if command -v timeout >/dev/null 2>&1; then
-      timeout 4 bash -c "echo > /dev/tcp/$1/443" 2>/dev/null && echo "reachable" || echo "NOT reachable"
-    else
-      echo "? (no timeout tool)"
-    fi
-  }
-  echo ""
-  echo "  == Pre-install check (nothing installed) =="
-  echo "  stick venv      : $([ -x "$PIP" ] && echo ready || echo 'MISSING - run without --check first to build')"
-  echo "  python (PC)     : $(command -v python3 >/dev/null 2>&1 && echo ok || echo 'missing (install Python 3.11+)')"
-  echo "  npm (PC)        : $(command -v npm >/dev/null 2>&1 && echo ok || echo 'missing (OpenClaw/OpenCode need it)')"
-  echo "  internet PyPI   : $(net_ok pypi.org)"
-  echo "  internet npmjs  : $(net_ok registry.npmjs.org)"
-  if [ -x "$PIP" ]; then
-    have=$("$PIP" list 2>/dev/null | grep -E 'hermes-agent|crewai|aider-chat' | awk '{print $1}' | tr '\n' ' ' || true)
-    for n in openclaw opencode; do
-      [ -d "$USB/CouncilKey-Os/tools/$n/node_modules/.bin" ] && have="$have $n"
-    done
-    echo "  already on stick: ${have:-none yet}"
-  fi
-  free_mb=$(df -Pm "$USB" 2>/dev/null | awk 'NR==2 {print $4}')
-  if [ -n "$free_mb" ]; then
-    free_gb=$(awk "BEGIN {printf \"%.1f\", $free_mb/1024}")
-    if [ "$free_mb" -lt 4096 ]; then
-      echo "  stick free space : ${free_gb} GB  ⚠ LOW - agents need ~3-4 GB free"
-    else
-      echo "  stick free space : ${free_gb} GB (ok)"
-    fi
-  fi
-  echo "  TIP: if an install hangs >20 min, Ctrl+C and re-run - it resumes"
-  echo "       from where it stopped (copy/venv are skipped, downloads resume)."
-  echo ""
-  echo "  Choose what to install, then re-run:"
-  echo "    ./scripts/pendrive-setup.sh $USB --agents 1,3,5   (or run without --agents to pick interactively)"
-  exit 0
-fi
-
-
-# 1. copy the project (without git history / heavy junk)
-echo ""
-echo "[1/6] Copying CouncilKey-Os to the pendrive..."
-mkdir -p "$USB/CouncilKey-Os"
-rsync -a --exclude .git --exclude .venv --exclude __pycache__ --exclude "*.pyc" \
-  --exclude tools --exclude .pytest_cache --exclude .ruff_cache \
-  "$ROOT/" "$USB/CouncilKey-Os/" 2>/dev/null || cp -r \
-  "$ROOT"/{council,scripts,deploy,builder,docs,images,tests,README.md,VERSION,pyproject.toml,Makefile,.gitignore,LICENSE,install.sh} \
-  "$USB/CouncilKey-Os/"
-echo "      ok"
-
-# 2. portable Python venv (works on any PC - python not required on the target)
-echo "[2/6] Creating a portable Python environment ON the stick..."
-if [ ! -d "$USB/CouncilKey-Os/.venv" ]; then
-  python3 -m venv "$USB/CouncilKey-Os/.venv"
-fi
-"$USB/CouncilKey-Os/.venv/bin/pip" install -q -e "$USB/CouncilKey-Os" 2>&1 | tail -1 || true
-echo "      ok (first start on the stick will finish this if interrupted)"
-
-# 3. portable COUNCIL_HOME on the stick (data never leaves the stick)
-echo "[3/6] Configuring the stick as the council home..."
-mkdir -p "$USB/council-data"
-# (launchers derive COUNCIL_HOME from their own location - no env file needed)
-echo "      ok"
-
-# 4. start scripts (double-click on Windows, bash on Linux)
-echo "[4/6] Writing START.bat / start.sh..."
-cat > "$USB/START.bat" <<EOF
-@echo off
-rem START.bat - CouncilKey-Os portable launcher (Windows)
-rem Just double-click this file after plugging in the stick.
-setlocal
-set "ROOT=%~dp0CouncilKey-Os"
-set "COUNCIL_HOME=%~dp0council-data"
-set "COUNCIL_PENDRIVE=1"
-
-echo == CouncilKey-Os portable start ==
-echo   Running from: %~dp0  (all data on the stick)
-
-rem 1. make sure the python environment exists on the stick
-if not exist "%ROOT%\.venv\Scripts\python.exe" (
-  echo [setup] creating portable environment (first run, one time)...
-  where python >nul 2>nul
-  if errorlevel 1 (
-    echo [error] python not found on this PC.
-    echo   Install Python 3.11+ from https://python.org, or run setup first on any PC.
-    pause
-    exit /b 1
-  )
-  python -m venv "%ROOT%\.venv"
-  "%ROOT%\.venv\Scripts\pip.exe" install -q -e "%ROOT%"
-)
-
-rem 2. start the dashboard (all data lives on the stick: %COUNCIL_HOME%)
-if "%COUNCIL_PORT%"=="" set COUNCIL_PORT=8443
-if "%COUNCIL_HOST%"=="" set COUNCIL_HOST=0.0.0.0
-echo.
-echo   Dashboard: http://localhost:%COUNCIL_PORT%   (Ctrl+C to stop)
-echo.
-"%ROOT%\.venv\Scripts\python.exe" -m uvicorn council.orchestrator.main:app --host "%COUNCIL_HOST%" --port "%COUNCIL_PORT%"
-pause
+echo   (window stays open - press any key to close)
+pause >nul
 endlocal
 EOF
 cat > "$USB/start.sh" <<'EOF'
@@ -429,6 +315,29 @@ else
       fi
     done
   fi
+
+  # verify what actually landed ON THE STICK (not the PC)
+  echo ""
+  echo "  agents actually on the stick:"
+  for n in hermes openclaw opencode crewai aider; do
+    ok=0
+    case "$n" in
+      hermes)   [ -x "$USB/CouncilKey-Os/.venv/bin/hermes" ] && ok=1; [ -x "$USB/CouncilKey-Os/.venv/Scripts/hermes.exe" ] && ok=1 ;;
+      crewai)   [ -x "$USB/CouncilKey-Os/.venv/bin/crewai" ] && ok=1; [ -x "$USB/CouncilKey-Os/.venv/Scripts/crewai.exe" ] && ok=1 ;;
+      aider)    [ -x "$USB/CouncilKey-Os/.venv/bin/aider" ] && ok=1; [ -x "$USB/CouncilKey-Os/.venv/Scripts/aider.exe" ] && ok=1 ;;
+      openclaw) [ -d "$USB/CouncilKey-Os/tools/openclaw/node_modules/.bin" ] && ok=1 ;;
+      opencode) [ -d "$USB/CouncilKey-Os/tools/opencode/node_modules/.bin" ] && ok=1 ;;
+    esac
+    if [ "$ok" -eq 1 ]; then
+      echo "    ✅ $n  (on the stick)"
+    else
+      if echo "$names" | grep -qw "$n"; then
+        echo "    ❌ $n  FAILED to install - re-run with --agents $n when internet is stable"
+      else
+        echo "    ⚪ $n  (not selected - add later with --agents $n)"
+      fi
+    fi
+  done
 fi
 
 # --- launchers: every agent runs from the stick with state on the stick ---
@@ -450,9 +359,14 @@ rem a fallback) - so make sure the stick config exists with the stick workspace.
 if not exist "%OPENCLAW_CONFIG_PATH%" (
   powershell -NoProfile -Command "$ws='%STICK%council-data\openclaw\workspace'; $cfg=[ordered]@{agents=@{defaults=@{workspace=$ws}}}; ($cfg|ConvertTo-Json -Depth 5) | Set-Content -Encoding ASCII '%OPENCLAW_CONFIG_PATH%'"
 )
+echo   Workspace: %OPENCLAW_WORKSPACE_DIR%
 if exist "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" (
+  echo   Running OpenClaw FROM THE STICK.
   "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" %*
 ) else (
+  echo   [note] OpenClaw is NOT installed on the stick - using the PC copy.
+  echo   State and workspace still stay on the stick. To install it on the stick:
+  echo     scripts\pendrive-setup.sh %STICK% --agents 2
   openclaw %*
 )
 endlocal
@@ -617,6 +531,7 @@ export OPENROUTER_API_KEY="$("$STICK/CouncilKey-Os/councilkey" key show OPENROUT
 export OPENAI_API_KEY="$("$STICK/CouncilKey-Os/councilkey" key show OPENAI_API_KEY 2>/dev/null || true)"
 export GEMINI_API_KEY="$("$STICK/CouncilKey-Os/councilkey" key show GEMINI_API_KEY 2>/dev/null || true)"
 export ANTHROPIC_API_KEY="$("$STICK/CouncilKey-Os/councilkey" key show ANTHROPIC_API_KEY 2>/dev/null || true)"
+echo "Config: $OPENCODE_CONFIG"
 exec opencode "$@"
 EOF
 

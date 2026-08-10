@@ -17,6 +17,23 @@ param(
 # installs that print warnings to stderr. We check $LASTEXITCODE instead.
 $ErrorActionPreference = "Continue"
 $ROOT = Split-Path -Parent $PSScriptRoot
+$AgentNames = @('hermes', 'openclaw', 'opencode', 'crewai', 'aider')
+$AgentMap = @{
+  '1' = 'hermes'; '2' = 'openclaw'; '3' = 'opencode'; '4' = 'crewai'; '5' = 'aider'
+  'hermes' = 'hermes'; 'openclaw' = 'openclaw'; 'opencode' = 'opencode'
+  'crewai' = 'crewai'; 'aider' = 'aider'
+}
+
+function Test-StickAgent([string]$name) {
+  switch ($name) {
+    'hermes'   { return Test-Path (Join-Path $Dest ".venv\Scripts\hermes.exe") }
+    'crewai'   { return Test-Path (Join-Path $Dest ".venv\Scripts\crewai.exe") }
+    'aider'    { return Test-Path (Join-Path $Dest ".venv\Scripts\aider.exe") }
+    'openclaw' { return Test-Path (Join-Path $Dest "tools\openclaw\node_modules\.bin\openclaw.cmd") }
+    'opencode' { return Test-Path (Join-Path $Dest "tools\opencode\node_modules\.bin\opencode.cmd") }
+  }
+  return $false
+}
 
 if (-not (Test-Path $Path)) {
   Write-Host "❌ $Path is not a directory - mount your pendrive first."
@@ -32,7 +49,7 @@ if (-not (Test-Path $Path)) {
 }
 
 Write-Host "=============================================="
-Write-Host " CouncilKey-Os pendrive setup v1.22.4"
+Write-Host " CouncilKey-Os pendrive setup v1.22.5"
 Write-Host "  - ASKS which agents to install (nothing automatic)"
 Write-Host "  - use -Check first to inspect everything"
 Write-Host " Target: $Path"
@@ -116,32 +133,62 @@ setlocal
 set "ROOT=%~dp0CouncilKey-Os"
 set "COUNCIL_HOME=%~dp0council-data"
 set "COUNCIL_PENDRIVE=1"
+set "LOG=%COUNCIL_HOME%\startup.log"
+if not exist "%COUNCIL_HOME%" mkdir "%COUNCIL_HOME%"
 
 echo == CouncilKey-Os portable start ==
 echo   Running from: %~dp0  (all data on the stick)
+echo.
 
-rem 1. make sure the python environment exists on the stick
-if not exist "%ROOT%\.venv\Scripts\python.exe" (
-  echo [setup] creating portable environment (first run, one time)...
-  where python >nul 2>nul
-  if errorlevel 1 (
-    echo [error] python not found on this PC.
-    echo   Install Python 3.11+ from https://python.org, or run setup first on any PC.
-    pause
-    exit /b 1
-  )
-  python -m venv "%ROOT%\.venv"
-  "%ROOT%\.venv\Scripts\pip.exe" install -q -e "%ROOT%"
+rem 1. portable python + app must be complete on the stick
+if not exist "%ROOT%\.venv\Scripts\python.exe" goto repair
+"%ROOT%\.venv\Scripts\python.exe" -c "import council, uvicorn" >nul 2>&1
+if not errorlevel 1 goto portpick
+:repair
+echo [setup] finishing the portable environment (first run, one time - can take a few minutes)...
+where python >nul 2>nul
+if errorlevel 1 goto nopython
+python -m venv "%ROOT%\.venv"
+if errorlevel 1 goto die
+"%ROOT%\.venv\Scripts\pip.exe" install -q -e "%ROOT%"
+if errorlevel 1 goto die
+"%ROOT%\.venv\Scripts\python.exe" -c "import council, uvicorn" >nul 2>&1
+if errorlevel 1 goto broken
+:portpick
+rem 2. pick a free port (8443-8463) - never fail just because 8443 is busy
+set "PORT=8443"
+:portloop
+netstat -ano 2>nul | findstr /r /c:":%PORT% .*LISTENING" >nul 2>&1
+if errorlevel 1 goto portok
+set /a PORT+=1
+if %PORT% gtr 8463 goto noports
+goto portloop
+:portok
+echo   Dashboard: http://localhost:%PORT%   (Ctrl+C to stop)
+echo.
+rem 3. start the dashboard - all output is also written to the stick log
+>"%LOG%" 2>&1 "%ROOT%\.venv\Scripts\python.exe" -m uvicorn council.orchestrator.main:app --host 0.0.0.0 --port %PORT%
+if errorlevel 1 (
+  echo [error] the dashboard stopped. Full log:
+  echo   %LOG%
+  echo   Paste the last lines to the CouncilKey-Os team for a fix.
 )
-
-rem 2. start the dashboard (all data lives on the stick: %COUNCIL_HOME%)
-if "%COUNCIL_PORT%"=="" set COUNCIL_PORT=8443
-if "%COUNCIL_HOST%"=="" set COUNCIL_HOST=0.0.0.0
+goto die
+:nopython
+echo [error] Python is not installed on this PC.
+echo   Install Python 3.11+ from https://python.org, then re-run START.bat
+goto die
+:broken
+echo [error] the app on the stick is incomplete (interrupted build).
+echo   Rebuild the stick on a PC with internet:
+echo     scripts\pendrive-setup.ps1 -Path %~d0 -Agents 1,2,3
+goto die
+:noports
+echo [error] no free port between 8443 and 8463 on this PC.
+:die
 echo.
-echo   Dashboard: http://localhost:%COUNCIL_PORT%   (Ctrl+C to stop)
-echo.
-"%ROOT%\.venv\Scripts\python.exe" -m uvicorn council.orchestrator.main:app --host "%COUNCIL_HOST%" --port "%COUNCIL_PORT%"
-pause
+echo   (window stays open - press any key to close)
+pause >nul
 endlocal
 "@ | Set-Content -Encoding ASCII (Join-Path $Path "START.bat")
 Write-Host "      ok"
@@ -213,6 +260,17 @@ if ($NoAgents) {
       }
     }
   }
+
+  # verify what actually landed ON THE STICK (not the PC)
+  Write-Host ""
+  Write-Host "  agents actually on the stick:"
+  foreach ($n in $AgentNames) {
+    if (Test-StickAgent $n) { Write-Host "    ✅ $n  (on the stick)" }
+    else {
+      if ($Selected -contains $n) { Write-Host "    ❌ $n  FAILED to install - re-run with -Agents $n when internet is stable" }
+      else { Write-Host "    ⚪ $n  (not selected - add later with -Agents $n)" }
+    }
+  }
 }
 
 # launchers - always written
@@ -231,9 +289,14 @@ rem a fallback) - so make sure the stick config exists with the stick workspace.
 if not exist "%OPENCLAW_CONFIG_PATH%" (
   powershell -NoProfile -Command "$ws='%STICK%council-data\openclaw\workspace'; $cfg=[ordered]@{agents=@{defaults=@{workspace=$ws}}}; ($cfg|ConvertTo-Json -Depth 5) | Set-Content -Encoding ASCII '%OPENCLAW_CONFIG_PATH%'"
 )
+echo   Workspace: %OPENCLAW_WORKSPACE_DIR%
 if exist "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" (
+  echo   Running OpenClaw FROM THE STICK.
   "%STICK%CouncilKey-Os\tools\openclaw\node_modules\.bin\openclaw.cmd" %*
 ) else (
+  echo   [note] OpenClaw is NOT installed on the stick - using the PC copy.
+  echo   State and workspace still stay on the stick. To install it on the stick:
+  echo     scripts\pendrive-setup.ps1 -Path %~d0 -Agents 2
   openclaw %*
 )
 endlocal
@@ -247,9 +310,12 @@ setlocal
 set "STICK=%~dp0"
 set "HERMES_HOME=%STICK%council-data\agents\hermes"
 if exist "%STICK%CouncilKey-Os\.venv\Scripts\hermes.exe" (
+  echo   Running Hermes FROM THE STICK.
   "%STICK%CouncilKey-Os\.venv\Scripts\hermes.exe" %*
 ) else (
-  echo [error] hermes not on the stick - rebuild the stick with internet
+  echo [error] Hermes is NOT installed on the stick.
+  echo   On a PC with internet, rebuild with:
+  echo     scripts\pendrive-setup.ps1 -Path %~d0 -Agents 1
   pause
 )
 endlocal
@@ -311,10 +377,15 @@ for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show OPENAI_AP
 for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show GEMINI_API_KEY 2^>nul') do set "GEMINI_API_KEY=%%K"
 for /f "delims=" %%K in ('"%~dp0CouncilKey-Os\councilkey.bat" key show ANTHROPIC_API_KEY 2^>nul') do set "ANTHROPIC_API_KEY=%%K"
 
+echo   Config: %OPENCODE_CONFIG%
 rem 2. run opencode (from the stick if installed there, else the PC install)
 if exist "%STICK%CouncilKey-Os\tools\opencode\node_modules\.bin\opencode.cmd" (
+  echo   Running OpenCode FROM THE STICK.
   "%STICK%CouncilKey-Os\tools\opencode\node_modules\.bin\opencode.cmd" %*
 ) else (
+  echo   [note] OpenCode is NOT installed on the stick - using the PC copy.
+  echo   State and config still stay on the stick. To install it on the stick:
+  echo     scripts\pendrive-setup.ps1 -Path %~d0 -Agents 3
   opencode %*
 )
 endlocal

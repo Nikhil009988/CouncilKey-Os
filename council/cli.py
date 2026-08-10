@@ -886,12 +886,44 @@ def cmd_pendrive_check(path: str, json_out: bool = False) -> int:
     else:
         missing.append("council-data (data dir)")
 
+    # deep test: can the stick venv actually import the app? (this is what
+    # START.bat does - a broken/incomplete venv is why the window closes)
+    venv_ok = venv_py.exists()
+    if venv_ok:
+        try:
+            import subprocess as _sp
+
+            r = _sp.run(
+                [str(venv_py), "-c", "import council, uvicorn"],
+                capture_output=True, text=True, timeout=60,
+            )
+            if r.returncode != 0:
+                venv_ok = False
+                missing.append("app import fails in stick venv (incomplete build)")
+        except Exception as exc:
+            venv_ok = False
+            missing.append(f"app import test error: {exc}")
+
+    # per-agent stick binaries (installed ON the stick, not the PC)
+    agent_binaries = {
+        "hermes": stick_venv / ("Scripts/hermes.exe" if os.name == "nt" else "bin/hermes"),
+        "openclaw": p / "CouncilKey-Os" / "tools" / "openclaw" / "node_modules" / ".bin" / ("openclaw.cmd" if os.name == "nt" else "openclaw"),
+        "opencode": p / "CouncilKey-Os" / "tools" / "opencode" / "node_modules" / ".bin" / ("opencode.cmd" if os.name == "nt" else "opencode"),
+        "crewai": stick_venv / ("Scripts/crewai.exe" if os.name == "nt" else "bin/crewai"),
+        "aider": stick_venv / ("Scripts/aider.exe" if os.name == "nt" else "bin/aider"),
+    }
+    agents_on_stick = {
+        name: binpath.exists() for name, binpath in agent_binaries.items()
+    }
+
     result = {
         "ok": not missing,
         "path": str(p),
         "missing": missing,
         "launchers": {f: (p / f).exists() for f in required},
-        "venv": venv_py.exists(),
+        "venv": venv_ok,
+        "app_imports": venv_ok,
+        "agents_on_stick": agents_on_stick,
         "data": {"size_bytes": data_size, "parts": data_parts},
     }
     if json_out:
@@ -904,7 +936,10 @@ def cmd_pendrive_check(path: str, json_out: bool = False) -> int:
     for f in required:
         mark = "✅" if (p / f).exists() else "❌"
         print(f"  {mark} {f}")
-    print(f"  {'✅' if venv_py.exists() else '❌'} CouncilKey-Os/.venv (portable python)")
+    print(f"  {'✅' if venv_ok else '❌'} CouncilKey-Os/.venv (portable python + app imports)")
+    print("  agents on the stick:")
+    for name, present in agents_on_stick.items():
+        print(f"    {'✅' if present else '⚪'} {name}")
     if data_dir.is_dir():
         print(f"  ✅ council-data/  ({_human_bytes(data_size)}): {', '.join(data_parts) if data_parts else 'empty'}")
     else:

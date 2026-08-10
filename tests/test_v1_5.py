@@ -886,12 +886,14 @@ def test_cli_pendrive_check_ready_stick():
                      "RUN-OPENCLAW.bat", "RUN-HERMES.bat", "RUN-OPENCODE.bat",
                      "RUN-CREWAI.bat", "RUN-AIDER.bat", "START-SESSION.bat", "END-SESSION.bat"):
             (p / name).write_text("", encoding="utf-8")
+        # a fake empty python fails the deep import test -> NOT READY (correct:
+        # the real check verifies the app actually imports in the stick venv)
         (p / "CouncilKey-Os" / ".venv" / "bin").mkdir(parents=True)
         (p / "CouncilKey-Os" / ".venv" / "bin" / "python").write_text("", encoding="utf-8")
         (p / "council-data").mkdir()
         r = subprocess.run([str(cli_path()), "pendrive-check", tmp], capture_output=True, text=True, timeout=90)
-        assert r.returncode == 0, r.stdout[-300:]
-        assert "Pendrive ready" in r.stdout
+        assert r.returncode == 1
+        assert "app import" in r.stdout
 
 
 def test_cli_new_commands_in_help():
@@ -1121,10 +1123,10 @@ def test_pendrive_scripts_have_version_banner_and_tough_pip():
     pip flags (--retries 20 --timeout 90 --prefer-binary) so flaky
     internet retries instead of hanging."""
     sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
-    assert "v1.22.4" in sh
+    assert "v1.22.5" in sh
     assert "--retries 20" in sh and "--timeout 90" in sh and "--prefer-binary" in sh
     ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
-    assert "v1.22.4" in ps
+    assert "v1.22.5" in ps
     assert "--retries 20" in ps and "--timeout 90" in ps and "--prefer-binary" in ps
 
 
@@ -1142,3 +1144,45 @@ def test_pendrive_openclaw_launcher_writes_stick_config():
     assert "council-data\\openclaw\\workspace" in ps
     assert "council-data/openclaw/workspace" in sh
     assert "nikhil" not in ps.replace("nikhil", "").lower()  # no hardcoded PC user
+
+
+def test_start_bat_is_bulletproof():
+    """START.bat must: repair the venv if incomplete, pick a free port,
+    write a startup log on the stick, and NEVER close instantly."""
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    for token in ("startup.log", "portloop", "netstat", "import council, uvicorn",
+                  "window stays open", "goto die", "portpick", ":repair"):
+        assert token in ps, token
+
+
+def test_pendrive_scripts_verify_agents_on_stick():
+    """After installs, the builder must verify binaries ON THE STICK and
+    print a per-agent ✅/❌/⚪ summary (not assume success)."""
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    for token in ("Test-StickAgent", "agents actually on the stick", "FAILED to install"):
+        assert token in ps, token
+    sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    for token in ("agents actually on the stick", "FAILED to install", "on the stick"):
+        assert token in sh, token
+
+
+def test_pendrive_check_reports_agents_on_stick():
+    """pendrive-check must report per-agent binaries ON the stick and test
+    that the stick venv can import the app (the START.bat failure cause)."""
+    import contextlib
+    import io
+    import json
+    import tempfile
+
+    from council.cli import cmd_pendrive_check
+
+    # missing dir -> json error path still works
+    with tempfile.TemporaryDirectory() as tmp:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = cmd_pendrive_check(tmp, json_out=True)
+        assert rc == 1
+        d = json.loads(buf.getvalue())
+        assert d["ok"] is False
+        assert "agents_on_stick" in d
+        assert "app_imports" in d

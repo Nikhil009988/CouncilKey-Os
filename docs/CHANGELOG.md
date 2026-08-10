@@ -1,5 +1,35 @@
 # Changelog
 
+## v1.22.5 (2026-08-10) - real pendrive fixes: agents actually install, START.bat never dies silently
+
+### Fixed (the user's real-world failures)
+- **CRITICAL: \$AgentNames/\$AgentMap were missing from pendrive-setup.ps1**
+  (lost in an earlier edit) - so agent selection silently did NOTHING and no
+  agents ever installed on the stick, while the wizard's verify showed PC
+  binaries. Re-added + every install is now VERIFIED on the stick with a
+  per-agent ✅/❌/⚪ summary ("agents actually on the stick").
+- **START.bat**: rewrote to never close silently - it now (1) checks the
+  venv can actually import council+uvicorn and REPAIRS it (pip install -e)
+  if the build was interrupted, (2) auto-picks a free port 8443-8463
+  (netstat scan - no more 'address in use' instant exit), (3) writes every
+  log line to E:\council-data\startup.log, (4) always stays open with a
+  clear error + the exact rebuild command.
+- **Launchers are loud**: RUN-OPENCLAW/RUN-OPENCODE print "Running X FROM
+  THE STICK" or "[note] X is NOT installed on the stick - using the PC
+  copy" + the exact command to add it (never silently run the PC copy).
+  RUN-OPENCLAW also prints its workspace path (the v1.22.4 config fix).
+- **pendrive-check now deep-tests**: runs the stick venv python to import
+  council+uvicorn (the exact START.bat check) and reports per-agent
+  binaries ON THE STICK (not PC PATH).
+- Fixed duplicated build section in pendrive-setup.sh (it ran steps 1-5
+  twice) and a verify loop that died under `set -e` when a binary was
+  missing (which skipped writing all launchers).
+
+### Verified
+- Full sh build test: --agents 3 installs ONLY opencode, verification
+  prints ✅/⚪ per agent, START.bat/RUN-*.bat generated correctly, 148
+  tests passing, ruff clean.
+
 ## v1.22.0 (2026-08-10) - you choose what goes on the stick + check mode
 
 ### Changed
