@@ -1083,7 +1083,7 @@ def terminal_status_route() -> JSONResponse:
 
 @app.get("/api/optional/agents")
 def optional_agents_route() -> JSONResponse:
-    return JSONResponse({"crewai": False, "microsoft": False, "llm_judge": True})
+    return JSONResponse({"crewai": False, "aider": False, "llm_judge": True})
 
 
 @app.get("/api/update/check")

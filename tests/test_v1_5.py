@@ -33,6 +33,26 @@ def test_wizard_noninteractive_runs():
     assert r.returncode == 0, r.stdout[-400:]
 
 
+def test_wizard_key_stored_even_if_openclaw_missing():
+    """Storing the API key must succeed and exit 0 even when OpenClaw is
+    not installed - the OpenClaw config step is informational, not fatal
+    (the key still drives the 3 council roles via the provider)."""
+    import subprocess
+
+    r = subprocess.run(
+        [str(cli_path()), "setup",
+         "--provider", "openai", "--api-key", "sk-test-wizard-xyz",
+         "--no-agents", "--skip-tests", "--skip-verify"],
+        capture_output=True, text=True, timeout=120,
+    )
+    assert "API key stored" in r.stdout
+    assert "Setup finished" in r.stdout
+    assert r.returncode == 0, r.stdout[-400:]
+    # the key actually landed in the vault
+    from council.secrets.vault import get_secret
+    assert get_secret("OPENAI_API_KEY") == "sk-test-wizard-xyz"
+
+
 def test_wizard_stores_key_in_vault(monkeypatch):
     from council.agents import setup_wizard as w
     from council.secrets.vault import get_secret

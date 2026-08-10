@@ -239,6 +239,13 @@ def run_wizard(
             openclaw_configured_ok = bool(cfg.get("ok"))
             if openclaw_configured_ok:
                 note("configure OpenClaw", True, cfg.get("detail", "")[:60])
+            elif "not installed" in (cfg.get("error") or ""):
+                # openclaw is optional and may be installed later - this is
+                # informational, NOT a setup failure (the key still works
+                # for the 3 council roles via your provider)
+                print(f"  ⚠ configure OpenClaw - {cfg.get('error', '')[:60]}")
+                print("        (optional - install it later with: councilkey agents install openclaw)")
+                openclaw_configured_ok = False
             else:
                 note("configure OpenClaw", False, cfg.get("error", "") or "will retry after agent install")
         if info["choice"] != "skip":
