@@ -13,6 +13,8 @@ import argparse
 import asyncio
 import json
 import os
+import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -847,6 +849,26 @@ def cmd_journal(action: str, limit: int, json_out: bool = False) -> int:
     return 0
 
 
+def _fs_type(p: Path) -> str:
+    """Best-effort filesystem type of the stick (Windows: Get-Volume;
+    Linux: stat -f). Returns '?' when unknown."""
+    try:
+        if os.name == "nt":
+            import subprocess as _sp
+
+            drive = str(p).split(":")[0]
+            r = _sp.run(
+                ["powershell", "-NoProfile", "-Command",
+                 f"(Get-Volume -DriveLetter {drive}).FileSystem"],
+                capture_output=True, text=True, timeout=15,
+            )
+            return (r.stdout or "").strip() or "?"
+        r = subprocess.run(["stat", "-f", "-c", "%T", str(p)], capture_output=True, text=True, timeout=15)
+        return (r.stdout or "").strip() or "?"
+    except Exception:
+        return "?"
+
+
 def cmd_pendrive_check(path: str, json_out: bool = False) -> int:
     """Health-check a CouncilKey-Os pendrive: files, venv, data, version."""
     p = Path(path)
@@ -916,6 +938,21 @@ def cmd_pendrive_check(path: str, json_out: bool = False) -> int:
         name: binpath.exists() for name, binpath in agent_binaries.items()
     }
 
+    # filesystem type (FAT32/exFAT break pip/npm -> warn) + venv corruption
+    # (stale ~* temp dirs from interrupted installs)
+    filesystem = _fs_type(p)
+    site_pkgs = stick_venv / ("Lib/site-packages" if os.name == "nt" else "lib")
+    stale_dirs = 0
+    if site_pkgs.is_dir():
+        try:
+            stale_dirs = sum(1 for d in site_pkgs.rglob("*") if d.is_dir() and d.name.startswith("~"))
+        except OSError:
+            pass
+    if filesystem and re.search(r"fat|exfat", filesystem, re.I):
+        pass  # informational - the builder now installs PC-first, so this is safe
+    if stale_dirs > 0:
+        missing.append(f"stick venv CORRUPTED ({stale_dirs} stale temp dirs - rebuild the stick)")
+
     result = {
         "ok": not missing,
         "path": str(p),
@@ -923,6 +960,8 @@ def cmd_pendrive_check(path: str, json_out: bool = False) -> int:
         "launchers": {f: (p / f).exists() for f in required},
         "venv": venv_ok,
         "app_imports": venv_ok,
+        "filesystem": filesystem,
+        "venv_stale_dirs": stale_dirs,
         "agents_on_stick": agents_on_stick,
         "data": {"size_bytes": data_size, "parts": data_parts},
     }

@@ -1123,10 +1123,10 @@ def test_pendrive_scripts_have_version_banner_and_tough_pip():
     pip flags (--retries 20 --timeout 90 --prefer-binary) so flaky
     internet retries instead of hanging."""
     sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
-    assert "v1.22.5" in sh
+    assert "v1.23.0" in sh
     assert "--retries 20" in sh and "--timeout 90" in sh and "--prefer-binary" in sh
     ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
-    assert "v1.22.5" in ps
+    assert "v1.23.0" in ps
     assert "--retries 20" in ps and "--timeout 90" in ps and "--prefer-binary" in ps
 
 
@@ -1186,3 +1186,35 @@ def test_pendrive_check_reports_agents_on_stick():
         assert d["ok"] is False
         assert "agents_on_stick" in d
         assert "app_imports" in d
+
+
+def test_pendrive_builds_agents_on_pc_first():
+    """pip/npm agents must be installed into a PC work dir then copied to the
+    stick - FAT32/exFAT drives break pip atomic-replace and npm tar symlinks."""
+    ps = (ROOT / "scripts" / "pendrive-setup.ps1").read_text(encoding="utf-8")
+    for token in ("councilkey-stick-build", "WorkVenv", "robocopy", "FAT-safe",
+                  "Get-StickFileSystem", "Get-StaleVenvCount", "~*"):
+        assert token in ps, token
+    sh = (ROOT / "scripts" / "pendrive-setup.sh").read_text(encoding="utf-8")
+    for token in ("WORK_VENV", "rsync", "FAT-safe", "~*", "STICK_VENV"):
+        assert token in sh, token
+
+
+def test_pendrive_check_reports_filesystem_and_corruption():
+    """pendrive-check must report the stick filesystem and detect a corrupted
+    venv (stale ~* temp dirs from interrupted installs)."""
+    import contextlib
+    import io
+    import json
+    import tempfile
+
+    from council.cli import cmd_pendrive_check
+
+    with tempfile.TemporaryDirectory() as tmp:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = cmd_pendrive_check(tmp, json_out=True)
+        assert rc == 1
+        d = json.loads(buf.getvalue())
+        assert "filesystem" in d
+        assert "venv_stale_dirs" in d

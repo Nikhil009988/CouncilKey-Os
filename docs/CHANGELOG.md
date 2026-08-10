@@ -1,5 +1,35 @@
 # Changelog
 
+## v1.23.0 (2026-08-10) - FAT32/exFAT stick fix: agents built on the PC, then copied
+
+### The problem (user's real failure)
+Building agents directly on a FAT32/exFAT pendrive breaks:
+- **pip**: `OSError: [Errno 22] Invalid argument` during atomic file-replace
+  (seen on websockets) + leftover `~ouncilkey_os-*.dist-info` temp dirs from
+  interrupted installs that poison every later install
+- **npm**: `TAR_ENTRY_ERROR UNKNOWN: unknown error, write` (tar cannot
+  extract symlinks/case-sensitive entries on FAT)
+
+### Fixed
+- **pip + npm agents are now installed on the PC first** (NTFS work dir:
+  `%TEMP%\councilkey-stick-build` / `${TMPDIR:-/tmp}/councilkey-stick-build`),
+  then **copied to the stick** (robocopy on Windows / rsync or cp on Linux,
+  incremental). FAT never sees pip/npm writes.
+- The portable venv itself is built on the PC then copied (same reason).
+- **Corrupted-stick detection + cleanup**: stale `~*` temp dirs in the stick
+  venv are counted (shown in `-Check` and `pendrive-check` as
+  `venv_stale_dirs` / CORRUPTED) and cleaned before copying.
+- **`-Check` / `--check` now report the stick filesystem** (FAT32/exFAT gets
+  a warning that the builder handles it PC-first).
+- START.bat repair: cleans stale `~*` dirs and uses `--retries 20 --timeout 90`
+  before `pip install -e` so on-stick self-repair is FAT-safe too.
+- `pendrive-check` reports filesystem + corruption in JSON as well.
+
+### Verified (sandbox)
+- Work-venv -> copy -> run-from-stick: councilkey + hermes run from the
+  copied venv; opencode 1.18.16 runs from the copied node_modules.
+- 150 tests passing, ruff clean.
+
 ## v1.22.5 (2026-08-10) - real pendrive fixes: agents actually install, START.bat never dies silently
 
 ### Fixed (the user's real-world failures)

@@ -24,6 +24,22 @@ $AgentMap = @{
   'crewai' = 'crewai'; 'aider' = 'aider'
 }
 
+function Get-StickFileSystem {
+  try {
+    $letter = $Path.TrimEnd('\').Substring(0, 1)
+    $vol = Get-Volume -DriveLetter $letter -ErrorAction Stop
+    return $vol.FileSystem
+  } catch { return '?' }
+}
+
+function Get-StaleVenvCount([string]$venvDir) {
+  $sp = Join-Path $venvDir "Lib\site-packages"
+  if (Test-Path $sp) {
+    return @(Get-ChildItem $sp -Directory -Filter "~*" -ErrorAction SilentlyContinue).Count
+  }
+  return 0
+}
+
 function Test-StickAgent([string]$name) {
   switch ($name) {
     'hermes'   { return Test-Path (Join-Path $Dest ".venv\Scripts\hermes.exe") }
@@ -49,7 +65,7 @@ if (-not (Test-Path $Path)) {
 }
 
 Write-Host "=============================================="
-Write-Host " CouncilKey-Os pendrive setup v1.22.5"
+Write-Host " CouncilKey-Os pendrive setup v1.23.0"
 Write-Host "  - ASKS which agents to install (nothing automatic)"
 Write-Host "  - use -Check first to inspect everything"
 Write-Host " Target: $Path"
@@ -87,6 +103,20 @@ if ($Check) {
     }
     Write-Host "  already on stick: $(if ($have) { $have -join ', ' } else { 'none yet' })"
   }
+  $fs = Get-StickFileSystem
+  if ($fs -match 'FAT|exFAT') {
+    Write-Host "  stick filesystem : $fs  ⚠ FAT drives break pip/npm - the builder now"
+    Write-Host "                      installs agents on the PC first, then copies (safe)."
+  } else {
+    Write-Host "  stick filesystem : $fs (ok - NTFS works directly)"
+  }
+  $stale = Get-StaleVenvCount (Join-Path $Dest ".venv")
+  if ($stale -gt 0) {
+    Write-Host "  stick venv health: CORRUPTED ($stale stale temp dirs from interrupted installs)"
+    Write-Host "                      - will be cleaned and rebuilt from the PC copy"
+  } else {
+    Write-Host "  stick venv health: ok"
+  }
   Write-Host ""
   Write-Host "  Choose what to install, then re-run:"
   Write-Host "    .\scripts\pendrive-setup.ps1 -Path $Path -Agents 1,3,5   (or run without -Agents to pick interactively)"
@@ -106,17 +136,41 @@ Get-ChildItem $ROOT -Force | Where-Object {
 }
 Write-Host "      ok"
 
-# 2. portable Python venv ON the stick
-Write-Host "[2/5] Creating a portable Python environment ON the stick..."
-if (-not (Test-Path "$Dest\.venv\Scripts\python.exe")) {
-  if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-    Write-Host "❌ python not found on this PC - install Python 3.11+ from https://python.org first"
-    exit 1
-  }
-  python -m venv "$Dest\.venv"
+# 2. portable Python venv - built on the PC (NTFS) then copied to the stick.
+#    (pip's atomic file-replace and npm's tar extraction BREAK on FAT32/exFAT -
+#    building on the PC sidesteps that entirely.)
+Write-Host "[2/5] Building the portable Python environment (on the PC, then copy to the stick)..."
+if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+  Write-Host "❌ python not found on this PC - install Python 3.11+ from https://python.org first"
+  exit 1
 }
-& "$Dest\.venv\Scripts\pip.exe" install -q -e $Dest
-Write-Host "      ok"
+$WorkRoot = Join-Path $env:TEMP "councilkey-stick-build"
+$WorkVenv = Join-Path $WorkRoot "venv"
+New-Item -ItemType Directory -Force -Path $WorkRoot | Out-Null
+# rebuild the work venv if it was made from an older version of the project
+if (Test-Path "$WorkVenv\Scripts\python.exe") {
+  & "$WorkVenv\Scripts\python.exe" -c "import council" 2>$null
+  if ($LASTEXITCODE -ne 0) { Remove-Item -Recurse -Force $WorkVenv -ErrorAction SilentlyContinue }
+}
+if (-not (Test-Path "$WorkVenv\Scripts\python.exe")) {
+  Write-Host "      creating the PC work venv (one time)..."
+  python -m venv "$WorkVenv"
+  if ($LASTEXITCODE -ne 0) { Write-Host "❌ could not create the venv"; exit 1 }
+}
+& "$WorkVenv\Scripts\pip.exe" install --retries 20 --timeout 90 -q -e $ROOT
+if ($LASTEXITCODE -ne 0) { Write-Host "⚠ installing the app into the work venv failed - re-run" }
+# clean corrupted leftovers on the stick, then copy (incremental)
+$StickVenv = "$Dest\.venv"
+$stale = Get-StaleVenvCount $StickVenv
+if ($stale -gt 0) {
+  Write-Host "      cleaning $stale corrupted temp dirs on the stick venv..."
+  Get-ChildItem (Join-Path $StickVenv "Lib\site-packages") -Directory -Filter "~*" -ErrorAction SilentlyContinue |
+    ForEach-Object { Remove-Item -Recurse -Force $_.FullName -ErrorAction SilentlyContinue }
+}
+New-Item -ItemType Directory -Force -Path $StickVenv | Out-Null
+robocopy "$WorkVenv" "$StickVenv" /E /NFL /NDL /NJH /NJS /NP | Out-Null
+if ($LASTEXITCODE -le 7) { Write-Host "      ok (portable venv on the stick)" }
+else { Write-Host "⚠ robocopy reported errors ($LASTEXITCODE) - re-run the build" }
 
 # 3. data dir on the stick
 Write-Host "[3/5] Configuring the stick as the council home..."
@@ -150,7 +204,9 @@ where python >nul 2>nul
 if errorlevel 1 goto nopython
 python -m venv "%ROOT%\.venv"
 if errorlevel 1 goto die
-"%ROOT%\.venv\Scripts\pip.exe" install -q -e "%ROOT%"
+rem clean stale pip temp dirs (interrupted installs) before reinstalling
+for /d %%D in ("%ROOT%\.venv\Lib\site-packages\~*") do rmdir /s /q "%%D" 2>nul
+"%ROOT%\.venv\Scripts\pip.exe" install -q --retries 20 --timeout 90 -e "%ROOT%"
 if errorlevel 1 goto die
 "%ROOT%\.venv\Scripts\python.exe" -c "import council, uvicorn" >nul 2>&1
 if errorlevel 1 goto broken
@@ -235,13 +291,18 @@ if ($NoAgents) {
       if ('hermes' -in $PipSel) { $PipPkgs += 'hermes-agent' }
       if ('crewai' -in $PipSel) { $PipPkgs += 'crewai' }
       if ('aider' -in $PipSel)  { $PipPkgs += 'aider-chat' }
-      if (Test-Path $StickPip) {
-        Write-Host "      installing $($PipPkgs -join ', ') into the stick venv (can take 5-15 min)..."
-        & $StickPip install --retries 20 --timeout 90 --prefer-binary @PipPkgs | Out-Null
-        if ($LASTEXITCODE -eq 0) { Write-Host "      ok ($($PipSel -join ' + ') on the stick)" }
+      if (Test-Path "$WorkVenv\Scripts\pip.exe") {
+        Write-Host "      installing $($PipPkgs -join ', ') into the PC work venv (5-15 min, then copied)..."
+        & "$WorkVenv\Scripts\pip.exe" install --retries 20 --timeout 90 --prefer-binary @PipPkgs | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+          Write-Host "      ok - copying to the stick..."
+          robocopy "$WorkVenv" "$StickVenv" /E /NFL /NDL /NJH /NJS /NP | Out-Null
+          if ($LASTEXITCODE -le 7) { Write-Host "      ok ($($PipSel -join ' + ') on the stick)" }
+          else { Write-Host "      ⚠ copy to the stick failed ($LASTEXITCODE)" }
+        }
         else { Write-Host "      ⚠ pip install failed (network?) - re-run when internet is stable" }
       } else {
-        Write-Host "      ⚠ stick venv not found"
+        Write-Host "      ⚠ PC work venv not found - re-run the build from step [2/5]"
       }
     }
     # npm agents (openclaw, opencode)
@@ -250,10 +311,17 @@ if ($NoAgents) {
         $pkg = if ($n -eq 'openclaw') { 'openclaw@latest' } else { 'opencode-ai' }
         New-Item -ItemType Directory -Force -Path (Join-Path $Path "council-data\$n") | Out-Null
         if (Get-Command npm -ErrorAction SilentlyContinue) {
-          Write-Host "      installing $n onto the stick (npm)..."
-          & npm install --prefix (Join-Path $Dest "tools\$n") --no-audit --no-fund $pkg | Out-Null
-          if ($LASTEXITCODE -eq 0) { Write-Host "      ok ($n CLI on the stick)" }
-          else { Write-Host "      ⚠ npm install of $n failed" }
+          $WorkAgent = Join-Path $WorkRoot "tools\$n"
+          Write-Host "      installing $n on the PC (npm, then copied - FAT-safe)..."
+          & npm install --prefix $WorkAgent --no-audit --no-fund $pkg | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "      ok - copying to the stick..."
+            New-Item -ItemType Directory -Force -Path (Join-Path $Dest "tools\$n") | Out-Null
+            robocopy $WorkAgent (Join-Path $Dest "tools\$n") /E /NFL /NDL /NJH /NJS /NP | Out-Null
+            if ($LASTEXITCODE -le 7) { Write-Host "      ok ($n CLI on the stick)" }
+            else { Write-Host "      ⚠ copy of $n to the stick failed ($LASTEXITCODE)" }
+          }
+          else { Write-Host "      ⚠ npm install of $n failed (network?) - re-run when internet is stable" }
         } else {
           Write-Host "      ⚠ npm not found - $n will use the host install"
         }

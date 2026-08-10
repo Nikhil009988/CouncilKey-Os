@@ -55,7 +55,7 @@ if [ ! -d "$USB" ]; then
 fi
 
 echo "=============================================="
-echo " CouncilKey-Os pendrive setup v1.22.5"
+echo " CouncilKey-Os pendrive setup v1.23.0"
 echo "  - ASKS which agents to install (nothing automatic)"
 echo "  - use --check first to inspect everything"
 echo " Target: $USB"
@@ -117,12 +117,30 @@ rsync -a --exclude .git --exclude .venv --exclude __pycache__ --exclude "*.pyc" 
 echo "      ok"
 
 # 2. portable Python venv (works on any PC - python not required on the target)
-echo "[2/6] Creating a portable Python environment ON the stick..."
-if [ ! -d "$USB/CouncilKey-Os/.venv" ]; then
-  python3 -m venv "$USB/CouncilKey-Os/.venv"
+echo "[2/6] Building the portable Python environment (on the PC, then copy to the stick)..."
+WORK_ROOT="${TMPDIR:-/tmp}/councilkey-stick-build"
+WORK_VENV="$WORK_ROOT/venv"
+mkdir -p "$WORK_ROOT"
+if [ -x "$WORK_VENV/bin/python" ]; then
+  "$WORK_VENV/bin/python" -c "import council" 2>/dev/null || rm -rf "$WORK_VENV"
 fi
-"$USB/CouncilKey-Os/.venv/bin/pip" install -q -e "$USB/CouncilKey-Os" 2>&1 | tail -1 || true
-echo "      ok (first start on the stick will finish this if interrupted)"
+if [ ! -x "$WORK_VENV/bin/python" ]; then
+  echo "      creating the PC work venv (one time)..."
+  python3 -m venv "$WORK_VENV" || { echo "❌ could not create the venv"; exit 1; }
+fi
+"$WORK_VENV/bin/pip" install --retries 20 --timeout 90 -q -e "$ROOT" 2>&1 | tail -1 || true
+# clean stale pip temp dirs on the stick, then copy (incremental)
+STICK_VENV="$USB/CouncilKey-Os/.venv"
+if [ -d "$STICK_VENV/lib/python3*/site-packages" ]; then
+  find "$STICK_VENV" -maxdepth 4 -type d -name '~*' -exec rm -rf {} + 2>/dev/null || true
+fi
+mkdir -p "$STICK_VENV"
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a --delete "$WORK_VENV/" "$STICK_VENV/" 2>/dev/null || true
+else
+  cp -a "$WORK_VENV/." "$STICK_VENV/" 2>/dev/null || true
+fi
+echo "      ok (portable venv on the stick)"
 
 # 3. portable COUNCIL_HOME on the stick (data never leaves the stick)
 echo "[3/6] Configuring the stick as the council home..."
@@ -157,7 +175,9 @@ where python >nul 2>nul
 if errorlevel 1 goto nopython
 python -m venv "%ROOT%\.venv"
 if errorlevel 1 goto die
-"%ROOT%\.venv\Scripts\pip.exe" install -q -e "%ROOT%"
+rem clean stale pip temp dirs (interrupted installs) before reinstalling
+for /d %%D in ("%ROOT%\.venv\Lib\site-packages\~*") do rmdir /s /q "%%D" 2>nul
+"%ROOT%\.venv\Scripts\pip.exe" install -q --retries 20 --timeout 90 -e "%ROOT%"
 if errorlevel 1 goto die
 "%ROOT%\.venv\Scripts\python.exe" -c "import council, uvicorn" >nul 2>&1
 if errorlevel 1 goto broken
@@ -291,12 +311,14 @@ else
     done
     if [ -n "$pip_list" ]; then
       if [ -x "$PIP" ]; then
-        echo "      installing:$pip_list into the stick venv (can take 5-15 min)..."
-        "$PIP" install --retries 20 --timeout 90 --prefer-binary $pip_list 2>/dev/null && \
-          echo "      ok (pip agents on the stick)" || \
+        echo "      installing:$pip_list into the PC work venv (5-15 min, then copied)..."
+        "$WORK_VENV/bin/pip" install --retries 20 --timeout 90 --prefer-binary $pip_list 2>/dev/null && \
+          { echo "      ok - copying to the stick..."; \
+            if command -v rsync >/dev/null 2>&1; then rsync -a --delete "$WORK_VENV/" "$STICK_VENV/"; else cp -a "$WORK_VENV/." "$STICK_VENV/"; fi; \
+            echo "      ok (pip agents on the stick)"; } || \
           echo "      ⚠ pip install failed (network?) - re-run when internet is stable"
       else
-        echo "      ⚠ stick venv not found"
+        echo "      ⚠ PC work venv not found - re-run the build from step [2/6]"
       fi
     fi
     # npm agents (openclaw, opencode)
@@ -305,10 +327,14 @@ else
         pkg="openclaw@latest"; [ "$n" = "opencode" ] && pkg="opencode-ai"
         mkdir -p "$USB/council-data/$n"
         if command -v npm >/dev/null 2>&1; then
-          echo "      installing $n onto the stick (npm)..."
-          npm install --prefix "$USB/CouncilKey-Os/tools/$n" --no-audit --no-fund "$pkg" >/dev/null 2>&1 && \
-            echo "      ok ($n CLI on the stick)" || \
-            echo "      ⚠ npm install of $n failed"
+          WORK_AGENT="$WORK_ROOT/tools/$n"
+          echo "      installing $n on the PC (npm, then copied - FAT-safe)..."
+          npm install --prefix "$WORK_AGENT" --no-audit --no-fund "$pkg" >/dev/null 2>&1 && \
+            { echo "      ok - copying to the stick..."; \
+              mkdir -p "$USB/CouncilKey-Os/tools/$n"; \
+              if command -v rsync >/dev/null 2>&1; then rsync -a --delete "$WORK_AGENT/" "$USB/CouncilKey-Os/tools/$n/"; else cp -a "$WORK_AGENT/." "$USB/CouncilKey-Os/tools/$n/"; fi; \
+              echo "      ok ($n CLI on the stick)"; } || \
+            echo "      ⚠ npm install of $n failed (network?) - re-run when internet is stable"
         else
           echo "      ⚠ npm not found - $n will use the host install"
         fi
